@@ -1,0 +1,123 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >
+  Cloudformation template for media exchange consumer setup.
+
+
+Outputs:
+  NotificationTopicArn:
+    Description: Arn for the notification topic
+    Value:
+      Ref: NotificationTopic
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+  CannonicalAccountID:
+    Type: String
+    Description: The Cannonical Account ID of the consumer.
+    # TODO: Regex
+  Email:
+    Type: String
+    Description: The email address of the consumer.
+    # TODO: Regex
+
+Resources:
+
+  PublishedEventRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "Notify Content Published"
+      EventPattern: 
+        source:
+          - aws.s3
+        detail-type:
+          - AWS API Call via CloudTrail
+        detail:
+          eventSource:
+            - s3.amazonaws.com
+          eventName:
+            - PutObjectAcl
+            - PutObject
+          requestParameters:
+            bucketName:
+              -  
+                Fn::Sub: mxc-store-${Environment}-${AWS::Region}-${AWS::AccountId}
+            accessControlList:
+              x-amz-grant-read:
+                -
+                  Fn::Sub: id=${CannonicalAccountID}
+      State: "ENABLED"
+      Targets: 
+        - 
+          Id: "S3PutACLEvent"
+          InputTransformer:
+            InputPathsMap:
+              region: "$.detail.awsRegion"
+              source: "$.detail.requestParameters.Host" 
+              ts: "$.detail.eventTime"
+              bucket: "$.detail.requestParameters.bucketName"
+              key: "$.detail.requestParameters.key"
+            InputTemplate: >
+              {  
+                "Records":[  
+                    {  
+                      "eventVersion":"1.0",
+                      "eventSource": <source>,
+                      "awsRegion": <region>,
+                      "eventTime": <ts>,
+                      "eventName":"mxc::share",
+                      "s3":{
+                          "bucket":{  
+                            "name":<bucket>
+                          },
+                          "object":{  
+                            "key":<key>
+                          }
+                      }
+                    }
+                ]
+              }
+          Arn:
+            Ref: "NotificationTopic"
+
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      Tags:
+        - 
+          Key: Type
+          Value: Consumer
+        - 
+          Key: 
+            Ref: Email
+          Value:
+            Fn::Sub: id=${CannonicalAccountID}
+
+  EventTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: 'sns:Publish'
+            Resource: '*'
+      Topics:
+        - 
+          Ref: NotificationTopic
+
+  NotificationsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint:
+        Ref: Email
+      Protocol: email
+      TopicArn:
+        Ref: NotificationTopic
+
+
+  

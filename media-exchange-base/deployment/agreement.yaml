@@ -1,0 +1,83 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >
+  Cloudformation template for media exchange consumer and producer agreement setup.
+
+Outputs:
+  KMSKeyId:
+    Description: KMS KeyId 
+    Value:
+      Ref: CMK
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+  ProducerAccountId:
+    Type: String
+    Description: The accountId of the producer.
+  ConsumerAccountId:
+    Type: String
+    Description: The accountId of the consumer.
+    # TODO: Regex
+
+
+Resources:
+
+  CMK:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Symetric Key for Encrypting Objects in Media Exchange
+      Enabled: true
+      EnableKeyRotation: true
+      PendingWindowInDays: 7
+      KeyPolicy: 
+        Version: '2012-10-17'
+        Id: default-key-policy
+        Statement:
+          - 
+            Sid: KeyManagement
+            Effect: Allow
+            Principal:
+              AWS:
+                - Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
+            Action: 
+              # - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:TagResource
+              - kms:UntagResource
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
+            Resource: '*'
+          - 
+            Sid: Consumer
+            Effect: Allow
+            Principal:
+              AWS:
+                - Fn::Sub: arn:aws:iam::${ConsumerAccountId}:root
+            Action: 
+              - kms:Decrypt
+              - kms:DescribeKey
+            Resource: '*'
+          - 
+            Sid: Producer
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: arn:aws:iam::${AWS::AccountId}:role/mxc-producer-${Environment}-${AWS::Region}-${AWS::AccountId}-${ProducerAccountId}
+            Action: 
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: '*'
