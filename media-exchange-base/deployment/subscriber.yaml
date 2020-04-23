@@ -1,0 +1,136 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Cloudformation template for media exchange subscriber setup.
+
+Outputs:
+  SubscriberAccountId:
+    Description: Subscriber's AWS AccountId
+    Value:
+      Ref: SubscriberAccountId
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-accountid
+  SubscriberCanonicalAccountID:
+    Description: Subscriber's Canonical AccountId
+    Value:
+      Ref: CanonicalAccountID
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-canonicalaccountid
+  SubscriberNotificationsTopic:
+    Description: Subscriber's notifications topic name
+    Value:
+      Ref: NotificationTopic
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
+
+
+Metadata:
+
+  License:
+    Description: |
+        Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+        Licensed under the Apache License, Version 2.0 (the "License").
+        You may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Deployment Configuration"
+        Parameters:
+          - Environment
+      -
+        Label:
+          default: "Subscriber Configuration"
+        Parameters:
+          - SubscriberName
+          - SubscriberAccountId
+          - CanonicalAccountID
+          - Email
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+
+  SubscriberAccountId:
+    Type: String
+    Description: The accountId of the Subscriber.
+    ConstraintDescription: AccountId is a 12 digit number
+    AllowedPattern: '^\d{12}$'
+
+  CanonicalAccountID:
+    Type: String
+    Description: The Canonical Account ID of the subscriber.
+
+  Email:
+    Type: String
+    Description: The email address for the transfer notifications.
+
+  SubscriberName:
+    Type: String
+    Description: A name for subscriber account.
+
+Resources:
+
+  CustomNotifySubscriberRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Forward Custom Events"
+      EventPattern:
+        source:
+          - Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher
+        detail-type:
+          - Fn::Sub: 'source=ApplicationEvent,subscribername=${SubscriberName}'
+
+      State: "ENABLED"
+      Targets:
+        -
+          Id: "SNSEvent"
+          InputPath: $.detail
+          Arn:
+            Ref: "NotificationTopic"
+        # -
+        #   Id: "XAccount"
+        #   Arn:
+        #     Fn::Sub: arn:aws:events:${AWS::Region}:${SubscriberAccountId}:event-bus/default
+
+
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+
+  EventTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: 'sns:Publish'
+            Resource: '*'
+      Topics:
+        -
+          Ref: NotificationTopic
+
+  NotificationsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint:
+        Ref: Email
+      Protocol: email
+      TopicArn:
+        Ref: NotificationTopic

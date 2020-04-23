@@ -1,0 +1,266 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Cloudformation template for media exchange core and service catalog setup.
+
+Metadata:
+
+  License:
+    Description: |
+        Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+        Licensed under the Apache License, Version 2.0 (the "License").
+        You may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+
+  AWS::cloudformation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: Deployment Configuration
+        Parameters:
+          - Environment
+
+Mappings:
+  SourceCode:
+    General:
+      Path: media-exchange-on-aws
+      Version: v1.0.0
+  AnonymousData:
+    SendAnonymousData:
+      Data: Yes
+
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+  Owner:
+    Type: String
+    Description: Mainatner Group
+    Default: mediaops
+  CfnBucket:
+    Type: String
+    Description: Bucket for storing CloudFormation products.
+
+
+Outputs:
+  ConsoleUrl:
+    Description: ServiceCatalog portfolio manager url.
+    Value:
+      Fn::Sub: https://signin.aws.amazon.com/switchrole?roleName=${ServiceCatalogUserRole}&account=${AWS::AccountId}&region=${AWS::Region}&redirect_uri=https://console.aws.amazon.com/servicecatalog/home?region=${AWS::Region}&isSceuc=true#/products
+
+Resources:
+
+  MediaExchangeCore:
+    Type: AWS::CloudFormation::Stack
+    Properties:
+      Parameters:
+        Environment :
+          Ref: Environment
+      TemplateURL:
+        Fn::Join:
+          - /
+          -
+            - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
+            - Fn::FindInMap: [ SourceCode, General, Path ]
+            - Fn::FindInMap: [ SourceCode, General, Version ]
+            - core.yaml
+      TimeoutInMinutes: 5
+
+  ServiceCatalogUserRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Description: User role for Service Catalog access
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: ${AWS::AccountId}
+            Action: 'sts:AssumeRole'
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AWSServiceCatalogEndUserFullAccess
+
+
+  # portfolio and products
+  Portfolio:
+    Type: AWS::ServiceCatalog::Portfolio
+    Properties:
+      DisplayName: Media Exchange On AWS
+      ProviderName: AWS Solutions Library
+      Description: Group of products related to Media Exchange On AWS solution.
+
+  PortfolioAccess:
+    Type: AWS::ServiceCatalog::PortfolioPrincipalAssociation
+    Properties:
+      PortfolioId: !Ref Portfolio
+      PrincipalARN: !GetAtt ServiceCatalogUserRole.Arn
+      PrincipalType: IAM
+
+  Publisher:
+    Type: AWS::ServiceCatalog::CloudFormationProduct
+    Properties:
+      Description: Publisher onboarding template for Media Exchange On AWS Solution
+      Name: Publisher
+      Owner:
+        Ref: Owner
+      SupportDescription: Please contact mediaops
+      SupportEmail:
+        Ref: Owner
+      SupportUrl: https://mediaops.yourcompany.com
+      Distributor: AWS Solutions Library / Media Exchange
+      ProvisioningArtifactParameters:
+        - Info:
+            LoadTemplateFromURL:
+              Fn::Join:
+                - /
+                -
+                  - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
+                  - Fn::FindInMap: [ SourceCode, General, Path ]
+                  - Fn::FindInMap: [ SourceCode, General, Version ]
+                  - publisher.yaml
+          Name:
+            Fn::FindInMap: [ SourceCode, General, Version ]
+
+
+  AddPublisherToPortfolio:
+    Type: AWS::ServiceCatalog::PortfolioProductAssociation
+    Properties:
+      PortfolioId:
+        Ref: Portfolio
+      ProductId:
+        Ref: Publisher
+
+  Subscriber:
+    Type: AWS::ServiceCatalog::CloudFormationProduct
+    Properties:
+      Description: Subscriber onboarding template for Media Exchange On AWS Solution
+      Name: Subscriber
+      Owner:
+        Ref: Owner
+      SupportDescription: Please contact mediaops
+      SupportEmail:
+        Ref: Owner
+      SupportUrl: https://mediaops.yourcompany.com
+      Distributor: AWS Solutions Library / Media Exchange
+      ProvisioningArtifactParameters:
+        - Info:
+            LoadTemplateFromURL:
+              Fn::Join:
+                - /
+                -
+                  - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
+                  - Fn::FindInMap: [ SourceCode, General, Path ]
+                  - Fn::FindInMap: [ SourceCode, General, Version ]
+                  - subscriber.yaml
+          Name:
+            Fn::FindInMap: [ SourceCode, General, Version ]
+
+
+  AddSubscriberToPortfolio:
+    Type: AWS::ServiceCatalog::PortfolioProductAssociation
+    Properties:
+      PortfolioId:
+        Ref: Portfolio
+      ProductId:
+        Ref: Subscriber
+
+  Agreement:
+    Type: AWS::ServiceCatalog::CloudFormationProduct
+    Properties:
+      Description: Template to setup shared S3 bucket between publisher and subscriber interchange.
+      Name: Transfer agreement
+      Owner:
+        Ref: Owner
+      SupportDescription: Please contact mediaops
+      SupportEmail:
+        Ref: Owner
+      SupportUrl: https://mediaops.yourcompany.com
+      Distributor: AWS Solutions Library / Media Exchange
+      ProvisioningArtifactParameters:
+        - Info:
+            LoadTemplateFromURL:
+              Fn::Join:
+                - /
+                -
+                  - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
+                  - Fn::FindInMap: [ SourceCode, General, Path ]
+                  - Fn::FindInMap: [ SourceCode, General, Version ]
+                  - agreement.yaml
+          Name:
+            Fn::FindInMap: [ SourceCode, General, Version ]
+
+
+  AddAgreementToPortfolio:
+    Type: AWS::ServiceCatalog::PortfolioProductAssociation
+    Properties:
+      PortfolioId:
+        Ref: Portfolio
+      ProductId:
+        Ref: Agreement
+
+
+  #Service catalog role
+  ServiceRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Description: Service role for Service Catalog
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service: servicecatalog.amazonaws.com
+            Action: 'sts:AssumeRole'
+
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+
+
+  #Constraints
+  LaunchRoleConstraintPublisher:
+    Type: AWS::ServiceCatalog::LaunchRoleConstraint
+    Properties:
+      Description: Administrative role for deploing publishers to Media Exchange
+      LocalRoleName:
+        Ref: ServiceRole
+      PortfolioId:
+        Ref: Portfolio
+      ProductId:
+        Ref: Publisher
+
+  LaunchRoleConstraintSubscriber:
+    Type: AWS::ServiceCatalog::LaunchRoleConstraint
+    Properties:
+      Description: Administrative role for deploing Subscribers to Media Exchange
+      LocalRoleName:
+        Ref: ServiceRole
+      PortfolioId:
+        Ref: Portfolio
+      ProductId:
+        Ref: Subscriber
+
+  LaunchRoleConstraintAgreement:
+    Type: AWS::ServiceCatalog::LaunchRoleConstraint
+    Properties:
+      Description: Administrative role for deploing publisher & subscriber agreement to Media Exchange
+      LocalRoleName:
+        Ref: ServiceRole
+      PortfolioId:
+        Ref: Portfolio
+      ProductId:
+        Ref: Agreement
