@@ -5,23 +5,50 @@ Description: >
 
 Outputs:
   KMSKeyId:
-    Description: KMS KeyId 
+    Description: KMS Key Arn 
     Value:
-      Ref: CMK
+      Fn::GetAtt: CMK.Arn
+
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Deployment Configuration"
+        Parameters: 
+          - Environment
+          - Version
+      - 
+        Label: 
+          default: "Agreement Configuration"
+        Parameters: 
+          - SubscriberAccountId
+          - PublisherAccountId
+         
+    # TODO:
+    # ParameterLabels: 
+    #   VPCID: 
+    #     default: "Which VPC should this be deployed to?"
 
 Parameters:
   Environment:
     Type: String
     Description: Deployment Environment Name
     Default: dev
-  ProducerAccountId:
+  Version: 
     Type: String
-    Description: The accountId of the producer.
-  ConsumerAccountId:
+    Description: Release version
+    Default: latest
+
+  PublisherAccountId:
     Type: String
-    Description: The accountId of the consumer.
+    Description: The accountId of the publisher.
     # TODO: Regex
 
+  SubscriberAccountId:
+    Type: String
+    Description: The accountId of the Subscriber.
+    # TODO: Regex
 
 Resources:
 
@@ -63,7 +90,8 @@ Resources:
             Effect: Allow
             Principal:
               AWS:
-                - Fn::Sub: arn:aws:iam::${ConsumerAccountId}:root
+                - Fn::Sub: arn:aws:iam::${SubscriberAccountId}:root
+                - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
             Action: 
               - kms:Decrypt
               - kms:DescribeKey
@@ -73,7 +101,7 @@ Resources:
             Effect: Allow
             Principal:
               AWS:
-                Fn::Sub: arn:aws:iam::${AWS::AccountId}:role/mxc-producer-${Environment}-${AWS::Region}-${AWS::AccountId}-${ProducerAccountId}
+                - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
             Action: 
               - kms:Encrypt
               - kms:Decrypt

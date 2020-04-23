@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: > 
+  Cloudformation template for media exchange. 
+
+
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Deployment Configuration"
+        Parameters: 
+          - Environment
+          - Version
+      # - 
+      #   Label: 
+      #     default: "Publisher Configuration"
+      #   Parameters: 
+      #     - PublisherAccountId
+      #     - Email
+      # TODO:
+      # ParameterLabels: 
+      #   VPCID: 
+      #     default: "Which VPC should this be deployed to?"
+      
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+  Version: 
+    Type: String
+    Description: Release version
+    Default: latest
+
+Resources:
+
+  #bucket for storing cloudtrails
+  ExchangeCloudTrailBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+
+  ExchangeCloudTrailBucketPolicy: 
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: 
+        Ref: ExchangeCloudTrailBucket
+      PolicyDocument: 
+        Version: "2012-10-17"
+        Statement: 
+          - 
+            Sid: "AWSCloudTrailAclCheck"
+            Effect: "Allow"
+            Principal: 
+              Service: "cloudtrail.amazonaws.com"
+            Action: "s3:GetBucketAcl"
+            Resource: 
+              Fn::Sub: arn:aws:s3:::${ExchangeCloudTrailBucket}
+          - 
+            Sid: "AWSCloudTrailWrite"
+            Effect: "Allow"
+            Principal: 
+              Service: "cloudtrail.amazonaws.com"
+            Action: "s3:PutObject"
+            Resource:
+              Fn::Sub: arn:aws:s3:::${ExchangeCloudTrailBucket}/AWSLogs/${AWS::AccountId}/*
+            Condition: 
+              StringEquals:
+                s3:x-amz-acl: "bucket-owner-full-control"
+
+  # ExchangeObjectsTrailLogRole:
+  #   Type: 'AWS::IAM::Role'
+  #   Properties:
+  #     AssumeRolePolicyDocument:
+  #       Version: 2012-10-17
+  #       Statement:
+  #         - 
+  #           Effect: Allow
+  #           Principal:
+  #             Service:
+  #             - cloudtrail.amazonaws.com
+  #           Action:
+  #             - 'sts:AssumeRole'
+  #     Policies:
+  #       - 
+  #         PolicyName: AllowCreateLogStreams
+  #         PolicyDocument:
+  #           Version: 2012-10-17
+  #           Statement:
+  #             - 
+  #               Effect: Allow
+  #               Action: 
+  #                 - 'logs:CreateLogStream'
+  #                 - 'logs:PutLogEvents'
+  #               Resource: '*'
+                  
+  # #cloudwatch logs for exchange bucket 
+  # ObjectsTrailLog:
+  #   Type: AWS::Logs::LogGroup
+  #   Properties:
+  #     RetentionInDays: 30
+
+  #cloudtrail for object read/write operations 
+  ObjectsTrail:
+    Type: AWS::CloudTrail::Trail
+    Properties: 
+      IsLogging: true
+      EnableLogFileValidation: true
+      IncludeGlobalServiceEvents: false
+      IsMultiRegionTrail: false
+      EventSelectors: 
+        - DataResources: 
+            - Type: 'AWS::S3::Object'
+              Values:
+                - 'arn:aws:s3:::'
+          IncludeManagementEvents: true
+          ReadWriteType: All
+      S3BucketName: 
+        Ref: ExchangeCloudTrailBucket
+      # CloudWatchLogsLogGroupArn:
+      #   Fn::GetAtt: ObjectsTrailLog.Arn
+      # CloudWatchLogsRoleArn:
+      #   Fn::GetAtt: ExchangeObjectsTrailLogRole.Arn
+  
+  EventBus:
+    Type: AWS::Events::EventBus
+    Properties: 
+      Name: 
+        Fn::Sub: mxc-events-${AWS::AccountId}-${AWS::Region}-${Environment}-${Version}

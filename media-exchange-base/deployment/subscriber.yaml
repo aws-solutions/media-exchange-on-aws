@@ -1,0 +1,151 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >
+  Cloudformation template for media exchange subscriber setup.
+
+Outputs:
+  SubscriberRole:
+    Description: Subscriber Role to perform List* operations on the bucket
+    Value:
+      Fn::GetAtt: CrossAccountRole.Arn
+
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Deployment Configuration"
+        Parameters: 
+          - Environment
+          - Version
+      - 
+        Label: 
+          default: "Subscriber Configuration"
+        Parameters: 
+          - SubscriberAccountId
+          - SubscriberCannonicalAccountID
+          - Email
+          - Prefix
+    # TODO:
+    # ParameterLabels: 
+    #   VPCID: 
+    #     default: "Which VPC should this be deployed to?"
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+  Version: 
+    Type: String
+    Description: Release version
+    Default: latest
+
+  SubscriberAccountId:
+    Type: String
+    Description: The accountId of the Subscriber.
+    # TODO: Regex
+  CannonicalAccountID:
+    Type: String
+    Description: The Cannonical Account ID of the subscriber.
+    # TODO: Regex
+  Email:
+    Type: String
+    Description: The email address for the transfer notifications.
+    # TODO: Regex
+  Prefix:
+    Type: String
+    Description: A prefix for subscriber account
+
+Resources:
+
+  PublishedEventRule: 
+    Type: AWS::Events::Rule
+    Properties: 
+      Description: "Notify Content Published"
+      EventBusName:
+        Fn::Sub: mxc-events-${AWS::AccountId}-${AWS::Region}-${Environment}-${Version}
+      EventPattern: 
+        source:
+          - mxc.publisher
+        detail-type:
+          - Event from publisher
+        detail:
+          subscriberCannonicalAccountId:
+            - Ref: CannonicalAccountID      
+      State: "ENABLED"
+      Targets: 
+        - 
+          Id: "S3PutACLEvent"
+          InputPath: $.detail
+          Arn:
+            Ref: "NotificationTopic"
+
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+
+  EventTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: 'sns:Publish'
+            Resource: '*'
+      Topics:
+        - 
+          Ref: NotificationTopic
+
+  NotificationsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint:
+        Ref: Email
+      Protocol: email
+      TopicArn:
+        Ref: NotificationTopic
+
+
+  CrossAccountRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Description: Cross accont role for subscriber to list contents of the bucket.
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              AWS:
+                Ref: SubscriberAccountId
+            Action: 'sts:AssumeRole'
+            Condition:
+              StringEquals:
+                'sts:ExternalId':
+                  Ref: Email
+      Path: /
+      Policies:
+        -
+          PolicyName: mxc-subscriber-access
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                  - s3:GetBucketLocation
+                Resource: '*'
+              -
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                Resource: 
+                  Fn::Sub: arn:aws:s3:::mxc-publisher-${AWS::Region}-${Environment}-${Version}-*
+                Condition: 
+                  StringEquals: 
+                    s3:prefix: 
+                      Ref: Prefix
+                  

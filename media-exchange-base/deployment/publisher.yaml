@@ -1,0 +1,214 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: 'AWS::Serverless-2016-10-31'
+Description: >
+  Cloudformation template to setup publisher in media exchange.
+
+Outputs:
+  PublisherRole:
+    Description: Publisher Role to perform List* operations on the bucket
+    Value:
+      Fn::GetAtt: CrossAccountRole.Arn
+  PublisherBucket:
+    Description: Publisher Bucket
+    Value:
+      Ref: PublisherBucket
+
+Metadata: 
+  AWS::CloudFormation::Interface: 
+    ParameterGroups: 
+      - 
+        Label: 
+          default: "Deployment Configuration"
+        Parameters: 
+          - Environment
+          - Version
+      - 
+        Label: 
+          default: "Publisher Configuration"
+        Parameters: 
+          - PublisherAccountId
+          - Email
+    # TODO:
+    # ParameterLabels: 
+    #   VPCID: 
+    #     default: "Which VPC should this be deployed to?"
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+  Version: 
+    Type: String
+    Description: Release version
+    Default: latest
+
+  PublisherAccountId:
+    Type: String
+    Description: The accountId of the publisher.
+    # TODO: Regex
+  Email:
+    Type: String
+    Description: The email address of the publisher.
+    # TODO: Regex
+
+Resources:
+
+  PublisherBucket:
+    Type: AWS::S3::Bucket
+    Properties:
+      BucketName:
+        Fn::Sub: mxc-publisher-${AWS::Region}-${Environment}-${Version}-${PublisherAccountId}
+      #versioning is disabled
+      VersioningConfiguration: 
+        Status: Enabled
+
+      # objects must be encrypted with a CMK
+      # we do not specify a default encryption configuration 
+      # rather enforce it from the bucket policy that 
+      # a kms key must be used. 
+        
+      # Objects must be locked for the duration of the agreement 
+      # we do not specify a default lock configuration. But we
+      # expect the publishers the lock the objects for the duration
+      # applicable for the agreement  
+      # we also stop explicit deletes from by a bucket policy.
+
+      #Expire objects after the lifecycle period
+      LifecycleConfiguration:
+        Rules: 
+          - 
+            Id: Expire
+            Status: Enabled
+            ExpirationInDays: 5
+          
+          - 
+            Id: AutoRemove
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 10
+
+          - 
+            Id: CleanupIncompleteUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload: 
+              DaysAfterInitiation: 2
+        
+      #tagging?
+
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+  
+  #bucket policy  
+  PublisherBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties: 
+      Bucket: 
+        Ref: PublisherBucket  
+      PolicyDocument: 
+        Version: 2012-10-17
+        Statement:
+          # deny direct deletes, updates are allowed
+          - 
+            Sid: "DenyDeletes"
+            Action: 
+              - "s3:DeleteObject"
+              - "s3:DeleteObjectVersion"
+            Effect: "Deny"
+            Resource: 
+              - Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
+            Principal: "*"
+
+          # TLS only
+          - 
+            Sid: "RequireTLS"
+            Action:
+              - "s3:*"
+            Effect: "Deny"
+            Resource: 
+              - Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
+            Principal: "*"
+            Condition: 
+              Bool: 
+                aws:SecureTransport: false
+
+          # require KMS for put
+          - 
+            Sid: "DenyIncorrectEncryptionHeader"
+            Action: 
+              - "s3:PutObject"
+            Effect: "Deny"
+            Resource: 
+              - Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
+            Principal: "*"
+            Condition: 
+              StringNotEquals: 
+                s3:x-amz-server-side-encryption: aws:kms
+              
+          - 
+            Sid: "DenyNoCMKHeader"
+            Action: 
+              - "s3:PutObject"
+            Effect: "Deny"
+            Resource: 
+              - Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
+            Principal: "*"
+            Condition:
+              'Null':
+                s3:x-amz-server-side-encryption-aws-kms-key-id: true
+          -
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:PutObjectAcl
+              - s3:GetObject
+              - s3:GetObjectAcl
+            Resource:
+              Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
+            Principal: 
+              AWS: 
+                - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
+
+  CrossAccountRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Description: Cross accont role for publisher to list contents of the bucket.
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              AWS:
+                Ref: PublisherAccountId
+            Action: 'sts:AssumeRole'
+            Condition:
+              StringEquals:
+                'sts:ExternalId':
+                  Ref: Email
+      Path: /
+      Policies:
+        -
+          PolicyName: mxc-publisher-access
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - s3:ListAllMyBuckets
+                Resource: '*'
+              -
+                Effect: Allow
+                Action:
+                  - s3:ListBucket
+                  - s3:GetBucketLocation
+                Resource:
+                  Fn::Sub: arn:aws:s3:::${PublisherBucket}
+              - 
+                Effect: Allow
+                Action: 
+                  - events:PutEvents
+                Resource: 
+                  - Fn::Sub: arn:aws:events:${AWS::Region}:472352166085:event-bus/mxc-events-${AWS::AccountId}-${AWS::Region}-${Environment}-${Version}
+  
+  
