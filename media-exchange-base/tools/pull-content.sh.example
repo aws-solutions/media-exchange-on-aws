@@ -8,14 +8,14 @@
 # export AWS_REGION=
 
 ##
-
 echo caller identity is $(aws sts get-caller-identity --query Arn)
 
 echo copying from exchange
 
-MEDIA_EXCHNAGE_BUCKET_NAME="mxc-publisher-us-west-2-dev-latest-657474709706"
-ORDER_ID='ORD-245778'
-PREFIX='holyflix'
+##
+MEDIA_EXCHNAGE_BUCKET_NAME="mxc-publisher-us-east-2-dev-latest-702582666339" ## bucketname can be found in the stack outputs section of publisher stack. 
+ORDER_ID='ORD-245778' ## optional
+PREFIX='1-1' ## prefix used in subscriber setup
 FILE_NAME='media-file.mp4'
 
 aws s3api get-object --bucket $MEDIA_EXCHNAGE_BUCKET_NAME --key $PREFIX/$ORDER_ID/$FILE_NAME /tmp/media-file.mp4
@@ -25,9 +25,9 @@ echo checksum is $(openssl dgst -sha256 /tmp/media-file.mp4 | cut -d' ' -f2)
 rm -rf /tmp/media-file.mp4
 
 ### list 
-SUBSCRIBER_EXTERNAL_ID="prodey+distribution@amazon.com"
-MXC_ROLE_ARN="arn:aws:iam::534054367376:role/media-exchange-subscriber-1-CrossAccountRole-9PF0Y282CSZK"
-SESSION_NAME="mxc-read-session"
+SUBSCRIBER_EXTERNAL_ID="abc@def.com" ## email during in subscriber setup
+MXC_ROLE_ARN="arn:aws:iam::xxxx:role/xxxxx" ## role arn can be found in the stack outputs section of subscriber stack. 
+SESSION_NAME="mxc-read-session" ## any name, only for tracking/collating log data
 
 echo assuming cross account role in media exchange
 resp=$(aws sts assume-role --role-arn $MXC_ROLE_ARN --role-session-name $SESSION_NAME --external-id $SUBSCRIBER_EXTERNAL_ID)

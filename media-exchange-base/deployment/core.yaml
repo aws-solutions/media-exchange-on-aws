@@ -3,8 +3,25 @@ Transform: 'AWS::Serverless-2016-10-31'
 Description: > 
   Cloudformation template for media exchange. 
 
-
 Metadata: 
+  
+  License:
+    Description: |
+      Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+      Permission is hereby granted, free of charge, to any person obtaining a copy of this
+      software and associated documentation files (the "Software"), to deal in the Software
+      without restriction, including without limitation the rights to use, copy, modify,
+      merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+      permit persons to whom the Software is furnished to do so.
+
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+      INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+      PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+      HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+      OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+      SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
   AWS::CloudFormation::Interface: 
     ParameterGroups: 
       - 
@@ -13,16 +30,6 @@ Metadata:
         Parameters: 
           - Environment
           - Version
-      # - 
-      #   Label: 
-      #     default: "Publisher Configuration"
-      #   Parameters: 
-      #     - PublisherAccountId
-      #     - Email
-      # TODO:
-      # ParameterLabels: 
-      #   VPCID: 
-      #     default: "Which VPC should this be deployed to?"
       
 Parameters:
   Environment:
@@ -34,12 +41,24 @@ Parameters:
     Description: Release version
     Default: latest
 
+Outputs:
+  EventBusName:
+    Description: Event Bus Name
+    Value:
+      Ref: EventBus
+
 Resources:
 
   #bucket for storing cloudtrails
   ExchangeCloudTrailBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
+    Properties: 
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
 
   ExchangeCloudTrailBucketPolicy: 
     Type: AWS::S3::BucketPolicy
@@ -54,7 +73,8 @@ Resources:
             Effect: "Allow"
             Principal: 
               Service: "cloudtrail.amazonaws.com"
-            Action: "s3:GetBucketAcl"
+            Action: 
+              - "s3:GetBucketAcl"
             Resource: 
               Fn::Sub: arn:aws:s3:::${ExchangeCloudTrailBucket}
           - 
@@ -69,40 +89,9 @@ Resources:
               StringEquals:
                 s3:x-amz-acl: "bucket-owner-full-control"
 
-  # ExchangeObjectsTrailLogRole:
-  #   Type: 'AWS::IAM::Role'
-  #   Properties:
-  #     AssumeRolePolicyDocument:
-  #       Version: 2012-10-17
-  #       Statement:
-  #         - 
-  #           Effect: Allow
-  #           Principal:
-  #             Service:
-  #             - cloudtrail.amazonaws.com
-  #           Action:
-  #             - 'sts:AssumeRole'
-  #     Policies:
-  #       - 
-  #         PolicyName: AllowCreateLogStreams
-  #         PolicyDocument:
-  #           Version: 2012-10-17
-  #           Statement:
-  #             - 
-  #               Effect: Allow
-  #               Action: 
-  #                 - 'logs:CreateLogStream'
-  #                 - 'logs:PutLogEvents'
-  #               Resource: '*'
-                  
-  # #cloudwatch logs for exchange bucket 
-  # ObjectsTrailLog:
-  #   Type: AWS::Logs::LogGroup
-  #   Properties:
-  #     RetentionInDays: 30
-
   #cloudtrail for object read/write operations 
   ObjectsTrail:
+    DependsOn: ExchangeCloudTrailBucketPolicy
     Type: AWS::CloudTrail::Trail
     Properties: 
       IsLogging: true

@@ -13,13 +13,13 @@
 
 echo caller identity is $(aws sts get-caller-identity --query Arn)
 
-AWS_REGION="us-west-2"
-MEDIA_EXCHNAGE_BUCKET_NAME="mxc-publisher-us-west-2-dev-latest-657474709706"
-KMS_KEY_ID="arn:aws:kms:us-west-2:534054367376:key/5e2f517a-7d76-48c7-b444-c72c211cfcda"
-SUBSCRIBER_CANNONICAL_ID="6a4b6571fc44c04d8cd85b35525373fb505dc69cfc5d9b509163d45825d62436"
+AWS_REGION="us-east-2"
+MEDIA_EXCHNAGE_BUCKET_NAME="mxc-publisher-us-east-2-dev-latest-702582666339" ## bucketname can be found in the stack outputs section of publisher stack. 
+KMS_KEY_ID="arn:aws:kms:us-east-2:xxxxx:key/xxxx" ## keyid can be found in the stack outputs section of agreement stack. 
+SUBSCRIBER_CANNONICAL_ID="abcdef..." ## Cannonical Account Id used for subscriber setup
 
 ORDER_ID='ORD-245778'
-PREFIX='holyflix'
+PREFIX='1-1' ## prefix used in subscriber setup
 FILE_NAME='media-file.mp4'
 echo generating a 1MB file
 dd if=/dev/random of=/tmp/$FILE_NAME count=1024 bs=1024 2>/dev/null
@@ -31,9 +31,9 @@ aws s3api put-object --bucket $MEDIA_EXCHNAGE_BUCKET_NAME --key $PREFIX/$ORDER_I
 
 #read 
 
-PRODUCER_EXTERNAL_ID="prodey+publisher@amazon.com"
-MXC_ROLE_ARN="arn:aws:iam::534054367376:role/media-exchange-publisher-1-CrossAccountRole-PSPXJ7EC0FJ9"
-SESSION_NAME="mxc-read-session"
+PRODUCER_EXTERNAL_ID="abc@def.com" ## email used in producer setup
+MXC_ROLE_ARN="arn:aws:iam::xxxxxx:role/xxx" ## role arn can be found in the stack outputs section of publisher stack. 
+SESSION_NAME="mxc-read-session" ## any name, only for tracking/collating log data
 
 echo assuming cross account role in media exchange
 resp=$(aws sts assume-role --role-arn $MXC_ROLE_ARN --role-session-name $SESSION_NAME --external-id $PRODUCER_EXTERNAL_ID)
@@ -51,7 +51,7 @@ ts=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
 echo sending events
 
-EVENT_BUS_NAME='mxc-events-534054367376-us-west-2-dev-latest'
+EVENT_BUS_NAME='mxc-events-xxxx-us-east-2-dev-latest' # event bus name : can be found in the stack outputs section of core stack. 
 aws --region $AWS_REGION events put-events --entries "Time=$ts,Source=mxc.publisher,DetailType=Event from publisher,Detail='{
     \"eventVersion\": \"latest\",
     \"eventTime\": \"$ts\",
