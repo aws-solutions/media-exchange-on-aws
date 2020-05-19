@@ -13,12 +13,12 @@ echo caller identity is $(aws sts get-caller-identity --query Arn)
 
 echo copying from exchange
 
-MEDIA_EXCHNAGE_BUCKET_NAME="mxc-publisher-us-west-2-dev-latest-657474709706"
+PUBLISHER_BUCKET_NAME="mxc-publisher-us-west-2-dev-latest-657474709706"
 ORDER_ID='ORD-245778'
 PREFIX='holyflix'
 FILE_NAME='media-file.mp4'
 
-aws s3api get-object --bucket $MEDIA_EXCHNAGE_BUCKET_NAME --key $PREFIX/$ORDER_ID/$FILE_NAME /tmp/media-file.mp4
+aws s3api get-object --bucket $PUBLISHER_BUCKET_NAME --key $PREFIX/$ORDER_ID/$FILE_NAME /tmp/media-file.mp4
 
 echo checksum is $(openssl dgst -sha256 /tmp/media-file.mp4 | cut -d' ' -f2)
 
@@ -39,6 +39,6 @@ export AWS_SESSION_TOKEN=$(echo $resp | jq -r .Credentials.SessionToken)
 echo caller identity is $(aws sts get-caller-identity --query Arn)
 
 echo getting list of objects
-aws s3api list-objects-v2 --bucket $MEDIA_EXCHNAGE_BUCKET_NAME --prefix $PREFIX --fetch-owner
+aws s3api list-objects-v2 --bucket $PUBLISHER_BUCKET_NAME --prefix $PREFIX --fetch-owner
 
 
