@@ -96,7 +96,6 @@ AWS_REGION=" <  eg: us-west-2 > " ## the region where Media Exchange is deployed
 PUBLISHER_BUCKET_NAME="< bucket name >" ## bucketname can be found in the stack outputs section of publisher stack. 
 KMS_KEY_ID="arn:aws:kms:pppp:xxxxx:key/xxxx" ## keyid can be found in the stack outputs section of agreement stack. 
 SUBSCRIBER_CANNONICAL_ID="abcdef..." ## Cannonical Account Id used for subscriber setup
-SUBSCRIBER_EXTERNAL_ID="abc@def.com" ## email during in subscriber setup
 PUBLISHER_EXTERNAL_ID="abc@def.com" ## email used in pubisher setup
 PUBLISHER_ROLE_ARN="arn:aws:iam::xxxxxx:role/xxx" ## role arn can be found in the stack outputs section of publisher stack. 
 SESSION_NAME="mxc-read-session" ## any name, only for tracking/collating log data
