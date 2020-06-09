@@ -44,10 +44,6 @@ Metadata:
           - SubscriberCannonicalAccountID
           - Email
           - Prefix
-    # TODO:
-    # ParameterLabels: 
-    #   VPCID: 
-    #     default: "Which VPC should this be deployed to?"
 
 Parameters:
   Environment:
@@ -62,15 +58,15 @@ Parameters:
   SubscriberAccountId:
     Type: String
     Description: The accountId of the Subscriber.
-    # TODO: Regex
+    ConstraintDescription: AccountId is a 12 digit number
+    AllowedPattern: '^\d{12}$'
+
   CannonicalAccountID:
     Type: String
     Description: The Cannonical Account ID of the subscriber.
-    # TODO: Regex
   Email:
     Type: String
     Description: The email address for the transfer notifications.
-    # TODO: Regex
   Prefix:
     Type: String
     Description: A prefix for subscriber account
@@ -161,7 +157,7 @@ Resources:
                 Action:
                   - s3:ListBucket
                 Resource: 
-                  Fn::Sub: arn:aws:s3:::mxc-publisher-${AWS::Region}-${Environment}-${Version}-*
+                  Fn::Sub: arn:aws:s3:::mxc-publisher-${AWS::AccountId}-${AWS::Region}-${Environment}-${Version}-*
                 Condition: 
                   StringEquals: 
                     s3:prefix: 

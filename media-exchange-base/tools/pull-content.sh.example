@@ -13,10 +13,9 @@ echo caller identity is $(aws sts get-caller-identity --query Arn)
 echo copying from exchange
 
 ##
-PUBLISHER_BUCKET_NAME="mxc-publisher-us-east-2-dev-latest-702582666339" ## bucketname can be found in the stack outputs section of publisher stack. 
-ORDER_ID='ORD-245778' ## optional
-PREFIX='1-1' ## prefix used in subscriber setup
-FILE_NAME='media-file.mp4'
+PUBLISHER_BUCKET_NAME="mxc-publisher-xxxx" ## bucketname can be found in the stack outputs section of publisher stack. 
+PREFIX='prefix' ## prefix used in subscriber setup
+FILE_NAME='filename' ## filename from push-content script
 
 aws s3api get-object --bucket $PUBLISHER_BUCKET_NAME --key $PREFIX/$ORDER_ID/$FILE_NAME /tmp/media-file.mp4
 

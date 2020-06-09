@@ -1,41 +1,61 @@
-all: clean configure deploy
+all: help checkenv
 
-version ?= latest
-env ?= dev
-name = mxc
+help: 
+	@echo 'deploys Media Exchange cloudformation templates. It uses AWS credentials to deploy the stacks. It checks if the credentials are set by AWS_ACC* environment variables.'
 
-ifndef AWS_REGION
-$(error AWS_REGION is not set)
-endif
+VERSION ?= latest
+ENV ?= dev
+STACKPREFIX = mxc
+CFNBUCKET ?= change_me 
 
 
-artifactbucket = mxc-artifacts-${env}-${AWS_REGION}-$(shell aws sts get-caller-identity --query Account --output text)
-
-configure:
-	@command -v aws >/dev/null 2>&1 || { echo >&2 "awscli is not installed. Please see install guide here: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html"; exit 1; }
+ndef = $(if $(value $(1)),,$(error $(1) not set))
+checkenv: ## checks environment
+	$(call ndef,AWS_REGION)
+	$(call ndef,AWS_REGION)
+	$(call ndef,CFNBUCKET)
+	@command -v aws >/dev/null 2>&1 || ( echo >&2 "awscli is not installed. Please see install guide here: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html"; exit 1; )
+    
+configure: checkenv
 	@mkdir -p build
 
-# packages cloudformation
-%.template: deployment/% 
+%.template: deployment/% ## packages cloudformation
 	@echo packaging $@
-	@aws --region ${AWS_REGION} cloudformation package --template-file $< --output-template-file build/$@  --s3-bucket ${artifactbucket} 1>/dev/null
+	@aws --region $(AWS_REGION) cloudformation package --template-file $< --output-template-file build/$@  --s3-bucket $(CFNBUCKET) 1>/dev/null
 	
-${name}-%-${env}-stack: %.yaml.template
-	@echo deploying $@
-	@aws --region ${AWS_REGION} cloudformation deploy --template-file build/$< --stack-name $@ --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --s3-bucket ${artifactbucket} 1>/dev/null
+core: core.yaml.template ## deploys core
+	@echo deploying $@ at $(AWS_REGION)
+	@aws --region $(AWS_REGION) cloudformation deploy --template-file build/$< --stack-name $(STACKPREFIX)-core-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --s3-bucket $(CFNBUCKET) 1>/dev/null
 
-deploy: ${name}-core-${env}-stack
 
-# Samples
-# make publisher NAME=1 PARAMETERS="PublisherAccountId=702582666339 Email=prodey+publisher@amazon.com"
-# make subscriber NAME=1 PARAMETERS="SubscriberAccountId=818349722120 Email=prodey+subscriber@amazon.com Prefix=One/ CannonicalAccountID=73bdba08d78f9958eda14541b6bbe42178fcdd767cc1502b5ee397f3687efcac"
-# make agreement NAME=1-1 PARAMETERS="PublisherAccountId=702582666339 SubscriberAccountId=818349722120"
+publisher: publisher.yaml.template ## deploys a publisher
+	$(call ndef,PUBLISHER_NAME)
+	$(call ndef,PUBLISHER_ACCOUNT_ID)
 
-%: %.yaml.template
-	@echo deploying $@ with ${PARAMETERS}
-	@aws --region ${AWS_REGION} cloudformation deploy --template-file build/$< --stack-name ${name}-$@-${NAME}-${env}-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --s3-bucket ${artifactbucket} --parameter-overrides ${PARAMETERS} 1>/dev/null
+	@echo deploying $@ at $(AWS_REGION)
+	@aws --region $(AWS_REGION) cloudformation deploy --template-file build/$< --stack-name $(STACKPREFIX)-publisher-$(PUBLISHER_NAME)-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --s3-bucket $(CFNBUCKET) --parameter-overrides PublisherAccountId=$(PUBLISHER_ACCOUNT_ID) 1>/dev/null
 
-clean:
+
+subscriber: subscriber.yaml.template ## deploys a subscriber
+	$(call ndef,SUBSCRIBER_NAME)
+	$(call ndef,SUBSCRIBER_ACCOUNT_ID)
+	$(call ndef,SUBSCRIBER_CANNONICAL_ACCOUNT_ID)
+	$(call ndef,SUBSCRIBER_EMAIL)
+
+	@echo deploying $@ at $(AWS_REGION)
+	@aws --region $(AWS_REGION) cloudformation deploy --template-file build/$< --stack-name $(STACKPREFIX)-subscriber-$(SUBSCRIBER_NAME)-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --s3-bucket $(CFNBUCKET) --parameter-overrides SubscriberAccountId=$(SUBSCRIBER_ACCOUNT_ID) CannonicalAccountID=$(SUBSCRIBER_CANNONICAL_ACCOUNT_ID) Email=$(SUBSCRIBER_EMAIL) Prefix=$(SUBSCRIBER_NAME) 1>/dev/null
+
+agreement: agreement.yaml.template ## deploys an agreement
+	$(call ndef,SUBSCRIBER_NAME)
+	$(call ndef,SUBSCRIBER_ACCOUNT_ID)
+	$(call ndef,PUBLISHER_NAME)
+	$(call ndef,PUBLISHER_ACCOUNT_ID)
+
+	@echo deploying $@ at $(AWS_REGION)
+	@aws --region $(AWS_REGION) cloudformation deploy --template-file build/$< --stack-name $(STACKPREFIX)-agreement-$(PUBLISHER_NAME)-$(SUBSCRIBER_NAME)-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --s3-bucket $(CFNBUCKET) --parameter-overrides SubscriberAccountId=$(SUBSCRIBER_ACCOUNT_ID) PublisherAccountId=$(PUBLISHER_ACCOUNT_ID) 1>/dev/null
+
+
+clean: ## clears the build directory
 	@rm -rf build/*
 
-.PHONY: configure build clean
+.PHONY: checkenv configure

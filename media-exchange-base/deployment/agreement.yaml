@@ -42,12 +42,7 @@ Metadata:
         Parameters: 
           - SubscriberAccountId
           - PublisherAccountId
-         
-    # TODO:
-    # ParameterLabels: 
-    #   VPCID: 
-    #     default: "Which VPC should this be deployed to?"
-
+ 
 Parameters:
   Environment:
     Type: String
@@ -61,12 +56,14 @@ Parameters:
   PublisherAccountId:
     Type: String
     Description: The accountId of the publisher.
-    # TODO: Regex
+    ConstraintDescription: AccountId is a 12 digit number
+    AllowedPattern: '^\d{12}$'
 
   SubscriberAccountId:
     Type: String
     Description: The accountId of the Subscriber.
-    # TODO: Regex
+    ConstraintDescription: AccountId is a 12 digit number
+    AllowedPattern: '^\d{12}$'
 
 Resources:
 

@@ -14,29 +14,26 @@
 echo caller identity is $(aws sts get-caller-identity --query Arn)
 
 AWS_REGION="us-east-2" ## the region where Media Exchange is deployed
-PUBLISHER_BUCKET_NAME="mxc-publisher-us-east-2-dev-latest-702582666339" ## bucketname can be found in the stack outputs section of publisher stack. 
+PUBLISHER_BUCKET_NAME="mxc-publisher-xxx" ## bucketname can be found in the stack outputs section of publisher stack. 
 KMS_KEY_ID="arn:aws:kms:us-east-2:xxxxx:key/xxxx" ## keyid can be found in the stack outputs section of agreement stack. 
 SUBSCRIBER_CANNONICAL_ID="abcdef..." ## Cannonical Account Id used for subscriber setup
+PREFIX='prefix' ## prefix used in subscriber setup
 
-ORDER_ID='ORD-245778'
-PREFIX='1-1' ## prefix used in subscriber setup
-FILE_NAME='media-file.mp4'
+FILE_NAME='filename'
 echo generating a 1MB file
 dd if=/dev/random of=/tmp/$FILE_NAME count=1024 bs=1024 2>/dev/null
 CHECKSUM=$(openssl dgst -sha256 /tmp/$FILE_NAME | cut -d' ' -f2)
 echo checksum is $CHECKSUM
 
 echo copying to exchange 
-aws s3api put-object --bucket $PUBLISHER_BUCKET_NAME --key $PREFIX/$ORDER_ID/$FILE_NAME  --body /tmp/$FILE_NAME   --server-side-encryption aws:kms --ssekms-key-id $KMS_KEY_ID --grant-read id=$SUBSCRIBER_CANNONICAL_ID
+aws s3api put-object --bucket $PUBLISHER_BUCKET_NAME --key $PREFIX/$FILE_NAME  --body /tmp/$FILE_NAME   --server-side-encryption aws:kms --ssekms-key-id $KMS_KEY_ID --grant-read id=$SUBSCRIBER_CANNONICAL_ID
 
 #read 
-
-PUBLISHER_EXTERNAL_ID="abc@def.com" ## email used in producer setup
 PUBLISHER_ROLE_ARN="arn:aws:iam::xxxxxx:role/xxx" ## role arn can be found in the stack outputs section of publisher stack. 
 SESSION_NAME="mxc-read-session" ## any name, only for tracking/collating log data
 
 echo assuming cross account role in media exchange
-resp=$(aws sts assume-role --role-arn $PUBLISHER_ROLE_ARN --role-session-name $SESSION_NAME --external-id $PUBLISHER_EXTERNAL_ID)
+resp=$(aws sts assume-role --role-arn $PUBLISHER_ROLE_ARN --role-session-name $SESSION_NAME)
 
 export AWS_ACCESS_KEY_ID=$(echo $resp | jq -r .Credentials.AccessKeyId)
 export AWS_SECRET_ACCESS_KEY=$(echo $resp | jq -r .Credentials.SecretAccessKey)
@@ -51,9 +48,10 @@ ts=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
 echo sending events
 
-## check CLI version 
 
-EVENT_BUS_NAME="mxc-events-xxxx-us-east-2-dev-latest" # event bus name : can be found in the stack outputs section of core stack. 
+EVENT_BUS_NAME="mxc-events-xxxx-" # event bus name: can be found in the stack outputs section of core stack. 
+## This is an example event. The solution does not enforce a schema, but will route based on the  subscriberCannonicalAccountId in the detail. So that is the only required field. 
+
 aws --region $AWS_REGION events put-events --entries "Time=$ts,Source=mxc.publisher,DetailType=Event from publisher,Detail='{
     \"eventVersion\": \"latest\",
     \"eventTime\": \"$ts\",
@@ -65,7 +63,7 @@ aws --region $AWS_REGION events put-events --entries "Time=$ts,Source=mxc.publis
     \"assets\": {
         \"bucket\": \"$PUBLISHER_BUCKET_NAME\",
         \"keys\": {
-           \"$CHECKSUM\" : \"$PREFIX/$ORDER_ID/$FILE\"
+           \"$CHECKSUM\" : \"$PREFIX/$FILE\"
         }
     },
     \"eventID\": \"1b0c5952-91c6-498d-bf5f-95c250920d8b\",

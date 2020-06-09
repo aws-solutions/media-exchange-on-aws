@@ -89,6 +89,42 @@ Resources:
               StringEquals:
                 s3:x-amz-acl: "bucket-owner-full-control"
 
+  ExchangeCloudTrailLogGroup: 
+    Type: AWS::Logs::LogGroup
+    Properties: 
+      RetentionInDays: 7
+
+  ExchangeCloudTrailLogGroupRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Description: Cloudtrail role for cloudwatch logs.
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal: 
+              Service: cloudtrail.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        -
+          PolicyName: mxc-cw-ct
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - logs:CreateLogStream
+                Resource: 
+                  Fn::Sub: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${ExchangeCloudTrailLogGroup}:log-stream:${AWS::AccountId}_CloudTrail_${AWS::Region}*
+              -
+                Effect: Allow
+                Action:
+                  - logs:PutLogEvents
+                Resource: 
+                  Fn::Sub: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${ExchangeCloudTrailLogGroup}:log-stream:${AWS::AccountId}_CloudTrail_${AWS::Region}*
+
   #cloudtrail for object read/write operations 
   ObjectsTrail:
     DependsOn: ExchangeCloudTrailBucketPolicy
@@ -107,10 +143,10 @@ Resources:
           ReadWriteType: All
       S3BucketName: 
         Ref: ExchangeCloudTrailBucket
-      # CloudWatchLogsLogGroupArn:
-      #   Fn::GetAtt: ObjectsTrailLog.Arn
-      # CloudWatchLogsRoleArn:
-      #   Fn::GetAtt: ExchangeObjectsTrailLogRole.Arn
+      CloudWatchLogsLogGroupArn:
+        Fn::GetAtt: ExchangeCloudTrailLogGroup.Arn
+      CloudWatchLogsRoleArn:
+        Fn::GetAtt: ExchangeCloudTrailLogGroupRole.Arn
   
   EventBus:
     Type: AWS::Events::EventBus
