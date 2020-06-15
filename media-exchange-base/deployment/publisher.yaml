@@ -1,19 +1,31 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: 'AWS::Serverless-2016-10-31'
 Description: >
   Cloudformation template to setup publisher in media exchange.
 
 Outputs:
-  PublisherRole:
-    Description: Publisher Role to perform List* operations on the bucket
+  PublisherAccountId:
+    Description: Publisher's AWS AccountId
     Value:
-      Fn::GetAtt: CrossAccountRole.Arn
+      Ref: PublisherAccountId
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-accountid
   PublisherBucket:
     Description: Publisher Bucket
     Value:
       Ref: PublisherBucket
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-bucketname
+  PublisherRole:
+    Description: Publisher Role to perform List* operations on the bucket
+    Value:
+      Fn::GetAtt: CrossAccountRole.Arn
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
 
-Metadata: 
+Metadata:
 
   License:
     Description: |
@@ -32,30 +44,30 @@ Metadata:
       OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
       SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-  AWS::CloudFormation::Interface: 
-    ParameterGroups: 
-      - 
-        Label: 
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
           default: "Deployment Configuration"
-        Parameters: 
+        Parameters:
           - Environment
-          - Version
-      - 
-        Label: 
+      -
+        Label:
           default: "Publisher Configuration"
-        Parameters: 
+        Parameters:
+          - PublisherName
           - PublisherAccountId
-    
+
 
 Parameters:
   Environment:
     Type: String
     Description: Deployment Environment Name
     Default: dev
-  Version: 
+
+  PublisherName:
     Type: String
-    Description: Release version
-    Default: latest
+    Description: Name of the publisher
 
   PublisherAccountId:
     Type: String
@@ -68,105 +80,105 @@ Resources:
   PublisherBucket:
     Type: AWS::S3::Bucket
     Properties:
+
       BucketName:
-        Fn::Sub: mxc-publisher-${AWS::AccountId}-${AWS::Region}-${Environment}-${Version}-${PublisherAccountId}
-      
+        Fn::Sub: mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-${PublisherAccountId}
+
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
-        
-      
-      VersioningConfiguration: 
+
+      VersioningConfiguration:
         Status: Enabled
 
       # objects must be encrypted with a CMK
-      # we do not specify a default encryption configuration 
-      # rather enforce it from the bucket policy that 
-      # a kms key must be used. 
-        
-      # Objects must be locked for the duration of the agreement 
+      # we do not specify a default encryption configuration
+      # rather enforce it from the bucket policy that
+      # a kms key must be used.
+
+      # Objects must be locked for the duration of the agreement
       # we do not specify a default lock configuration. But we
       # expect the publishers the lock the objects for the duration
-      # applicable for the agreement  
+      # applicable for the agreement
       # we also stop explicit deletes from by a bucket policy.
 
       #Expire objects after the lifecycle period
       LifecycleConfiguration:
-        Rules: 
-          - 
+        Rules:
+          -
             Id: Expire
             Status: Enabled
             ExpirationInDays: 5
-          
-          - 
+
+          -
             Id: AutoRemove
             Status: Enabled
             NoncurrentVersionExpirationInDays: 10
 
-          - 
+          -
             Id: CleanupIncompleteUploads
             Status: Enabled
-            AbortIncompleteMultipartUpload: 
+            AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 2
-            
-    
+
+
     UpdateReplacePolicy: Delete
     DeletionPolicy: Delete
-  
-  #bucket policy  
+
+  #bucket policy
   PublisherBucketPolicy:
     Type: AWS::S3::BucketPolicy
-    Properties: 
-      Bucket: 
-        Ref: PublisherBucket  
-      PolicyDocument: 
+    Properties:
+      Bucket:
+        Ref: PublisherBucket
+      PolicyDocument:
         Version: 2012-10-17
         Statement:
           # deny direct deletes, updates are allowed
-          - 
+          -
             Sid: "DenyDeletes"
-            Action: 
+            Action:
               - "s3:DeleteObject"
               - "s3:DeleteObjectVersion"
             Effect: "Deny"
-            Resource: 
+            Resource:
               - Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
             Principal: "*"
 
           # TLS only
-          - 
+          -
             Sid: "RequireTLS"
             Action:
               - "s3:*"
             Effect: "Deny"
-            Resource: 
+            Resource:
               - Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
             Principal: "*"
-            Condition: 
-              Bool: 
+            Condition:
+              Bool:
                 aws:SecureTransport: false
 
           # require KMS for put
-          - 
+          -
             Sid: "DenyIncorrectEncryptionHeader"
-            Action: 
+            Action:
               - "s3:PutObject"
             Effect: "Deny"
-            Resource: 
+            Resource:
               - Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
             Principal: "*"
-            Condition: 
-              StringNotEquals: 
+            Condition:
+              StringNotEquals:
                 s3:x-amz-server-side-encryption: aws:kms
-              
-          - 
+
+          -
             Sid: "DenyNoCMKHeader"
-            Action: 
+            Action:
               - "s3:PutObject"
             Effect: "Deny"
-            Resource: 
+            Resource:
               - Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
             Principal: "*"
             Condition:
@@ -191,8 +203,8 @@ Resources:
               - s3:ListMultipartUploadParts
             Resource:
               Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
-            Principal: 
-              AWS: 
+            Principal:
+              AWS:
                 - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
           -
             Sid: "AllowBasicConsole"
@@ -202,10 +214,10 @@ Resources:
               - s3:GetBucketVersioning
             Resource:
               Fn::Sub: arn:aws:s3:::${PublisherBucket}
-            Principal: 
-              AWS: 
+            Principal:
+              AWS:
                 - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
-              
+
   CrossAccountRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -240,11 +252,13 @@ Resources:
                   - s3:ListBucketMultipartUploads
                 Resource:
                   Fn::Sub: arn:aws:s3:::${PublisherBucket}
-              - 
+              -
                 Effect: Allow
-                Action: 
+                Action:
                   - events:PutEvents
-                Resource: 
-                  - Fn::Sub: arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/mxc-events-${AWS::AccountId}-${AWS::Region}-${Environment}-${Version}
-  
-  
+                Resource:
+                  - Fn::Join:
+                    - /
+                    - - Fn::Sub: arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus
+                      - Fn::ImportValue:
+                          Fn::Sub: mxc-${AWS::Region}-${Environment}-events

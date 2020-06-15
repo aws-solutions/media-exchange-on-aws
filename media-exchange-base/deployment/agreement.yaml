@@ -1,16 +1,73 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: 'AWS::Serverless-2016-10-31'
 Description: >
-  Cloudformation template for media exchange consumer and producer agreement setup.
+  Cloudformation template for media exchange publisher and subscriber shared CMK setup.
 
 Outputs:
-  KMSKeyId:
-    Description: KMS Key Arn 
+  SubscriberOnboardingSummary:
+    Description: Configuration information for subscriber as key-value
     Value:
-      Fn::GetAtt: CMK.Arn
+      Fn::Join:
+        - ' '
+        - - Fn::Sub: NAME=${SubscriberName}
+          - Fn::Sub: AWS_REGION=${AWS::Region}
+          - Fn::Join:
+            - ''
+            - - BUCKET_NAME=
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-bucketname
+          - Fn::Join:
+            - ''
+            - - PREFIX=
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-prefix
+          - Fn::Join:
+            - ''
+            - - ROLE=
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-role
 
-Metadata: 
-  
+  PublisherOnboardingSummary:
+    Description: Configuration information for publisher as key-value
+    Value:
+      Fn::Join:
+        - ' '
+        - - Fn::Sub: NAME=${PublisherName}
+          - Fn::Sub: AWS_REGION=${AWS::Region}
+          - Fn::Join:
+            - ''
+            - - BUCKET_NAME=
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-bucketname
+
+          - Fn::Join:
+            - ''
+            - - SUBSCRIBER_PREFIX=
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-prefix
+
+          - Fn::Join:
+            - ''
+            - - SUBSCRIBER_CANNONICAL_ACCOUNTID=
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-cannonicalaccountid
+
+          - Fn::Sub: KMSMANAGEDMASTERKEY=${CMK.Arn}
+
+          - Fn::Join:
+            - ''
+            - - ROLE=
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
+
+          - Fn::Join:
+            - ''
+            - - EVENT_BUS_NAME=
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-events
+
+
+Metadata:
+
   License:
     Description: |
       Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
@@ -28,42 +85,35 @@ Metadata:
       OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
       SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-  AWS::CloudFormation::Interface: 
-    ParameterGroups: 
-      - 
-        Label: 
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
           default: "Deployment Configuration"
-        Parameters: 
+        Parameters:
           - Environment
-          - Version
-      - 
-        Label: 
+      -
+        Label:
           default: "Agreement Configuration"
-        Parameters: 
-          - SubscriberAccountId
-          - PublisherAccountId
- 
+        Parameters:
+          - PublisherName
+          - SubscriberName
+
+
 Parameters:
   Environment:
     Type: String
     Description: Deployment Environment Name
     Default: dev
-  Version: 
-    Type: String
-    Description: Release version
-    Default: latest
 
-  PublisherAccountId:
+  PublisherName:
     Type: String
-    Description: The accountId of the publisher.
-    ConstraintDescription: AccountId is a 12 digit number
-    AllowedPattern: '^\d{12}$'
+    Description: The name of the publisher, case sensetive, as registerd in this Media Exchange deployment.
 
-  SubscriberAccountId:
+  SubscriberName:
     Type: String
-    Description: The accountId of the Subscriber.
-    ConstraintDescription: AccountId is a 12 digit number
-    AllowedPattern: '^\d{12}$'
+    Description: The name of the subscriber, case sensetive, as registerd in this Media Exchange deployment.
+
 
 Resources:
 
@@ -74,18 +124,19 @@ Resources:
       Enabled: true
       EnableKeyRotation: true
       PendingWindowInDays: 7
-      KeyPolicy: 
-        Version: '2012-10-17'
-        Id: default-key-policy
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: node-key-policy
         Statement:
-          - 
+          -
             Sid: KeyManagement
             Effect: Allow
             Principal:
               AWS:
                 - Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
-            Action: 
-              # - kms:Create*
+                # - Fn::Sub: arn:aws:iam::${AWS::AccountId}:role/mxc-${Environment}-${AWS::Region}-sc-product-role
+            Action:
+              - kms:Create*
               - kms:Describe*
               - kms:Enable*
               - kms:List*
@@ -100,24 +151,34 @@ Resources:
               - kms:ScheduleKeyDeletion
               - kms:CancelKeyDeletion
             Resource: '*'
-          - 
-            Sid: Consumer
+          -
+            Sid: SubscriberAccess
             Effect: Allow
             Principal:
               AWS:
-                - Fn::Sub: arn:aws:iam::${SubscriberAccountId}:root
-                - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
-            Action: 
+                - Fn::Join:
+                  - ':'
+                  - - 'arn:aws:iam:'
+                    - Fn::ImportValue:
+                        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-accountid
+                    - root
+
+            Action:
               - kms:Decrypt
               - kms:DescribeKey
             Resource: '*'
-          - 
-            Sid: Producer
+          -
+            Sid: PublisherAccess
             Effect: Allow
             Principal:
               AWS:
-                - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
-            Action: 
+                - Fn::Join:
+                  - ':'
+                  - - 'arn:aws:iam:'
+                    - Fn::ImportValue:
+                        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-accountid
+                    - root
+            Action:
               - kms:Encrypt
               - kms:Decrypt
               - kms:ReEncrypt*

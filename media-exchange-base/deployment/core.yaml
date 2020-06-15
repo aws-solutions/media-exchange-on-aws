@@ -1,51 +1,48 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: 'AWS::Serverless-2016-10-31'
-Description: > 
-  Cloudformation template for media exchange. 
+Description: >
+  - Cloudformation template for media exchange core.
 
-Metadata: 
-  
+Metadata:
+
   License:
     Description: |
-      Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+      Copyright 2020 Amazon.com Inc. or its affiliates. All Rights Reserved.
 
-      Permission is hereby granted, free of charge, to any person obtaining a copy of this
-      software and associated documentation files (the "Software"), to deal in the Software
-      without restriction, including without limitation the rights to use, copy, modify,
-      merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+      Permission is hereby granted free of charge to any person obtaining a copy of this
+      software and associated documentation files (the Software) to deal in the Software
+      without restriction including without limitation the rights to use copy modify
+      merge publish distribute sublicense and/or sell copies of the Software and to
       permit persons to whom the Software is furnished to do so.
 
-      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
-      INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+      THE SOFTWARE IS PROVIDED AS IS WITHOUT WARRANTY OF ANY KIND EXPRESS OR IMPLIED
+      INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY FITNESS FOR A
       PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
-      HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
-      OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+      HOLDERS BE LIABLE FOR ANY CLAIM DAMAGES OR OTHER LIABILITY WHETHER IN AN ACTION
+      OF CONTRACT TORT OR OTHERWISE ARISING FROM OUT OF OR IN CONNECTION WITH THE
       SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-  AWS::CloudFormation::Interface: 
-    ParameterGroups: 
-      - 
-        Label: 
-          default: "Deployment Configuration"
-        Parameters: 
+  AWS::cloudformation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: Deployment Configuration
+        Parameters:
           - Environment
-          - Version
-      
+
 Parameters:
   Environment:
     Type: String
     Description: Deployment Environment Name
     Default: dev
-  Version: 
-    Type: String
-    Description: Release version
-    Default: latest
 
 Outputs:
   EventBusName:
     Description: Event Bus Name
     Value:
       Ref: EventBus
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-events
 
 Resources:
 
@@ -53,45 +50,45 @@ Resources:
   ExchangeCloudTrailBucket:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
-    Properties: 
+    Properties:
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
 
-  ExchangeCloudTrailBucketPolicy: 
+  ExchangeCloudTrailBucketPolicy:
     Type: AWS::S3::BucketPolicy
-    Properties: 
-      Bucket: 
+    Properties:
+      Bucket:
         Ref: ExchangeCloudTrailBucket
-      PolicyDocument: 
-        Version: "2012-10-17"
-        Statement: 
-          - 
-            Sid: "AWSCloudTrailAclCheck"
-            Effect: "Allow"
-            Principal: 
-              Service: "cloudtrail.amazonaws.com"
-            Action: 
-              - "s3:GetBucketAcl"
-            Resource: 
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Sid: AWSCloudTrailAclCheck
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action:
+              - s3:GetBucketAcl
+            Resource:
               Fn::Sub: arn:aws:s3:::${ExchangeCloudTrailBucket}
-          - 
-            Sid: "AWSCloudTrailWrite"
-            Effect: "Allow"
-            Principal: 
-              Service: "cloudtrail.amazonaws.com"
-            Action: "s3:PutObject"
+          -
+            Sid: AWSCloudTrailWrite
+            Effect: Allow
+            Principal:
+              Service: cloudtrail.amazonaws.com
+            Action: s3:PutObject
             Resource:
               Fn::Sub: arn:aws:s3:::${ExchangeCloudTrailBucket}/AWSLogs/${AWS::AccountId}/*
-            Condition: 
+            Condition:
               StringEquals:
-                s3:x-amz-acl: "bucket-owner-full-control"
+                s3:x-amz-acl: bucket-owner-full-control
 
-  ExchangeCloudTrailLogGroup: 
+  ExchangeCloudTrailLogGroup:
     Type: AWS::Logs::LogGroup
-    Properties: 
+    Properties:
       RetentionInDays: 7
 
   ExchangeCloudTrailLogGroupRole:
@@ -103,7 +100,7 @@ Resources:
         Statement:
           -
             Effect: Allow
-            Principal: 
+            Principal:
               Service: cloudtrail.amazonaws.com
             Action: 'sts:AssumeRole'
       Policies:
@@ -116,40 +113,41 @@ Resources:
                 Effect: Allow
                 Action:
                   - logs:CreateLogStream
-                Resource: 
+                Resource:
                   Fn::Sub: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${ExchangeCloudTrailLogGroup}:log-stream:${AWS::AccountId}_CloudTrail_${AWS::Region}*
               -
                 Effect: Allow
                 Action:
                   - logs:PutLogEvents
-                Resource: 
+                Resource:
                   Fn::Sub: arn:aws:logs:${AWS::Region}:${AWS::AccountId}:log-group:${ExchangeCloudTrailLogGroup}:log-stream:${AWS::AccountId}_CloudTrail_${AWS::Region}*
 
-  #cloudtrail for object read/write operations 
+  #cloudtrail for object read/write operations
   ObjectsTrail:
     DependsOn: ExchangeCloudTrailBucketPolicy
     Type: AWS::CloudTrail::Trail
-    Properties: 
+    Properties:
       IsLogging: true
       EnableLogFileValidation: true
       IncludeGlobalServiceEvents: false
       IsMultiRegionTrail: false
-      EventSelectors: 
-        - DataResources: 
+      EventSelectors:
+        - DataResources:
             - Type: 'AWS::S3::Object'
               Values:
                 - 'arn:aws:s3:::'
           IncludeManagementEvents: true
           ReadWriteType: All
-      S3BucketName: 
+      S3BucketName:
         Ref: ExchangeCloudTrailBucket
       CloudWatchLogsLogGroupArn:
         Fn::GetAtt: ExchangeCloudTrailLogGroup.Arn
       CloudWatchLogsRoleArn:
         Fn::GetAtt: ExchangeCloudTrailLogGroupRole.Arn
-  
+
+  #central eventbus
   EventBus:
     Type: AWS::Events::EventBus
-    Properties: 
-      Name: 
-        Fn::Sub: mxc-events-${AWS::AccountId}-${AWS::Region}-${Environment}-${Version}
+    Properties:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-events

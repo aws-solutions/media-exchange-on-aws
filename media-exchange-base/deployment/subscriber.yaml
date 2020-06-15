@@ -1,15 +1,38 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: 'AWS::Serverless-2016-10-31'
 Description: >
   Cloudformation template for media exchange subscriber setup.
 
 Outputs:
+  SubscriberAccountId:
+    Description: Subscriber's AWS AccountId
+    Value:
+      Ref: SubscriberAccountId
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-accountid
+  SubscriberCannonicalAccountID:
+    Description: Subscriber's Cannonical AccountId
+    Value:
+      Ref: CannonicalAccountID
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-cannonicalaccountid
+  SubscriberPrefix:
+    Description: Subscriber's foldername for receiving content
+    Value:
+      Ref: Prefix
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-prefix
   SubscriberRole:
     Description: Subscriber Role to perform List* operations on the bucket
     Value:
       Fn::GetAtt: CrossAccountRole.Arn
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-role
 
-Metadata: 
+Metadata:
 
   License:
     Description: |
@@ -28,32 +51,27 @@ Metadata:
       OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
       SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
 
-  AWS::CloudFormation::Interface: 
-    ParameterGroups: 
-      - 
-        Label: 
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
           default: "Deployment Configuration"
-        Parameters: 
+        Parameters:
           - Environment
-          - Version
-      - 
-        Label: 
+      -
+        Label:
           default: "Subscriber Configuration"
-        Parameters: 
+        Parameters:
+          - SubscriberName
           - SubscriberAccountId
-          - SubscriberCannonicalAccountID
+          - CannonicalAccountID
           - Email
-          - Prefix
 
 Parameters:
   Environment:
     Type: String
     Description: Deployment Environment Name
     Default: dev
-  Version: 
-    Type: String
-    Description: Release version
-    Default: latest
 
   SubscriberAccountId:
     Type: String
@@ -64,22 +82,29 @@ Parameters:
   CannonicalAccountID:
     Type: String
     Description: The Cannonical Account ID of the subscriber.
+
   Email:
     Type: String
     Description: The email address for the transfer notifications.
+
+  SubscriberName:
+    Type: String
+    Description: A name for subscriber account.
+
   Prefix:
     Type: String
-    Description: A prefix for subscriber account
+    Description: A prefix for subscriber access. .
 
 Resources:
 
-  PublishedEventRule: 
+  PublishedEventRule:
     Type: AWS::Events::Rule
-    Properties: 
+    Properties:
       Description: "Notify Content Published"
       EventBusName:
-        Fn::Sub: mxc-events-${AWS::AccountId}-${AWS::Region}-${Environment}-${Version}
-      EventPattern: 
+        Fn::ImportValue:
+          Fn::Sub: mxc-${AWS::Region}-${Environment}-events
+      EventPattern:
         source:
           - mxc.publisher
         detail-type:
@@ -88,8 +113,8 @@ Resources:
           subscriberCannonicalAccountId:
             - Ref: CannonicalAccountID
       State: "ENABLED"
-      Targets: 
-        - 
+      Targets:
+        -
           Id: "S3PutACLEvent"
           InputPath: $.detail
           Arn:
@@ -109,7 +134,7 @@ Resources:
             Action: 'sns:Publish'
             Resource: '*'
       Topics:
-        - 
+        -
           Ref: NotificationTopic
 
   NotificationsSubscription:
@@ -120,7 +145,6 @@ Resources:
       Protocol: email
       TopicArn:
         Ref: NotificationTopic
-
 
   CrossAccountRole:
     Type: 'AWS::IAM::Role'
@@ -135,10 +159,7 @@ Resources:
               AWS:
                 Ref: SubscriberAccountId
             Action: 'sts:AssumeRole'
-            Condition:
-              StringEquals:
-                'sts:ExternalId':
-                  Ref: Email
+
       Path: /
       Policies:
         -
@@ -156,10 +177,9 @@ Resources:
                 Effect: Allow
                 Action:
                   - s3:ListBucket
-                Resource: 
-                  Fn::Sub: arn:aws:s3:::mxc-publisher-${AWS::AccountId}-${AWS::Region}-${Environment}-${Version}-*
-                Condition: 
-                  StringEquals: 
-                    s3:prefix: 
+                Resource:
+                  Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-*
+                Condition:
+                  StringEquals:
+                    s3:prefix:
                       Ref: Prefix
-                  
