@@ -54,14 +54,22 @@ agreement: agreement.yaml.template ## deploys an agreement
 	@echo deploying $@ at $(AWS_REGION)
 	@aws --region $(AWS_REGION) cloudformation deploy --template-file build/$< --stack-name $(STACKPREFIX)-agreement-$(PUBLISHER_NAME)-$(SUBSCRIBER_NAME)-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides SubscriberName=$(SUBSCRIBER_NAME) PublisherName=$(PUBLISHER_NAME) $(DEBUG)  1>/dev/null
 
-# # templates := $(patsubst deployment/%.yaml,%.yaml.template,$(wildcard deployment/*.yaml))
-# install: agreement.yaml.template publisher.yaml.template subscriber.yaml.template
-# 	$(call ndef,CFNBUCKET)
-# 	$(call ndef,RELEASE_VERSION)
-# 	@aws --region $(AWS_REGION) s3 sync build s3://$(CFNBUCKET)/media-exchange-on-aws/$(RELEASE_VERSION)
-#
-# 	@echo deploying $@ at $(AWS_REGION)
-# 	@aws --region $(AWS_REGION) cloudformation deploy --template-file build/$@.yaml.template --stack-name $(STACKPREFIX)-servicecatalog-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM $(DEBUG) 1>/dev/null
+	@echo saving publihser onboarding info at tools/publisher.env
+	@aws --region $(AWS_REGION) cloudformation describe-stacks --stack-name $(STACKPREFIX)-agreement-$(PUBLISHER_NAME)-$(SUBSCRIBER_NAME)-$(ENV)-stack --query "Stacks[0].Outputs[?OutputKey == 'PublisherOnboardingSummary'].OutputValue" --output text > tools/publisher.env
+
+	@echo saving subscriber onboarding info at tools/subscriber.env
+	@aws --region $(AWS_REGION) cloudformation describe-stacks --stack-name $(STACKPREFIX)-agreement-$(PUBLISHER_NAME)-$(SUBSCRIBER_NAME)-$(ENV)-stack --query "Stacks[0].Outputs[?OutputKey == 'SubscriberOnboardingSummary'].OutputValue" --output text > tools/subscriber.env
+
+
+templates := $(patsubst deployment/%.yaml,%.yaml.template,$(wildcard deployment/*.yaml))
+install: $(templates)
+	$(call ndef,CFNBUCKET)
+	$(call ndef,RELEASE_VERSION)
+	@aws --region $(AWS_REGION) s3 sync build s3://$(CFNBUCKET)/media-exchange-on-aws/$(RELEASE_VERSION)
+
+	@echo deploying $@ at $(AWS_REGION)
+	@aws --region $(AWS_REGION) cloudformation deploy --template-file build/servicecatalog.yaml.template --stack-name $(STACKPREFIX)-servicecatalog-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM $(DEBUG) 1>/dev/null
+
 
 clean: ## clears the build directory
 	@rm -rf build/*

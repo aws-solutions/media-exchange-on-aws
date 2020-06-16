@@ -4,7 +4,7 @@ Description: >
 
 Outputs:
   SubscriberOnboardingSummary:
-    Description: Configuration information for subscriber as key-value
+    Description: Configuration information for subscriber. Save contents as tools/subscriber.env to use with tools/pull-content.sh
     Value:
       Fn::Join:
         - ' '
@@ -17,22 +17,35 @@ Outputs:
                   Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-bucketname
           - Fn::Join:
             - ''
-            - - PREFIX=
+            - - SUBSCRIBER_PREFIX=
               - Fn::ImportValue:
                   Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-prefix
           - Fn::Join:
             - ''
-            - - ROLE=
+            - - SUBSCRIBER_ROLE_ARN="
               - Fn::ImportValue:
                   Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-role
+              - '"'
+          - Fn::Join:
+            - ''
+            - - ACCOUNTID=
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-accountid
 
   PublisherOnboardingSummary:
-    Description: Configuration information for publisher as key-value
+    Description: Configuration information for publisher. Save contents as tools/publisher.env to use with tools/pull-content.sh
     Value:
       Fn::Join:
         - ' '
         - - Fn::Sub: NAME=${PublisherName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
+
+          - Fn::Join:
+            - ''
+            - - ACCOUNTID=
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-accountid
+
           - Fn::Join:
             - ''
             - - BUCKET_NAME=
@@ -47,17 +60,18 @@ Outputs:
 
           - Fn::Join:
             - ''
-            - - SUBSCRIBER_CANNONICAL_ACCOUNTID=
+            - - SUBSCRIBER_CANNONICAL_ID=
               - Fn::ImportValue:
                   Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-cannonicalaccountid
 
-          - Fn::Sub: KMSMANAGEDMASTERKEY=${CMK.Arn}
+          - Fn::Sub: KMS_KEY_ID="${CMK.Arn}"
 
           - Fn::Join:
             - ''
-            - - ROLE=
+            - - PUBLISHER_ROLE_ARN="
               - Fn::ImportValue:
                   Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
+              - '"'
 
           - Fn::Join:
             - ''
@@ -134,7 +148,6 @@ Resources:
             Principal:
               AWS:
                 - Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
-                # - Fn::Sub: arn:aws:iam::${AWS::AccountId}:role/mxc-${Environment}-${AWS::Region}-sc-product-role
             Action:
               - kms:Create*
               - kms:Describe*

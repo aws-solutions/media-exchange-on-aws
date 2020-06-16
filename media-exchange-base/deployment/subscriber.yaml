@@ -93,7 +93,7 @@ Parameters:
 
   Prefix:
     Type: String
-    Description: A prefix for subscriber access. .
+    Description: A prefix for subscriber access.
 
 Resources:
 

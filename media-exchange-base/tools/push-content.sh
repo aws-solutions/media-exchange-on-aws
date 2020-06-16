@@ -7,30 +7,28 @@
 # export AWS_SESSION_TOKEN=
 # export AWS_REGION=
 
-# set -x
+# instructions
+# run make agreement to generate the configuration file at build/<publisher>.env
+# this script load the environment
 
 ##
 
 echo caller identity is $(aws sts get-caller-identity --query Arn)
 
-AWS_REGION="us-east-2" ## the region where Media Exchange is deployed
-PUBLISHER_BUCKET_NAME="mxc-publisher-xxx" ## bucketname can be found in the stack outputs section of publisher stack. 
-KMS_KEY_ID="arn:aws:kms:us-east-2:xxxxx:key/xxxx" ## keyid can be found in the stack outputs section of agreement stack. 
-SUBSCRIBER_CANNONICAL_ID="abcdef..." ## Cannonical Account Id used for subscriber setup
-PREFIX='prefix' ## prefix used in subscriber setup
+source ./common.env
+source ./publisher.env
 
-FILE_NAME='filename'
+echo running on behalf of $NAME
+
 echo generating a 1MB file
 dd if=/dev/random of=/tmp/$FILE_NAME count=1024 bs=1024 2>/dev/null
 CHECKSUM=$(openssl dgst -sha256 /tmp/$FILE_NAME | cut -d' ' -f2)
 echo checksum is $CHECKSUM
 
-echo copying to exchange 
-aws s3api put-object --bucket $PUBLISHER_BUCKET_NAME --key $PREFIX/$FILE_NAME  --body /tmp/$FILE_NAME   --server-side-encryption aws:kms --ssekms-key-id $KMS_KEY_ID --grant-read id=$SUBSCRIBER_CANNONICAL_ID
+echo copying to s3
+aws s3api put-object --bucket $BUCKET_NAME --key $SUBSCRIBER_PREFIX/$FILE_NAME  --body /tmp/$FILE_NAME   --server-side-encryption aws:kms --ssekms-key-id $KMS_KEY_ID --grant-read id=$SUBSCRIBER_CANNONICAL_ID
 
-#read 
-PUBLISHER_ROLE_ARN="arn:aws:iam::xxxxxx:role/xxx" ## role arn can be found in the stack outputs section of publisher stack. 
-SESSION_NAME="mxc-read-session" ## any name, only for tracking/collating log data
+rm -rf /tmp/$FILE_NAME
 
 echo assuming cross account role in media exchange
 resp=$(aws sts assume-role --role-arn $PUBLISHER_ROLE_ARN --role-session-name $SESSION_NAME)
@@ -42,15 +40,11 @@ export AWS_SESSION_TOKEN=$(echo $resp | jq -r .Credentials.SessionToken)
 echo caller identity is $(aws sts get-caller-identity --query Arn)
 
 echo getting list of objects
-aws s3api list-objects-v2 --bucket $PUBLISHER_BUCKET_NAME --prefix $PREFIX --fetch-owner
+aws s3api list-objects-v2 --bucket $BUCKET_NAME --prefix $SUBSCRIBER_PREFIX --fetch-owner
 
 ts=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
 
-echo sending events
-
-
-EVENT_BUS_NAME="mxc-events-xxxx-" # event bus name: can be found in the stack outputs section of core stack. 
-## This is an example event. The solution does not enforce a schema, but will route based on the  subscriberCannonicalAccountId in the detail. So that is the only required field. 
+echo sending notification
 
 aws --region $AWS_REGION events put-events --entries "Time=$ts,Source=mxc.publisher,DetailType=Event from publisher,Detail='{
     \"eventVersion\": \"latest\",
@@ -61,13 +55,11 @@ aws --region $AWS_REGION events put-events --entries "Time=$ts,Source=mxc.publis
     \"sourceIPAddress\": \"52.95.4.10\",
     \"userAgent\": \"GNU bash, version 3.2.57(1)-release (x86_64-apple-darwin18)\",
     \"assets\": {
-        \"bucket\": \"$PUBLISHER_BUCKET_NAME\",
+        \"bucket\": \"$BUCKET_NAME\",
         \"keys\": {
-           \"$CHECKSUM\" : \"$PREFIX/$FILE\"
+           \"$CHECKSUM\" : \"$SUBSCRIBER_PREFIX/$FILE\"
         }
     },
     \"eventID\": \"1b0c5952-91c6-498d-bf5f-95c250920d8b\",
     \"eventType\": \"ApplicationEvent\",
     \"subscriberCannonicalAccountId\": \"$SUBSCRIBER_CANNONICAL_ID\"}',EventBusName=$EVENT_BUS_NAME"
-
-rm -rf /tmp/$FILE_NAME
