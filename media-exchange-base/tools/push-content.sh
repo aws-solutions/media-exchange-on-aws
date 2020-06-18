@@ -42,24 +42,24 @@ echo caller identity is $(aws sts get-caller-identity --query Arn)
 echo getting list of objects
 aws s3api list-objects-v2 --bucket $BUCKET_NAME --prefix $SUBSCRIBER_PREFIX --fetch-owner
 
-ts=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
-
-echo sending notification
-
-aws --region $AWS_REGION events put-events --entries "Time=$ts,Source=mxc.publisher,DetailType=Event from publisher,Detail='{
-    \"eventVersion\": \"latest\",
-    \"eventTime\": \"$ts\",
-    \"eventSource\": \"mxc.mydomain.com\",
-    \"eventName\": \"AssetsShared\",
-    \"awsRegion\": \"$AWS_REGION\",
-    \"sourceIPAddress\": \"52.95.4.10\",
-    \"userAgent\": \"GNU bash, version 3.2.57(1)-release (x86_64-apple-darwin18)\",
-    \"assets\": {
-        \"bucket\": \"$BUCKET_NAME\",
-        \"keys\": {
-           \"$CHECKSUM\" : \"$SUBSCRIBER_PREFIX/$FILE\"
-        }
-    },
-    \"eventID\": \"1b0c5952-91c6-498d-bf5f-95c250920d8b\",
-    \"eventType\": \"ApplicationEvent\",
-    \"subscriberCannonicalAccountId\": \"$SUBSCRIBER_CANNONICAL_ID\"}',EventBusName=$EVENT_BUS_NAME"
+# ts=$(date -u +'%Y-%m-%dT%H:%M:%SZ')
+#
+# echo sending notification
+#
+# aws --region $AWS_REGION events put-events --entries "Time=$ts,Source=mxc.publisher,DetailType=Event from publisher,Detail='{
+#     \"eventVersion\": \"latest\",
+#     \"eventTime\": \"$ts\",
+#     \"eventSource\": \"mxc.mydomain.com\",
+#     \"eventName\": \"AssetsShared\",
+#     \"awsRegion\": \"$AWS_REGION\",
+#     \"sourceIPAddress\": \"52.95.4.10\",
+#     \"userAgent\": \"GNU bash, version 3.2.57(1)-release (x86_64-apple-darwin18)\",
+#     \"assets\": {
+#         \"bucket\": \"$BUCKET_NAME\",
+#         \"keys\": {
+#            \"$CHECKSUM\" : \"$SUBSCRIBER_PREFIX/$FILE\"
+#         }
+#     },
+#     \"eventID\": \"1b0c5952-91c6-498d-bf5f-95c250920d8b\",
+#     \"eventType\": \"ApplicationEvent\",
+#     \"subscriberCannonicalAccountId\": \"$SUBSCRIBER_CANNONICAL_ID\"}',EventBusName=$EVENT_BUS_NAME"

@@ -8,13 +8,11 @@ DEBUG ?=
 VERSION ?= latest
 ENV ?= dev
 STACKPREFIX = mediaexchange
-CFNBUCKET ?= change_me
 
 RELEASE_VERSION?=v1.0.0
 
 ndef = $(if $(value $(1)),,$(error $(1) not set))
 checkenv: ## checks environment
-	$(call ndef,AWS_REGION)
 	$(call ndef,AWS_REGION)
 	$(call ndef,CFNBUCKET)
 	@command -v aws >/dev/null 2>&1 || ( echo >&2 "awscli is not installed. Please see install guide here: https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html"; exit 1; )
@@ -22,7 +20,7 @@ checkenv: ## checks environment
 configure: checkenv
 	@mkdir -p build
 
-%.template: deployment/% ## packages cloudformation
+%.template: deployment/% checkenv ## packages cloudformation
 	@echo packaging $@
 	@aws --region $(AWS_REGION) cloudformation package --template-file $< --output-template-file build/$@  --s3-bucket $(CFNBUCKET) --s3-prefix scratch --force-upload $(DEBUG) 1>/dev/null
 
@@ -67,7 +65,7 @@ install: $(templates)
 	$(call ndef,RELEASE_VERSION)
 	@aws --region $(AWS_REGION) s3 sync build s3://$(CFNBUCKET)/media-exchange-on-aws/$(RELEASE_VERSION)
 
-	@echo deploying $@ at $(AWS_REGION)
+	@echo deploying to service catalog at $(AWS_REGION)
 	@aws --region $(AWS_REGION) cloudformation deploy --template-file build/servicecatalog.yaml.template --stack-name $(STACKPREFIX)-servicecatalog-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM $(DEBUG) 1>/dev/null
 
 

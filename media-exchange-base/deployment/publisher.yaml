@@ -93,6 +93,13 @@ Resources:
       VersioningConfiguration:
         Status: Enabled
 
+      LoggingConfiguration:
+        LogFilePrefix:
+          Ref: PublisherName
+        DestinationBucketName:
+          Fn::ImportValue:
+            Fn::Sub: mxc-${AWS::Region}-${Environment}-logs
+
       # objects must be encrypted with a CMK
       # we do not specify a default encryption configuration
       # rather enforce it from the bucket policy that
@@ -252,13 +259,3 @@ Resources:
                   - s3:ListBucketMultipartUploads
                 Resource:
                   Fn::Sub: arn:aws:s3:::${PublisherBucket}
-              -
-                Effect: Allow
-                Action:
-                  - events:PutEvents
-                Resource:
-                  - Fn::Join:
-                    - /
-                    - - Fn::Sub: arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus
-                      - Fn::ImportValue:
-                          Fn::Sub: mxc-${AWS::Region}-${Environment}-events

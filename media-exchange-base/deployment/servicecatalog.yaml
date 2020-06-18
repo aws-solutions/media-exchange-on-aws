@@ -33,7 +33,7 @@ Metadata:
 Mappings:
   SourceCode:
     General:
-      Host: https://prodey-mxc-cfnbucket-ca-central-1.s3.ca-central-1.amazonaws.com
+      Host: https://mxc-artifacts-dev-us-west-2-534054367376-us-west-2.s3.us-west-2.amazonaws.com
       Path: media-exchange-on-aws
       Version: v1.0.0
   AnonymousData:
@@ -113,7 +113,7 @@ Resources:
       SupportEmail:
         Ref: Owner
       SupportUrl: https://mediaops.yourcompany.com
-      Distributor: AWS Solutions Library
+      Distributor: AWS Solutions Library / Media Exchange
       ProvisioningArtifactParameters:
         - Info:
             LoadTemplateFromURL:
@@ -147,7 +147,7 @@ Resources:
       SupportEmail:
         Ref: Owner
       SupportUrl: https://mediaops.yourcompany.com
-      Distributor: AWS Solutions Library
+      Distributor: AWS Solutions Library / Media Exchange
       ProvisioningArtifactParameters:
         - Info:
             LoadTemplateFromURL:
@@ -173,15 +173,15 @@ Resources:
   Agreement:
     Type: AWS::ServiceCatalog::CloudFormationProduct
     Properties:
-      Description: Template to setup an unique KMS managed encryption key for publisher and subscriber asset transfer.
-      Name: Media Exchange Agreement
+      Description: Template to setup an unique KMS managed master encryption key for publisher and subscriber asset transfer.
+      Name: Transfer Encryption Master Key
       Owner:
         Ref: Owner
       SupportDescription: Please contact mediaops@yourcompany.com
       SupportEmail:
         Ref: Owner
       SupportUrl: https://mediaops.yourcompany.com
-      Distributor: AWS Solutions Library
+      Distributor: AWS Solutions Library / Media Exchange
       ProvisioningArtifactParameters:
         - Info:
             LoadTemplateFromURL:

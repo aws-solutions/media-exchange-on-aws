@@ -44,7 +44,29 @@ Outputs:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-events
 
+  LogBucketName:
+    Description: Logging Bucket Name
+    Value:
+      Ref: ExchangeLogBucket
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-logs
+
+
 Resources:
+
+  #bucket for storing S3 Access Logs
+  ExchangeLogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      AccessControl: LogDeliveryWrite
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
 
   #bucket for storing cloudtrails
   ExchangeCloudTrailBucket:
