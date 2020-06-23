@@ -3,6 +3,25 @@ Description: >
   Cloudformation template for media exchange publisher and subscriber shared CMK setup.
 
 Outputs:
+
+  SubscriberConsoleUrl:
+    Description: Use this url to directly access the shared content.
+    Value:
+      Fn::Join:
+        - ''
+        - - https://signin.aws.amazon.com/switchrole?roleName=
+          - Fn::ImportValue:
+              Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-rolename
+          - Fn::Sub: '&account=${AWS::AccountId}&region=${AWS::Region}'
+          - '&redirect_uri=https://s3.console.aws.amazon.com/s3/buckets/'
+          - Fn::ImportValue:
+              Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-bucketname
+          - '/'
+          - Fn::ImportValue:
+              Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-prefix
+          - '/'
+
+
   SubscriberOnboardingSummary:
     Description: Configuration information for subscriber. Save contents as tools/subscriber.env to use with tools/pull-content.sh
     Value:
@@ -32,12 +51,18 @@ Outputs:
               - Fn::ImportValue:
                   Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-accountid
 
-  #Console URLs
-  # https://s3.console.aws.amazon.com/s3/buckets/mxc-534054367376-ca-central-1-dev-publisherbucket-657474709706/?region=ca-central-1&tab=overview
 
-  # https://signin.aws.amazon.com/switchrole?roleName=mediaexchange-subscriber-distribu-CrossAccountRole-ERDDUBZX7GTG&account=534054367376&region=ca-central-1
 
-  # https://s3.console.aws.amazon.com/s3/buckets/mxc-534054367376-ca-central-1-dev-publisherbucket-657474709706/distributor?region=ca-central-1&tab=overview
+  PublisherConsoleUrl:
+    Description: Use this url to directly access the publisher bucket.
+    Value:
+      Fn::Join:
+        - ''
+        - - https://s3.console.aws.amazon.com/s3/buckets/
+          - Fn::ImportValue:
+              Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-bucketname
+          - Fn::Sub: /?region=${AWS::Region}&tab=overview
+
 
   PublisherOnboardingSummary:
     Description: Configuration information for publisher. Save contents as tools/publisher.env to use with tools/pull-content.sh

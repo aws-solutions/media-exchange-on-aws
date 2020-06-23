@@ -56,7 +56,7 @@ Outputs:
   UserRole:
     Description: ServiceCatalog portfolio user role
     Value:
-      Fn::Sub: https://signin.aws.amazon.com/switchrole?roleName=${UserRole}&account=${AWS::AccountId}
+      Fn::Sub: https://signin.aws.amazon.com/switchrole?roleName=${UserRole}&account=${AWS::AccountId}&}&region=${AWS::Region}
 
 Resources:
 

@@ -250,6 +250,7 @@ Resources:
                 - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
 
 
+
   CrossAccountRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -276,14 +277,6 @@ Resources:
                 Action:
                   - s3:ListAllMyBuckets
                 Resource: '*'
-              -
-                Effect: Allow
-                Action:
-                  - s3:ListBucket
-                  - s3:GetBucketLocation
-                  - s3:ListBucketMultipartUploads
-                Resource:
-                  Fn::Sub: arn:aws:s3:::${PublisherBucket}
               -
                 Effect: Allow
                 Action:

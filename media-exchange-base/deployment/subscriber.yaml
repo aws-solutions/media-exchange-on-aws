@@ -31,6 +31,13 @@ Outputs:
     Export:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-role
+  SubscriberRoleName:
+    Description: Subscriber Role to perform List* operations on the bucket
+    Value:
+      Ref: CrossAccountRole
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-rolename
 
 Metadata:
 
@@ -186,6 +193,17 @@ Resources:
           PolicyDocument:
             Version: 2012-10-17
             Statement:
+              # enable for root level access
+              # -
+              #   Effect: Allow
+              #   Action:
+              #     - s3:ListBucket
+              #   Resource:
+              #     Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-*
+              #   Condition:
+              #     StringEquals:
+              #       s3:prefix: ''
+              #       s3:delimiter: '/'
               -
                 Effect: Allow
                 Action:
@@ -193,25 +211,23 @@ Resources:
                 Resource:
                   Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-*
                 Condition:
-                  StringEquals:
+                  StringLike:
                     s3:prefix:
-                      Ref: Prefix
+                      Fn::Sub: ${Prefix}*
+              -
+                  Effect: Allow
+                  Action:
+                    - s3:GetBucketLocation
+                    - s3:GetBucketPolicyStatus
+                    - s3:GetBucketVersioning
+                    - s3:GetBucketPublicAccessBlock
+                    - s3:GetBucketObjectLockConfiguration
+                    - s3:GetBucketAcl
+                    - s3:GetEncryptionConfiguration
+                  Resource:
+                    Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-*
               -
                 Effect: Allow
                 Action:
-                  - s3:GetBucketLocation
-                  - s3:GetBucketVersioning
                   - s3:GetAccountPublicAccessBlock
-                  - s3:GetBucketEncryption
-                Resource:
-                  Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-*
-
-              -
-                Effect: Allow
-                Action:
-                  - s3:GetObject
-                  - s3:GetObjectVersion
-                  - s3:GetObjectTagging
-                  - s3:GetObjectVersionTagging
-                Resource:
-                  Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-*/${Prefix}/*
+                Resource: '*'
