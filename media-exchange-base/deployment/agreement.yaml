@@ -32,6 +32,13 @@ Outputs:
               - Fn::ImportValue:
                   Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-accountid
 
+  #Console URLs
+  # https://s3.console.aws.amazon.com/s3/buckets/mxc-534054367376-ca-central-1-dev-publisherbucket-657474709706/?region=ca-central-1&tab=overview
+
+  # https://signin.aws.amazon.com/switchrole?roleName=mediaexchange-subscriber-distribu-CrossAccountRole-ERDDUBZX7GTG&account=534054367376&region=ca-central-1
+
+  # https://s3.console.aws.amazon.com/s3/buckets/mxc-534054367376-ca-central-1-dev-publisherbucket-657474709706/distributor?region=ca-central-1&tab=overview
+
   PublisherOnboardingSummary:
     Description: Configuration information for publisher. Save contents as tools/publisher.env to use with tools/pull-content.sh
     Value:

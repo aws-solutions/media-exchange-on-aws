@@ -66,6 +66,7 @@ Metadata:
           - SubscriberAccountId
           - CannonicalAccountID
           - Email
+          - Prefix
 
 Parameters:
   Environment:
@@ -93,11 +94,11 @@ Parameters:
 
   Prefix:
     Type: String
-    Description: A prefix for subscriber access.
+    Description: A folder name for shared content.
 
 Resources:
 
-  PublishedEventRule:
+  AutoNotifySubscriberRule:
     Type: AWS::Events::Rule
     Properties:
       Description: "Notify Content Published"
@@ -106,16 +107,34 @@ Resources:
           Fn::Sub: mxc-${AWS::Region}-${Environment}-events
       EventPattern:
         source:
-          - mxc.publisher
+          - publisher.mxc.amazonaws.com
         detail-type:
-          - Event from publisher
-        detail:
-          subscriberCannonicalAccountId:
-            - Ref: CannonicalAccountID
+          - Fn::Sub: 'source=s3:ObjectCreated:*,notify=auto,prefix=${Prefix}'
       State: "ENABLED"
       Targets:
         -
-          Id: "S3PutACLEvent"
+          Id: "SNSEvent"
+          InputPath: $.detail
+          Arn:
+            Ref: "NotificationTopic"
+
+  CustomNotifySubscriberRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Notify Content Published"
+      EventBusName:
+        Fn::ImportValue:
+          Fn::Sub: mxc-${AWS::Region}-${Environment}-events
+      EventPattern:
+        source:
+          - publisher.mxc.amazonaws.com
+        detail-type:
+          - Fn::Sub: 'source=ApplicationEvent,prefix=${Prefix}'
+
+      State: "ENABLED"
+      Targets:
+        -
+          Id: "SNSEvent"
           InputPath: $.detail
           Arn:
             Ref: "NotificationTopic"
@@ -170,12 +189,6 @@ Resources:
               -
                 Effect: Allow
                 Action:
-                  - s3:ListAllMyBuckets
-                  - s3:GetBucketLocation
-                Resource: '*'
-              -
-                Effect: Allow
-                Action:
                   - s3:ListBucket
                 Resource:
                   Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-*
@@ -183,3 +196,22 @@ Resources:
                   StringEquals:
                     s3:prefix:
                       Ref: Prefix
+              -
+                Effect: Allow
+                Action:
+                  - s3:GetBucketLocation
+                  - s3:GetBucketVersioning
+                  - s3:GetAccountPublicAccessBlock
+                  - s3:GetBucketEncryption
+                Resource:
+                  Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-*
+
+              -
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetObjectTagging
+                  - s3:GetObjectVersionTagging
+                Resource:
+                  Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-*/${Prefix}/*

@@ -33,7 +33,7 @@ Metadata:
 Mappings:
   SourceCode:
     General:
-      Host: https://mxc-artifacts-dev-us-west-2-534054367376-us-west-2.s3.us-west-2.amazonaws.com
+      Host: https://cf-templates-ahpshqtqbhdi-us-west-2.s3.us-west-2.amazonaws.com
       Path: media-exchange-on-aws
       Version: v1.0.0
   AnonymousData:

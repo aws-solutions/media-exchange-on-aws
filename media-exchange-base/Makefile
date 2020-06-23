@@ -72,4 +72,4 @@ install: $(templates)
 clean: ## clears the build directory
 	@rm -rf build/*
 
-.PHONY: checkenv configure release clean
+.PHONY: checkenv configure release clean install
