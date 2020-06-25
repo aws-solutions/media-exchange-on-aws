@@ -74,11 +74,10 @@ You will need three AWS accounts to test this effectively (a) publisher, (b) sub
 1. Accept the capabilities and transforms by checking the boxes and click on create stack.
 1. Wait for the the status to change to create_complete.
 
-### Install from command line
-
-![](media-exchange-base/images/install-cli-demo.mp4)
 
 ### Install using Service Catalog
+
+`make install`
 
 
 ### Testing

@@ -66,7 +66,9 @@ install: $(templates)
 	@aws --region $(AWS_REGION) s3 sync build s3://$(CFNBUCKET)/media-exchange-on-aws/$(RELEASE_VERSION)
 
 	@echo deploying to service catalog at $(AWS_REGION)
-	@aws --region $(AWS_REGION) cloudformation deploy --template-file build/servicecatalog.yaml.template --stack-name $(STACKPREFIX)-servicecatalog-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM $(DEBUG) 1>/dev/null
+	
+	@envsubst <build/servicecatalog.yaml.template > build/servicecatalog.yaml.template.1
+	@aws --region $(AWS_REGION) cloudformation deploy --template-file build/servicecatalog.yaml.template.1 --stack-name $(STACKPREFIX)-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM $(DEBUG) 1>/dev/null
 
 
 clean: ## clears the build directory

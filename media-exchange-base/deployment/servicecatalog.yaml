@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  - Cloudformation template for media exchange service catalog.
+  Cloudformation template for media exchange core and service catalog setup.
 
 Metadata:
 
@@ -33,7 +33,7 @@ Metadata:
 Mappings:
   SourceCode:
     General:
-      Host: https://cf-templates-ahpshqtqbhdi-us-west-2.s3.us-west-2.amazonaws.com
+      Host: https://$CFNBUCKET.s3.$AWS_REGION.amazonaws.com
       Path: media-exchange-on-aws
       Version: v1.0.0
   AnonymousData:
@@ -54,9 +54,9 @@ Parameters:
 
 Outputs:
   UserRole:
-    Description: ServiceCatalog portfolio user role
+    Description: ServiceCatalog portfolio manager url.
     Value:
-      Fn::Sub: https://signin.aws.amazon.com/switchrole?roleName=${UserRole}&account=${AWS::AccountId}&}&region=${AWS::Region}
+      Fn::Sub: https://signin.aws.amazon.com/switchrole?roleName=${UserRole}&account=${AWS::AccountId}&region=${AWS::Region}&redirect_uri=https://console.aws.amazon.com/servicecatalog/home?region=${AWS::Region}&isSceuc=true#/products
 
 Resources:
 
@@ -91,9 +91,9 @@ Resources:
   Portfolio:
     Type: AWS::ServiceCatalog::Portfolio
     Properties:
-      DisplayName: Media Exchange Solution
+      DisplayName: Media Exchange On AWS
       ProviderName: AWS Solutions Library
-      Description: Group of products related to Media Exchange on AWS solution.
+      Description: Group of products related to Media Exchange On AWS solution.
 
   PortfolioAccess:
     Type: AWS::ServiceCatalog::PortfolioPrincipalAssociation
@@ -105,8 +105,8 @@ Resources:
   Publisher:
     Type: AWS::ServiceCatalog::CloudFormationProduct
     Properties:
-      Description: Publisher onboarding template for Media Exchange Solution
-      Name: Media Exchange Publisher
+      Description: Publisher onboarding template for Media Exchange On AWS Solution
+      Name: Publisher Onboarding
       Owner:
         Ref: Owner
       SupportDescription: Please contact mediaops@yourcompany.com
@@ -139,8 +139,8 @@ Resources:
   Subscriber:
     Type: AWS::ServiceCatalog::CloudFormationProduct
     Properties:
-      Description: Subscriber onboarding template for Media Exchange Solution
-      Name: Media Exchange Subscriber
+      Description: Subscriber onboarding template for Media Exchange On AWS Solution
+      Name: Subscriber Onboarding
       Owner:
         Ref: Owner
       SupportDescription: Please contact mediaops@yourcompany.com
@@ -173,8 +173,8 @@ Resources:
   Agreement:
     Type: AWS::ServiceCatalog::CloudFormationProduct
     Properties:
-      Description: Template to setup an unique KMS managed master encryption key for publisher and subscriber asset transfer.
-      Name: Transfer Encryption Master Key
+      Description: Template to setup an unique customer managed master encryption key for publisher and subscriber interchange.
+      Name: Transfer Encryption Master Key (KMS CMK)
       Owner:
         Ref: Owner
       SupportDescription: Please contact mediaops@yourcompany.com
@@ -250,7 +250,7 @@ Resources:
   LaunchRoleConstraintAgreement:
     Type: AWS::ServiceCatalog::LaunchRoleConstraint
     Properties:
-      Description: Administrative role for deploing publisher subscriber agreement to Media Exchange
+      Description: Administrative role for deploing publisher & subscriber agreement to Media Exchange
       LocalRoleName:
         Ref: ServiceRole
       PortfolioId:

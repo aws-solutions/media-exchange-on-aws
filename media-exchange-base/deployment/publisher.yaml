@@ -67,6 +67,11 @@ Metadata:
         Parameters:
           - PublisherName
           - PublisherAccountId
+      -
+        Label:
+          default: "Notifications Configuration"
+        Parameters:
+          - Notifications
 
 
 Parameters:
@@ -97,6 +102,7 @@ Resources:
 
   PublisherBucket:
     Type: AWS::S3::Bucket
+
     Properties:
 
       BucketName:
@@ -157,6 +163,7 @@ Resources:
 
     UpdateReplacePolicy: Delete
     DeletionPolicy: Delete
+    DependsOn: LambdaPermissionForS3Bucket
 
   #bucket policy
   PublisherBucketPolicy:
@@ -331,7 +338,8 @@ Resources:
       SourceAccount:
         Ref: AWS::AccountId
       SourceArn:
-        Fn::GetAtt: PublisherBucket.Arn
+        Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-${PublisherAccountId}
+
 
   #lambda to send s3 events to EventBus
   S3ForwarderFunction:

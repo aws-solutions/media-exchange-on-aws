@@ -1,11 +1,11 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Cloudformation template for media exchange publisher and subscriber shared CMK setup.
+  Cloudformation template for media exchange publisher and subscriber shared CMK setup for asset exchange.
 
 Outputs:
 
   SubscriberConsoleUrl:
-    Description: Use this url to directly access the shared content.
+    Description: Use this url to see the list of shared content.
     Value:
       Fn::Join:
         - ''
@@ -23,7 +23,7 @@ Outputs:
 
 
   SubscriberOnboardingSummary:
-    Description: Configuration information for subscriber. Save contents as tools/subscriber.env to use with tools/pull-content.sh
+    Description: Configuration information for subscriber.
     Value:
       Fn::Join:
         - ' '
@@ -65,7 +65,7 @@ Outputs:
 
 
   PublisherOnboardingSummary:
-    Description: Configuration information for publisher. Save contents as tools/publisher.env to use with tools/pull-content.sh
+    Description: Configuration information for publisher. 
     Value:
       Fn::Join:
         - ' '

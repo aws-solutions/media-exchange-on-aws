@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  - Cloudformation template for media exchange core.
+  Cloudformation template for media exchange core.
 
 Metadata:
 
