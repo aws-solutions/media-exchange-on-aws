@@ -1,0 +1,119 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Cloudformation template for batch transfer utlity for large files.
+
+Metadata:
+
+  License:
+    Description: |
+      Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+      Permission is hereby granted, free of charge, to any person obtaining a copy of this
+      software and associated documentation files (the "Software"), to deal in the Software
+      without restriction, including without limitation the rights to use, copy, modify,
+      merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+      permit persons to whom the Software is furnished to do so.
+
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+      INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+      PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+      HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+      OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+      SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Deployment Configuration"
+        Parameters:
+          - Environment
+          - DestinationBucket
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+  DestinationBucket:
+    Type: String
+    Description: Destination Bucket
+
+
+Resources:
+
+  DriverFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Lambda function to be invoked by s3 batch
+
+      CodeUri: driver/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      MemorySize: 128
+
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - S3ReadPolicy:
+            BucketName: '*'
+        - S3WritePolicy:
+            BucketName: '*'
+        - AWSXRayDaemonWriteAccess
+        - Statement:
+          - Sid: xray
+            Effect: Allow
+            Action:
+            - lambda:GetAccountSettings
+            Resource: '*'
+        - Statement:
+          - Sid: batch
+            Effect: Allow
+            Action:
+              - batch:SubmitJob
+              - batch:DescribeJobs
+              - batch:TerminateJob
+            Resource:
+            - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/*
+            - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-queue/*
+
+      Timeout: 30
+      ReservedConcurrentExecutions: 2
+
+      Environment:
+        Variables:
+          DestinationBucket:
+            Ref: DestinationBucket
+          JobDefinition:
+            Fn::ImportValue:
+              Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-copyjob
+          JobQueue:
+            Fn::ImportValue:
+              Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-jobq
+
+  S3BatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: batchoperations.s3.amazonaws.com
+        Version: "2012-10-17"
+      Path: /
+      Policies:
+        -
+          PolicyName: S3BatchRolePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                  - lambda:InvokeFunction
+                Effect: Allow
+                Resource: '*'
