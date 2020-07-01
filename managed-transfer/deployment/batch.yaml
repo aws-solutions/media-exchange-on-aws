@@ -75,6 +75,8 @@ Resources:
           - cp
           - Ref::Source
           - Ref::Destination
+          - --copy-props
+          - metadata-directive
         JobRoleArn:
           Fn::GetAtt: JobRole.Arn
       RetryStrategy:
@@ -91,14 +93,30 @@ Resources:
             Service: ecs-tasks.amazonaws.com
           Action:
             - sts:AssumeRole
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AmazonS3FullAccess
       Policies:
         -
-          PolicyName: KMS
+          PolicyName: KMSAndS3
           PolicyDocument:
             Version: 2012-10-17
             Statement:
+              -
+                # minimal permissions mapping to READ ACL
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource: '*'
+              -
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+                  - s3:PutObjectVersionAcl
+                  - s3:PutObjectTagging
+                  - s3:PutObjectVersionTagging
+                  - s3:AbortMultipartUpload
+                  - s3:ListMultipartUploadParts
+                Resource: '*'
               -
                 Effect: Allow
                 Action:
