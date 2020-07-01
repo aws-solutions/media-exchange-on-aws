@@ -43,8 +43,10 @@ def lambda_handler(event, context):
 
         logger.debug("subumitting job")
 
+        #Add preflight checks _read_ + _write_
+
         response = client.submit_job(
-            jobName="CopyJobByS3Batch",
+            jobName="CopyStartedByS3Batch",
             jobQueue=os.environ['JobQueue'],
             jobDefinition=os.environ['JobDefinition'],
             parameters={

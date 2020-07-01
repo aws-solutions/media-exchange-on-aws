@@ -58,6 +58,14 @@ Outputs:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-copyjob
 
+  CopyCheckSumJobDefinition:
+    Description: Copy Job Definition
+    Value:
+      Ref: CopyJobDefinition
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-copychecksumjob
+
 Resources:
 
   CopyJobDefinition:
@@ -77,6 +85,24 @@ Resources:
           - Ref::Destination
           - --copy-props
           - metadata-directive
+        JobRoleArn:
+          Fn::GetAtt: JobRole.Arn
+      RetryStrategy:
+        Attempts: 3
+
+  CopyAndCheckSumJobDefinition:
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      Type: container
+      ContainerProperties:
+        Image:
+          Fn::Sub: ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ImageName}
+        Vcpus: 2
+        Memory: 3584
+        Command:
+          - copyPlusSHA256.sh
+          - Ref::Source
+          - Ref::Destination
         JobRoleArn:
           Fn::GetAtt: JobRole.Arn
       RetryStrategy:
@@ -149,7 +175,8 @@ Resources:
         MinvCpus: 0
         DesiredvCpus: 2
         MaxvCpus: 32
-        InstanceTypes: [ m5, m5a, m5n, m4, c5, c5a, c5n, c4, r5, r5a, r5n, r4 ]
+        InstanceTypes:
+          - optimal
 
         Type: SPOT
         BidPercentage: 50

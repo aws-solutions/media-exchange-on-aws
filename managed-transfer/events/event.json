@@ -7,9 +7,9 @@
     "tasks": [
         {
             "taskId": "dGFza2lkZ29lc2hlcmUK",
-            "s3Key": "assets/distributor-share/asset.bin.aa",
+            "s3Key": "5GiB",
             "s3VersionId": "1",
-            "s3BucketArn": "arn:aws:s3:::mxc-subscriber-us-west-2-assets"
+            "s3BucketArn": "arn:aws:s3:::544474278235-orandom-us-west-2"
         }
     ]
 }

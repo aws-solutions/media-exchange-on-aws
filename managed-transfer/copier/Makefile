@@ -31,7 +31,7 @@ repository: repository.yaml.template
 
 image:
 	@echo "Building docker image..."
-	docker build -t $(NAME):$(VERSION) - < $(CURRENT_DIR)/Dockerfile
+	docker build -t $(NAME):$(VERSION) .
 
 publish: image repository
 	@echo "Publishing Docker image to registry..."
