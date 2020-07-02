@@ -26,9 +26,12 @@ CHECKSUM=$(openssl dgst -sha256 /tmp/$FILE_NAME | cut -d' ' -f2)
 echo checksum is $CHECKSUM
 
 echo copying to s3
-aws s3api put-object --bucket $BUCKET_NAME --key $SUBSCRIBER_PREFIX/$FILE_NAME  --body /tmp/$FILE_NAME   --server-side-encryption aws:kms --ssekms-key-id $KMS_KEY_ID --grant-read id=$SUBSCRIBER_CANNONICAL_ID
+aws s3api put-object --bucket $BUCKET_NAME --key $FILE_NAME  --body /tmp/$FILE_NAME   --server-side-encryption aws:kms --ssekms-key-id $KMS_KEY_ID --grant-read id=$SUBSCRIBER_CANNONICAL_ID
 
 rm -rf /tmp/$FILE_NAME
+
+echo getting list of objects
+aws s3api list-objects-v2 --bucket $BUCKET_NAME --fetch-owner
 
 echo assuming cross account role in media exchange
 resp=$(aws sts assume-role --role-arn $PUBLISHER_ROLE_ARN --role-session-name $SESSION_NAME)
@@ -39,13 +42,9 @@ export AWS_SESSION_TOKEN=$(echo $resp | jq -r .Credentials.SessionToken)
 
 echo caller identity is $(aws sts get-caller-identity --query Arn)
 
-echo getting list of objects
-aws s3api list-objects-v2 --bucket $BUCKET_NAME --prefix $SUBSCRIBER_PREFIX --fetch-owner
-
-
 echo sending notification
 
-aws --region $AWS_REGION events put-events --entries "Source=publisher.mxc.amazonaws.com,DetailType='source=ApplicationEvent,prefix=${SUBSCRIBER_PREFIX}',Detail='{
+aws --region $AWS_REGION events put-events --entries "Source=publisher.mxc.amazonaws.com,DetailType='source=ApplicationEvent,subscribername=${SUBSCRIBER_NAME}',Detail='{
     \"eventSource\": \"publisher.mxc.amazonaws.com\",
     \"eventName\": \"AssetsShared\",
     \"awsRegion\": \"$AWS_REGION\",
@@ -53,7 +52,7 @@ aws --region $AWS_REGION events put-events --entries "Source=publisher.mxc.amazo
     \"assets\": {
         \"bucket\": \"$BUCKET_NAME\",
         \"keys\": {
-           \"$CHECKSUM\" : \"$SUBSCRIBER_PREFIX/$FILE\"
+           \"$CHECKSUM\" : \"$FILE_NAME\"
         }
     },
     \"eventID\": \"1b0c5952-91c6-498d-bf5f-95c250920d8b\",

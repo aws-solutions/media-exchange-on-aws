@@ -1,26 +1,8 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Cloudformation template for media exchange publisher and subscriber shared CMK setup for asset exchange.
+  Cloudformation template for media exchange publisher and subscriber shared resources for asset exchange.
 
 Outputs:
-
-  SubscriberConsoleUrl:
-    Description: Use this url to see the list of shared content.
-    Value:
-      Fn::Join:
-        - ''
-        - - https://signin.aws.amazon.com/switchrole?roleName=
-          - Fn::ImportValue:
-              Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-rolename
-          - Fn::Sub: '&account=${AWS::AccountId}&region=${AWS::Region}'
-          - '&redirect_uri=https://s3.console.aws.amazon.com/s3/buckets/'
-          - Fn::ImportValue:
-              Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-bucketname
-          - '/'
-          - Fn::ImportValue:
-              Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-prefix
-          - '/'
-
 
   SubscriberOnboardingSummary:
     Description: Configuration information for subscriber.
@@ -29,43 +11,20 @@ Outputs:
         - ' '
         - - Fn::Sub: NAME=${SubscriberName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
-          - Fn::Join:
-            - ''
-            - - BUCKET_NAME=
-              - Fn::ImportValue:
-                  Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-bucketname
-          - Fn::Join:
-            - ''
-            - - SUBSCRIBER_PREFIX=
-              - Fn::ImportValue:
-                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-prefix
-          - Fn::Join:
-            - ''
-            - - SUBSCRIBER_ROLE_ARN="
-              - Fn::ImportValue:
-                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-role
-              - '"'
+          - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
           - Fn::Join:
             - ''
             - - ACCOUNTID=
               - Fn::ImportValue:
                   Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-accountid
 
-
-
-  PublisherConsoleUrl:
-    Description: Use this url to directly access the publisher bucket.
+  ConsoleUrl:
+    Description: Use this url to directly access the shared bucket.
     Value:
-      Fn::Join:
-        - ''
-        - - https://s3.console.aws.amazon.com/s3/buckets/
-          - Fn::ImportValue:
-              Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-bucketname
-          - Fn::Sub: /?region=${AWS::Region}&tab=overview
-
+      Fn::Sub: https://s3.console.aws.amazon.com/s3/buckets/${ExchangeBucket}/?region=${AWS::Region}&tab=overview
 
   PublisherOnboardingSummary:
-    Description: Configuration information for publisher. 
+    Description: Configuration information for publisher.
     Value:
       Fn::Join:
         - ' '
@@ -78,17 +37,9 @@ Outputs:
               - Fn::ImportValue:
                   Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-accountid
 
-          - Fn::Join:
-            - ''
-            - - BUCKET_NAME=
-              - Fn::ImportValue:
-                  Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-bucketname
+          - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
 
-          - Fn::Join:
-            - ''
-            - - SUBSCRIBER_PREFIX=
-              - Fn::ImportValue:
-                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-prefix
+          - Fn::Sub: SUBSCRIBER_NAME=${SubscriberName}
 
           - Fn::Join:
             - ''
@@ -110,7 +61,6 @@ Outputs:
             - - EVENT_BUS_NAME=
               - Fn::ImportValue:
                   Fn::Sub: mxc-${AWS::Region}-${Environment}-events
-
 
 Metadata:
 
@@ -162,6 +112,215 @@ Parameters:
 
 
 Resources:
+
+
+  ExchangeBucket:
+    Type: AWS::S3::Bucket
+
+    Properties:
+      # BucketName:
+      #   Fn::Sub: mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-${PublisherAccountId}
+
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+
+      VersioningConfiguration:
+        Status: Enabled
+
+      LoggingConfiguration:
+        LogFilePrefix:
+          Ref: PublisherName
+        DestinationBucketName:
+          Fn::ImportValue:
+            Fn::Sub: mxc-${AWS::Region}-${Environment}-logs
+
+      # objects must be encrypted with a CMK
+      # we do not specify a default encryption configuration
+      # rather enforce it from the bucket policy that
+      # a kms key must be used.
+
+      # Objects must be locked for the duration of the agreement
+      # we do not specify a default lock configuration. But we
+      # expect the publishers the lock the objects for the duration
+      # applicable for the agreement
+      # we also stop explicit deletes from by a bucket policy.
+
+      #Expire objects after the lifecycle period
+      LifecycleConfiguration:
+        Rules:
+          -
+            Id: Expire
+            Status: Enabled
+            ExpirationInDays: 10
+
+          -
+            Id: AutoRemove
+            Status: Enabled
+            NoncurrentVersionExpirationInDays: 10
+
+          -
+            Id: CleanupIncompleteUploads
+            Status: Enabled
+            AbortIncompleteMultipartUpload:
+              DaysAfterInitiation: 2
+
+      NotificationConfiguration:
+        LambdaConfigurations:
+          -
+            Event: 's3:ObjectCreated:*'
+            Function:
+              Fn::Join:
+                - ':'
+                - - Fn::Sub: arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function
+                  - Fn::ImportValue:
+                      Fn::Sub: mxc-${AWS::Region}-${Environment}-s3eventfn
+
+    UpdateReplacePolicy: Delete
+    DeletionPolicy: Delete
+    DependsOn: LambdaPermissionForS3Bucket
+
+
+  #bucket policy
+  ExchangeBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: ExchangeBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          # deny direct deletes, updates are allowed
+          -
+            Sid: "DenyDeletes"
+            Action:
+              - "s3:DeleteObject"
+              - "s3:DeleteObjectVersion"
+            Effect: "Deny"
+            Resource:
+              - Fn::Sub: arn:aws:s3:::${ExchangeBucket}/*
+            Principal: "*"
+
+          # TLS only
+          -
+            Sid: "RequireTLS"
+            Action:
+              - "s3:*"
+            Effect: "Deny"
+            Resource:
+              - Fn::Sub: arn:aws:s3:::${ExchangeBucket}/*
+            Principal: "*"
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+
+          # require KMS for put
+          -
+            Sid: "DenyIncorrectEncryptionHeader"
+            Action:
+              - "s3:PutObject"
+            Effect: "Deny"
+            Resource:
+              - Fn::Sub: arn:aws:s3:::${ExchangeBucket}/*
+            Principal: "*"
+            Condition:
+              StringNotEquals:
+                s3:x-amz-server-side-encryption: aws:kms
+
+          -
+            Sid: "DenyNoCMKHeader"
+            Action:
+              - "s3:PutObject"
+            Effect: "Deny"
+            Resource:
+              - Fn::Sub: arn:aws:s3:::${ExchangeBucket}/*
+            Principal: "*"
+            Condition:
+              'Null':
+                s3:x-amz-server-side-encryption-aws-kms-key-id: true
+          -
+            Sid: "AllowCopyOpPublisher"
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:PutObjectAcl
+              - s3:PutObjectVersionAcl
+              - s3:PutObjectTagging
+              - s3:PutObjectVersionTagging
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:GetObjectAcl
+              - s3:GetObjectVersionAcl
+              - s3:GetObjectTagging
+              - s3:GetObjectVersionTagging
+              - s3:AbortMultipartUpload
+              - s3:ListMultipartUploadParts
+            Resource:
+              Fn::Sub: arn:aws:s3:::${ExchangeBucket}/*
+            Principal:
+              AWS:
+                - Fn::Join:
+                  - ':'
+                  - - 'arn:aws:iam:'
+                    - Fn::ImportValue:
+                        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-accountid
+                    - root
+          # read permissions are granted by the ACLs. In addition we want the tags to be private. 
+          # -
+          #   Sid: "AllowCopyOpSubscriber"
+          #   Effect: Allow
+          #   Action:
+          #     - s3:GetObject
+          #     - s3:GetObjectVersion
+          #     - s3:GetObjectAcl
+          #     - s3:GetObjectVersionAcl
+          #     - s3:GetObjectTagging
+          #     - s3:GetObjectVersionTagging
+          #   Resource:
+          #     Fn::Sub: arn:aws:s3:::${ExchangeBucket}/*
+          #   Principal:
+          #     AWS:
+          #       - Fn::Join:
+          #         - ':'
+          #         - - 'arn:aws:iam:'
+          #           - Fn::ImportValue:
+          #               Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-accountid
+          #           - root
+          -
+            Sid: "AllowBasicConsole"
+            Effect: Allow
+            Action:
+              - s3:Get*
+              - s3:List*
+            Resource:
+              Fn::Sub: arn:aws:s3:::${ExchangeBucket}
+            Principal:
+              AWS:
+                - Fn::Join:
+                  - ':'
+                  - - 'arn:aws:iam:'
+                    - Fn::ImportValue:
+                        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-accountid
+                    - root
+                - Fn::Join:
+                  - ':'
+                  - - 'arn:aws:iam:'
+                    - Fn::ImportValue:
+                        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-accountid
+                    - root
+
+  LambdaPermissionForS3Bucket:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Fn::ImportValue:
+          Fn::Sub: mxc-${AWS::Region}-${Environment}-s3eventfn
+      Principal: s3.amazonaws.com
+      SourceAccount:
+        Ref: AWS::AccountId
 
   CMK:
     Type: AWS::KMS::Key
@@ -230,3 +389,25 @@ Resources:
               - kms:GenerateDataKey*
               - kms:DescribeKey
             Resource: '*'
+
+
+  AutoNotifySubscriberRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Notify Content Published"
+      EventBusName:
+        Fn::ImportValue:
+          Fn::Sub: mxc-${AWS::Region}-${Environment}-events
+      EventPattern:
+        source:
+          - publisher.mxc.amazonaws.com
+        detail-type:
+          - Fn::Sub: 'source=s3:ObjectCreated:*,notify=auto,bucket=${ExchangeBucket}'
+      State: "ENABLED"
+      Targets:
+        -
+          Id: "SNSEvent"
+          InputPath: $.detail
+          Arn:
+            Fn::ImportValue:
+              Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic

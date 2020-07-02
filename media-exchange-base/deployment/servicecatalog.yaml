@@ -1,5 +1,4 @@
 AWSTemplateFormatVersion: '2010-09-09'
-Transform: AWS::Serverless-2016-10-31
 Description: >
   Cloudformation template for media exchange core and service catalog setup.
 
@@ -33,7 +32,6 @@ Metadata:
 Mappings:
   SourceCode:
     General:
-      Host: https://$CFNBUCKET.s3.$AWS_REGION.amazonaws.com
       Path: media-exchange-on-aws
       Version: v1.0.0
   AnonymousData:
@@ -50,26 +48,36 @@ Parameters:
     Type: String
     Description: Mainatner Group
     Default: mediaops@yourcompany.com
+  CfnBucket:
+    Type: String
+    Description: Bucket for storing CloudFormation products.
 
 
 Outputs:
-  UserRole:
+  ConsoleUrl:
     Description: ServiceCatalog portfolio manager url.
     Value:
-      Fn::Sub: https://signin.aws.amazon.com/switchrole?roleName=${UserRole}&account=${AWS::AccountId}&region=${AWS::Region}&redirect_uri=https://console.aws.amazon.com/servicecatalog/home?region=${AWS::Region}&isSceuc=true#/products
+      Fn::Sub: https://signin.aws.amazon.com/switchrole?roleName=${ServiceCatalogUserRole}&account=${AWS::AccountId}&region=${AWS::Region}&redirect_uri=https://console.aws.amazon.com/servicecatalog/home?region=${AWS::Region}&isSceuc=true#/products
 
 Resources:
 
   MediaExchangeCore:
-    Type: AWS::Serverless::Application
+    Type: AWS::CloudFormation::Stack
     Properties:
       Parameters:
         Environment :
           Ref: Environment
-      Location: ../build/core.yaml.template
+      TemplateURL:
+        Fn::Join:
+          - /
+          -
+            - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
+            - Fn::FindInMap: [ SourceCode, General, Path ]
+            - Fn::FindInMap: [ SourceCode, General, Version ]
+            - core.yaml
       TimeoutInMinutes: 5
 
-  UserRole:
+  ServiceCatalogUserRole:
     Type: 'AWS::IAM::Role'
     Properties:
       Description: User role for Service Catalog access
@@ -99,14 +107,14 @@ Resources:
     Type: AWS::ServiceCatalog::PortfolioPrincipalAssociation
     Properties:
       PortfolioId: !Ref Portfolio
-      PrincipalARN: !GetAtt UserRole.Arn
+      PrincipalARN: !GetAtt ServiceCatalogUserRole.Arn
       PrincipalType: IAM
 
   Publisher:
     Type: AWS::ServiceCatalog::CloudFormationProduct
     Properties:
       Description: Publisher onboarding template for Media Exchange On AWS Solution
-      Name: Publisher Onboarding
+      Name: Publisher
       Owner:
         Ref: Owner
       SupportDescription: Please contact mediaops@yourcompany.com
@@ -120,10 +128,10 @@ Resources:
               Fn::Join:
                 - /
                 -
-                  - Fn::FindInMap: [ SourceCode, General, Host ]
+                  - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
                   - Fn::FindInMap: [ SourceCode, General, Path ]
                   - Fn::FindInMap: [ SourceCode, General, Version ]
-                  - publisher.yaml.template
+                  - publisher.yaml
           Name:
             Fn::FindInMap: [ SourceCode, General, Version ]
 
@@ -140,7 +148,7 @@ Resources:
     Type: AWS::ServiceCatalog::CloudFormationProduct
     Properties:
       Description: Subscriber onboarding template for Media Exchange On AWS Solution
-      Name: Subscriber Onboarding
+      Name: Subscriber
       Owner:
         Ref: Owner
       SupportDescription: Please contact mediaops@yourcompany.com
@@ -154,10 +162,10 @@ Resources:
               Fn::Join:
                 - /
                 -
-                  - Fn::FindInMap: [ SourceCode, General, Host ]
+                  - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
                   - Fn::FindInMap: [ SourceCode, General, Path ]
                   - Fn::FindInMap: [ SourceCode, General, Version ]
-                  - subscriber.yaml.template
+                  - subscriber.yaml
           Name:
             Fn::FindInMap: [ SourceCode, General, Version ]
 
@@ -173,8 +181,8 @@ Resources:
   Agreement:
     Type: AWS::ServiceCatalog::CloudFormationProduct
     Properties:
-      Description: Template to setup an unique customer managed master encryption key for publisher and subscriber interchange.
-      Name: Transfer Encryption Master Key (KMS CMK)
+      Description: Template to setup shared S3 bucket between publisher and subscriber interchange.
+      Name: Transfer agreement
       Owner:
         Ref: Owner
       SupportDescription: Please contact mediaops@yourcompany.com
@@ -188,10 +196,10 @@ Resources:
               Fn::Join:
                 - /
                 -
-                  - Fn::FindInMap: [ SourceCode, General, Host ]
+                  - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
                   - Fn::FindInMap: [ SourceCode, General, Path ]
                   - Fn::FindInMap: [ SourceCode, General, Version ]
-                  - agreement.yaml.template
+                  - agreement.yaml
           Name:
             Fn::FindInMap: [ SourceCode, General, Version ]
 

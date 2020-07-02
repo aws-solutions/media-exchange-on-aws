@@ -17,27 +17,14 @@ Outputs:
     Export:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-cannonicalaccountid
-  SubscriberPrefix:
-    Description: Subscriber's foldername for receiving content
+  SubscriberNotificationsTopic:
+    Description: Subscriber's notifications topic name
     Value:
-      Ref: Prefix
+      Ref: NotificationTopic
     Export:
       Name:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-prefix
-  SubscriberRole:
-    Description: Subscriber Role to perform List* operations on the bucket
-    Value:
-      Fn::GetAtt: CrossAccountRole.Arn
-    Export:
-      Name:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-role
-  SubscriberRoleName:
-    Description: Subscriber Role to perform List* operations on the bucket
-    Value:
-      Ref: CrossAccountRole
-    Export:
-      Name:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-rolename
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
+
 
 Metadata:
 
@@ -73,7 +60,6 @@ Metadata:
           - SubscriberAccountId
           - CannonicalAccountID
           - Email
-          - Prefix
 
 Parameters:
   Environment:
@@ -99,31 +85,7 @@ Parameters:
     Type: String
     Description: A name for subscriber account.
 
-  Prefix:
-    Type: String
-    Description: A folder name for shared content.
-
 Resources:
-
-  AutoNotifySubscriberRule:
-    Type: AWS::Events::Rule
-    Properties:
-      Description: "Notify Content Published"
-      EventBusName:
-        Fn::ImportValue:
-          Fn::Sub: mxc-${AWS::Region}-${Environment}-events
-      EventPattern:
-        source:
-          - publisher.mxc.amazonaws.com
-        detail-type:
-          - Fn::Sub: 'source=s3:ObjectCreated:*,notify=auto,prefix=${Prefix}'
-      State: "ENABLED"
-      Targets:
-        -
-          Id: "SNSEvent"
-          InputPath: $.detail
-          Arn:
-            Ref: "NotificationTopic"
 
   CustomNotifySubscriberRule:
     Type: AWS::Events::Rule
@@ -136,7 +98,7 @@ Resources:
         source:
           - publisher.mxc.amazonaws.com
         detail-type:
-          - Fn::Sub: 'source=ApplicationEvent,prefix=${Prefix}'
+          - Fn::Sub: 'source=ApplicationEvent,subscribername=${SubscriberName}'
 
       State: "ENABLED"
       Targets:
@@ -171,63 +133,3 @@ Resources:
       Protocol: email
       TopicArn:
         Ref: NotificationTopic
-
-  CrossAccountRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      Description: Cross accont role for subscriber to list contents of the bucket.
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              AWS:
-                Ref: SubscriberAccountId
-            Action: 'sts:AssumeRole'
-
-      Path: /
-      Policies:
-        -
-          PolicyName: mxc-subscriber-access
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              # enable for root level access
-              # -
-              #   Effect: Allow
-              #   Action:
-              #     - s3:ListBucket
-              #   Resource:
-              #     Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-*
-              #   Condition:
-              #     StringEquals:
-              #       s3:prefix: ''
-              #       s3:delimiter: '/'
-              -
-                Effect: Allow
-                Action:
-                  - s3:ListBucket
-                Resource:
-                  Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-*
-                Condition:
-                  StringLike:
-                    s3:prefix:
-                      Fn::Sub: ${Prefix}*
-              -
-                  Effect: Allow
-                  Action:
-                    - s3:GetBucketLocation
-                    - s3:GetBucketPolicyStatus
-                    - s3:GetBucketVersioning
-                    - s3:GetBucketPublicAccessBlock
-                    - s3:GetBucketObjectLockConfiguration
-                    - s3:GetBucketAcl
-                    - s3:GetEncryptionConfiguration
-                  Resource:
-                    Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-*
-              -
-                Effect: Allow
-                Action:
-                  - s3:GetAccountPublicAccessBlock
-                Resource: '*'

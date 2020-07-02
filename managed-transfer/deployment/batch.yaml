@@ -61,7 +61,7 @@ Outputs:
   CopyCheckSumJobDefinition:
     Description: Copy Job Definition
     Value:
-      Ref: CopyJobDefinition
+      Ref: CopyAndCheckSumJobDefinition
     Export:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-copychecksumjob

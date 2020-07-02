@@ -11,14 +11,6 @@ Outputs:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-accountid
 
-  PublisherBucket:
-    Description: Publisher Bucket
-    Value:
-      Ref: PublisherBucket
-    Export:
-      Name:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-bucketname
-
   PublisherRole:
     Description: Publisher Role to perform List* operations on the bucket
     Value:
@@ -26,14 +18,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
-
-  PublisherNotificationConfig:
-    Description: Publisher notificafions configuration
-    Value:
-      Ref: Notifications
-    Export:
-      Name:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-notification-config
 
 Metadata:
 
@@ -67,12 +51,6 @@ Metadata:
         Parameters:
           - PublisherName
           - PublisherAccountId
-      -
-        Label:
-          default: "Notifications Configuration"
-        Parameters:
-          - Notifications
-
 
 Parameters:
   Environment:
@@ -90,178 +68,28 @@ Parameters:
     ConstraintDescription: AccountId is a 12 digit number
     AllowedPattern: '^\d{12}$'
 
-  Notifications:
-    Type: String
-    Description: Select auto to forward default S3 notifications to subscribers.
-    Default: auto
-    AllowedValues:
-      - auto
-      - custom
-
 Resources:
 
-  PublisherBucket:
-    Type: AWS::S3::Bucket
 
-    Properties:
-
-      BucketName:
-        Fn::Sub: mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-${PublisherAccountId}
-
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-
-      VersioningConfiguration:
-        Status: Enabled
-
-      LoggingConfiguration:
-        LogFilePrefix:
-          Ref: PublisherName
-        DestinationBucketName:
-          Fn::ImportValue:
-            Fn::Sub: mxc-${AWS::Region}-${Environment}-logs
-
-      # objects must be encrypted with a CMK
-      # we do not specify a default encryption configuration
-      # rather enforce it from the bucket policy that
-      # a kms key must be used.
-
-      # Objects must be locked for the duration of the agreement
-      # we do not specify a default lock configuration. But we
-      # expect the publishers the lock the objects for the duration
-      # applicable for the agreement
-      # we also stop explicit deletes from by a bucket policy.
-
-      #Expire objects after the lifecycle period
-      LifecycleConfiguration:
-        Rules:
-          -
-            Id: Expire
-            Status: Enabled
-            ExpirationInDays: 5
-
-          -
-            Id: AutoRemove
-            Status: Enabled
-            NoncurrentVersionExpirationInDays: 10
-
-          -
-            Id: CleanupIncompleteUploads
-            Status: Enabled
-            AbortIncompleteMultipartUpload:
-              DaysAfterInitiation: 2
-
-      NotificationConfiguration:
-        LambdaConfigurations:
-          -
-            Event: 's3:ObjectCreated:*'
-            Function:
-              Fn::GetAtt: S3ForwarderFunction.Arn
-
-    UpdateReplacePolicy: Delete
-    DeletionPolicy: Delete
-    DependsOn: LambdaPermissionForS3Bucket
-
-  #bucket policy
-  PublisherBucketPolicy:
-    Type: AWS::S3::BucketPolicy
-    Properties:
-      Bucket:
-        Ref: PublisherBucket
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          # deny direct deletes, updates are allowed
-          -
-            Sid: "DenyDeletes"
-            Action:
-              - "s3:DeleteObject"
-              - "s3:DeleteObjectVersion"
-            Effect: "Deny"
-            Resource:
-              - Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
-            Principal: "*"
-
-          # TLS only
-          -
-            Sid: "RequireTLS"
-            Action:
-              - "s3:*"
-            Effect: "Deny"
-            Resource:
-              - Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
-            Principal: "*"
-            Condition:
-              Bool:
-                aws:SecureTransport: false
-
-          # require KMS for put
-          -
-            Sid: "DenyIncorrectEncryptionHeader"
-            Action:
-              - "s3:PutObject"
-            Effect: "Deny"
-            Resource:
-              - Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
-            Principal: "*"
-            Condition:
-              StringNotEquals:
-                s3:x-amz-server-side-encryption: aws:kms
-
-          -
-            Sid: "DenyNoCMKHeader"
-            Action:
-              - "s3:PutObject"
-            Effect: "Deny"
-            Resource:
-              - Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
-            Principal: "*"
-            Condition:
-              'Null':
-                s3:x-amz-server-side-encryption-aws-kms-key-id: true
-          -
-            Sid: "AllowCopyOp"
-            Effect: Allow
-            Action:
-              - s3:PutObject
-              - s3:PutObjectAcl
-              - s3:PutObjectVersionAcl
-              - s3:PutObjectTagging
-              - s3:PutObjectVersionTagging
-              - s3:GetObject
-              - s3:GetObjectVersion
-              - s3:GetObjectAcl
-              - s3:GetObjectVersionAcl
-              - s3:GetObjectTagging
-              - s3:GetObjectVersionTagging
-              - s3:AbortMultipartUpload
-              - s3:ListMultipartUploadParts
-            Resource:
-              Fn::Sub: arn:aws:s3:::${PublisherBucket}/*
-            Principal:
-              AWS:
-                - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
-          -
-            Sid: "AllowBasicConsole"
-            Effect: Allow
-            Action:
-              - s3:Get*
-              - s3:List*
-            Resource:
-              Fn::Sub: arn:aws:s3:::${PublisherBucket}
-            Principal:
-              AWS:
-                - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
-
+  # alternative to assuming role for sending events
+  # PutEventsPermission:
+  #   Type: AWS::Events::EventBusPolicy
+  #   Properties:
+  #     Action:
+  #       events:PutEvents
+  #     EventBusName:
+  #       Fn::ImportValue:
+  #           Fn::Sub: mxc-${AWS::Region}-${Environment}-events
+  #     Principal:
+  #       Ref: PublisherAccountId
+  #     StatementId:
+  #       Fn::Sub: "Sid${PublisherName}Events"
 
 
   CrossAccountRole:
     Type: 'AWS::IAM::Role'
     Properties:
-      Description: Cross accont role for publisher to list contents of the bucket.
+      Description: Cross accont role for publisher send events through eventbridge.
       AssumeRolePolicyDocument:
         Version: 2012-10-17
         Statement:
@@ -282,11 +110,6 @@ Resources:
               -
                 Effect: Allow
                 Action:
-                  - s3:ListAllMyBuckets
-                Resource: '*'
-              -
-                Effect: Allow
-                Action:
                   - events:PutEvents
                 Resource:
                   - Fn::Join:
@@ -294,115 +117,3 @@ Resources:
                     - - Fn::Sub: arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus
                       - Fn::ImportValue:
                           Fn::Sub: mxc-${AWS::Region}-${Environment}-events
-
-
-  S3EventForwarderFunctionRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      Description: Role for EventForwarer Lambda.
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: 'sts:AssumeRole'
-      Path: /
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        -
-          PolicyName: mxc-lambda-putevents
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              -
-                Effect: Allow
-                Action:
-                  - events:PutEvents
-                Resource:
-                  - Fn::Join:
-                    - /
-                    - - Fn::Sub: arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus
-                      - Fn::ImportValue:
-                          Fn::Sub: mxc-${AWS::Region}-${Environment}-events
-
-  LambdaPermissionForS3Bucket:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: 'lambda:InvokeFunction'
-      FunctionName:
-        Ref: S3ForwarderFunction
-      Principal: s3.amazonaws.com
-      SourceAccount:
-        Ref: AWS::AccountId
-      SourceArn:
-        Fn::Sub: arn:aws:s3:::mxc-${AWS::AccountId}-${AWS::Region}-${Environment}-publisherbucket-${PublisherAccountId}
-
-
-  #lambda to send s3 events to EventBus
-  S3ForwarderFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Description: Lambda function to forward the S3 event notifications to EventBridge
-      MemorySize: 128
-      Role:
-        Fn::GetAtt: S3EventForwarderFunctionRole.Arn
-      Runtime: python3.7
-      Timeout: 10
-      Handler: index.handler
-      Environment:
-        Variables:
-          EventBusName:
-            Fn::ImportValue:
-              Fn::Sub: mxc-${AWS::Region}-${Environment}-events
-          NotificationConfiguration:
-            Ref: Notifications
-
-      Code:
-        ZipFile: |
-          import os
-          import logging
-          import boto3
-          import json
-
-          logger = logging.getLogger()
-          logger.setLevel(logging.INFO)
-
-          #events client
-          client = boto3.client('events')
-
-          def handler(event, context):
-            # logger.debug("Event received", json.dumps(event))
-
-            try:
-              logger.info("forwarding Event to EventBridge")
-
-              source_key = event["Records"][0]["s3"]["object"]["key"]
-              prefix = ''
-              delim = '/'
-              prefix_end = source_key.find(delim)
-              if (prefix_end != -1):
-                prefix = source_key[:prefix_end]
-
-              routing_data = 'source=s3:ObjectCreated:*,notify='+ os.environ['NotificationConfiguration'] +',prefix=' + prefix
-              logger.info("routing_data=" + routing_data)
-
-              response = client.put_events(
-                Entries=[
-                    {
-                        'Source': 'publisher.mxc.amazonaws.com',
-                        'DetailType': routing_data,
-                        'Detail': json.dumps(event),
-                        'EventBusName': os.environ['EventBusName']
-                    },
-                ]
-              )
-
-              logger.debug("finished forwarding event")
-
-            except Exception as e:
-                # Catch all exceptions
-                result = 'Exception: {}'.format(e)
-                logger.error(result)
