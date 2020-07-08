@@ -54,7 +54,7 @@ The easiest install path is to use the included Makefile. This uses awscli to pa
 
 * Login into MediaExchange account using the URL to launch Service Catalog. This URL was printed out on command prompt, and is available in the stack outputs section of the MediaExchange CloudFormation stack.
 
-* The page should list out three products from AWS Solutions Library. Use _publisher_ to on-board an account that needs to push content to MediaExchange and use _subscriber_ to on-board a receiver. Once you you have added the publisher and subscriber, establish a transfer link between them my deploying _transfer agreement_.
+* The page should list out three products from AWS Solutions Library. Use _publisher_ to on-board an account that needs to push content to MediaExchange and use _subscriber_ to on-board a receiver. Once you have added the publisher and subscriber, establish a transfer link between them my deploying _transfer agreement_.
 
 * _Deploy a publisher_
 
@@ -74,7 +74,7 @@ The easiest install path is to use the included Makefile. This uses awscli to pa
   1. Enter a stack name eg. mediaexchange-subscriber-ott and then click next.
   1. Enter a name for subscriber. This is used for identifying the publisher in the MediaExchange and will be used to link up to the publisher.
   1. Enter the AWS Account Id of the subscriber account. See [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/console_account-alias.html#FindingYourAWSId) to find account id and then click next.
-  1. Enter the Cannonical Account ID of the subscriber. See [here](https://docs.aws.amazon.com/general/latest/gr/acct-identifiers.html#FindingCanonicalId) to find Cannonical Account Id.
+  1. Enter the Canonical Account ID of the subscriber. See [here](https://docs.aws.amazon.com/general/latest/gr/acct-identifiers.html#FindingCanonicalId) to find Canonical Account Id.
   1. Enter an email address for subscriber. This email is used to send asset availability notifications.
   1. (Optional) add tags to resources by specifying them as key-value pairs.
   1. (Optional) enable notification
@@ -91,7 +91,7 @@ The easiest install path is to use the included Makefile. This uses awscli to pa
   1. (Optional) enable notification
   1. clink launch.
   1. Once complete, this transfer agreement is going to be listed in the provisioned product list.
-  1. Share the following information with the publisher over usual communication channels. They will use these configuration information to access MediaExchange.
+  1. Share the following information with the publisher over usual communication channels. They will use this configuration information to access MediaExchange.
     * _PublisherOnboardingSummary_
     * _ConsoleUrl_
   1. Share the following information with the subscriber over usual communication channels
@@ -113,7 +113,7 @@ The easiest install path is to use the included Makefile. This uses awscli to pa
   * Click Add Files, and select an asset from disk.
   * Click Next
   * Click Add Account button next to "Access for other AWS account".
-  * In the textbox, enter the value of SUBSCRIBER_CANNONICAL_ID from _PublisherOnboardingSummary_
+  * In the textbox, enter the value of SUBSCRIBER_CANONICAL_ID from _PublisherOnboardingSummary_
   * Check the "read" box. Click save. This will allow the subscriber account to have read access.
   * Click next
   * Select standard storage class and scroll down to encryption section.

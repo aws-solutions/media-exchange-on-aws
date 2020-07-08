@@ -10,13 +10,13 @@ Outputs:
     Export:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-accountid
-  SubscriberCannonicalAccountID:
-    Description: Subscriber's Cannonical AccountId
+  SubscriberCanonicalAccountID:
+    Description: Subscriber's Canonical AccountId
     Value:
-      Ref: CannonicalAccountID
+      Ref: CanonicalAccountID
     Export:
       Name:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-cannonicalaccountid
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-canonicalaccountid
   SubscriberNotificationsTopic:
     Description: Subscriber's notifications topic name
     Value:
@@ -58,7 +58,7 @@ Metadata:
         Parameters:
           - SubscriberName
           - SubscriberAccountId
-          - CannonicalAccountID
+          - CanonicalAccountID
           - Email
 
 Parameters:
@@ -73,9 +73,9 @@ Parameters:
     ConstraintDescription: AccountId is a 12 digit number
     AllowedPattern: '^\d{12}$'
 
-  CannonicalAccountID:
+  CanonicalAccountID:
     Type: String
-    Description: The Cannonical Account ID of the subscriber.
+    Description: The Canonical Account ID of the subscriber.
 
   Email:
     Type: String

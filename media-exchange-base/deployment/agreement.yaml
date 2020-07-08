@@ -34,11 +34,11 @@ Outputs:
           - Fn::Sub: EVENT_SOURCE_NAME=mxc-${AWS::Region}-${Environment}-publisher
           - Fn::Join:
             - ''
-            - - SUBSCRIBER_CANNONICAL_ACCOUNT_ID=
+            - - SUBSCRIBER_CANONICAL_ACCOUNT_ID=
               - Fn::ImportValue:
-                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-cannonicalaccountid
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-canonicalaccountid
 
-  
+
 
 Metadata:
 

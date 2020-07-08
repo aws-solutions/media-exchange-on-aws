@@ -29,11 +29,11 @@ subscriber:  ## deploys a subscriber
 	$(call ndef,AWS_REGION)
 	$(call ndef,SUBSCRIBER_NAME)
 	$(call ndef,SUBSCRIBER_ACCOUNT_ID)
-	$(call ndef,SUBSCRIBER_CANNONICAL_ACCOUNT_ID)
+	$(call ndef,SUBSCRIBER_CANONICAL_ACCOUNT_ID)
 	$(call ndef,SUBSCRIBER_EMAIL)
 
 	@echo deploying $@ at $(AWS_REGION)
-	@aws --region $(AWS_REGION) cloudformation deploy --template-file $(CURRENT_DIR)/deployment/subscriber.yaml --stack-name $(STACKPREFIX)-subscriber-$(SUBSCRIBER_NAME)-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) SubscriberAccountId=$(SUBSCRIBER_ACCOUNT_ID) CannonicalAccountID=$(SUBSCRIBER_CANNONICAL_ACCOUNT_ID) Email=$(SUBSCRIBER_EMAIL) Prefix=$(SUBSCRIBER_NAME) SubscriberName=$(SUBSCRIBER_NAME) $(DEBUG) 1>/dev/null
+	@aws --region $(AWS_REGION) cloudformation deploy --template-file $(CURRENT_DIR)/deployment/subscriber.yaml --stack-name $(STACKPREFIX)-subscriber-$(SUBSCRIBER_NAME)-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) SubscriberAccountId=$(SUBSCRIBER_ACCOUNT_ID) CanonicalAccountID=$(SUBSCRIBER_CANONICAL_ACCOUNT_ID) Email=$(SUBSCRIBER_EMAIL) Prefix=$(SUBSCRIBER_NAME) SubscriberName=$(SUBSCRIBER_NAME) $(DEBUG) 1>/dev/null
 
 agreement: ## deploys an agreement
 	$(call ndef,AWS_REGION)
@@ -53,13 +53,13 @@ agreement: ## deploys an agreement
 # templates := $(patsubst deployment/%.yaml,%.yaml.template,$(wildcard deployment/*.yaml))
 install:
 	$(call ndef,AWS_REGION)
-	$(call ndef,CFNBUCKET)
+	$(call ndef,CFN_BUCKET)
 	$(call ndef,RELEASE_VERSION)
-	@aws --region $(AWS_REGION) s3 sync $(CURRENT_DIR)/deployment s3://$(CFNBUCKET)/media-exchange-on-aws/$(RELEASE_VERSION) --delete --exact-timestamps --exclude "*" --include "*.yaml" 
+	@aws --region $(AWS_REGION) s3 sync $(CURRENT_DIR)/deployment s3://$(CFN_BUCKET)/media-exchange-on-aws/$(RELEASE_VERSION) --delete --exact-timestamps --exclude "*" --include "*.yaml"
 
 	@echo deploying to service catalog at $(AWS_REGION)
 
-	@aws --region $(AWS_REGION) cloudformation deploy --template-file $(CURRENT_DIR)/deployment/servicecatalog.yaml --stack-name $(STACKPREFIX)-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) CfnBucket=$(CFNBUCKET) $(DEBUG) 1>/dev/null
+	@aws --region $(AWS_REGION) cloudformation deploy --template-file $(CURRENT_DIR)/deployment/servicecatalog.yaml --stack-name $(STACKPREFIX)-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) CfnBucket=$(CFN_BUCKET) $(DEBUG) 1>/dev/null
 
 	@echo login to service catalog in mediaexchange account with the following url to onboard publishers and subscribers
 

@@ -26,7 +26,7 @@ CHECKSUM=$(openssl dgst -sha256 /tmp/$FILE_NAME | cut -d' ' -f2)
 echo checksum is $CHECKSUM
 
 echo copying to s3
-aws s3api put-object --bucket $BUCKET_NAME --key $FILE_NAME  --body /tmp/$FILE_NAME   --server-side-encryption aws:kms --ssekms-key-id $KMS_KEY_ID --grant-read id=$SUBSCRIBER_CANNONICAL_ACCOUNT_ID
+aws s3api put-object --bucket $BUCKET_NAME --key $FILE_NAME  --body /tmp/$FILE_NAME   --server-side-encryption aws:kms --ssekms-key-id $KMS_KEY_ID --grant-read id=$SUBSCRIBER_CANONICAL_ACCOUNT_ID
 
 rm -rf /tmp/$FILE_NAME
 
