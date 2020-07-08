@@ -9,14 +9,11 @@ Outputs:
     Value:
       Fn::Join:
         - ' '
-        - - Fn::Sub: NAME=${SubscriberName}
+        - - Fn::Sub: SUBSCRIBER_NAME=${SubscriberName}
+          - Fn::Sub: PUBLISHER_NAME=${PublisherName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
           - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
-          - Fn::Join:
-            - ''
-            - - ACCOUNTID=
-              - Fn::ImportValue:
-                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-accountid
+          - Fn::Sub: MEDIAEXCHNAGE_ACCOUNTID=${AWS::AccountId}
 
   ConsoleUrl:
     Description: Use this url to directly access the shared bucket.
@@ -28,39 +25,20 @@ Outputs:
     Value:
       Fn::Join:
         - ' '
-        - - Fn::Sub: NAME=${PublisherName}
+        - - Fn::Sub: PUBLISHER_NAME=${PublisherName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
-
-          - Fn::Join:
-            - ''
-            - - ACCOUNTID=
-              - Fn::ImportValue:
-                  Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-accountid
-
+          - Fn::Sub: MEDIAEXCHNAGE_ACCOUNTID=${AWS::AccountId}
           - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
-
           - Fn::Sub: SUBSCRIBER_NAME=${SubscriberName}
-
+          - Fn::Sub: KMS_KEY_ID="${CMK.Arn}"
+          - Fn::Sub: EVENT_SOURCE_NAME=mxc-${AWS::Region}-${Environment}-publisher
           - Fn::Join:
             - ''
-            - - SUBSCRIBER_CANNONICAL_ID=
+            - - SUBSCRIBER_CANNONICAL_ACCOUNT_ID=
               - Fn::ImportValue:
                   Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-cannonicalaccountid
 
-          - Fn::Sub: KMS_KEY_ID="${CMK.Arn}"
-
-          - Fn::Join:
-            - ''
-            - - PUBLISHER_ROLE_ARN="
-              - Fn::ImportValue:
-                  Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
-              - '"'
-
-          - Fn::Join:
-            - ''
-            - - EVENT_BUS_NAME=
-              - Fn::ImportValue:
-                  Fn::Sub: mxc-${AWS::Region}-${Environment}-events
+  
 
 Metadata:
 
@@ -267,7 +245,7 @@ Resources:
                     - Fn::ImportValue:
                         Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-accountid
                     - root
-          # read permissions are granted by the ACLs. In addition we want the tags to be private. 
+          # read permissions are granted by the ACLs. In addition we want the tags to be private.
           # -
           #   Sid: "AllowCopyOpSubscriber"
           #   Effect: Allow
@@ -395,12 +373,9 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Description: "Notify Content Published"
-      EventBusName:
-        Fn::ImportValue:
-          Fn::Sub: mxc-${AWS::Region}-${Environment}-events
       EventPattern:
         source:
-          - publisher.mxc.amazonaws.com
+          - Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher
         detail-type:
           - Fn::Sub: 'source=s3:ObjectCreated:*,notify=auto,bucket=${ExchangeBucket}'
       State: "ENABLED"
@@ -411,3 +386,13 @@ Resources:
           Arn:
             Fn::ImportValue:
               Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
+        # -
+        #   Id: "XAccount"
+        #   Arn:
+        #     Fn::Join:
+        #       - ':'
+        #       - - arn:aws:events
+        #         - Ref: AWS::Region
+        #         - Fn::ImportValue:
+        #             Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-accountid
+        #         - event-bus/default

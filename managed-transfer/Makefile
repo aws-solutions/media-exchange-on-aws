@@ -7,35 +7,27 @@ DEBUG ?=
 
 VERSION ?= latest
 ENV ?= dev
-STACKPREFIX = mediaexchange-managed-transfer
+STACKPREFIX = mediaexchange-managedtransfer
 CURRENT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 
 
 ndef = $(if $(value $(1)),,$(error $(1) not set))
 checkenv: ## checks environment
 	$(call ndef,AWS_REGION)
-	$(call ndef,CFNBUCKET)
-	$(call ndef,DESTINATION_BUCKET)
 
-configure: checkenv
-	@mkdir -p build
-
-%.template: deployment/% configure ## packages cloudformation
-	@echo packaging $@
-	@aws --region $(AWS_REGION) cloudformation package --template-file $(CURRENT_DIR)/$< --output-template-file $(CURRENT_DIR)/build/$@  --s3-bucket $(CFNBUCKET) --s3-prefix scratch --force-upload $(DEBUG) 1>/dev/null
-
-%: %.yaml.template
+%: deployment/%.yaml checkenv
 	@echo starting deployment of $@ at $(AWS_REGION)
-	@aws --region $(AWS_REGION) cloudformation deploy --template-file $(CURRENT_DIR)/build/$< --stack-name $(STACKPREFIX)-$@-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM  $(DEBUG) 1>/dev/null
+	@aws --region $(AWS_REGION) cloudformation deploy --template-file $(CURRENT_DIR)deployment/$@.yaml --stack-name $(STACKPREFIX)-$@-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) $(DEBUG) 1>/dev/null
 
 install: network batch
-	@sam deploy --region $(AWS_REGION) --template-file $(CURRENT_DIR)/build/template.yaml --stack-name $(STACKPREFIX)-s3job-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM  --s3-bucket $(CFNBUCKET) --s3-prefix scratch --force-upload --parameter-overrides DestinationBucket=$(DESTINATION_BUCKET) $(DEBUG) 1>/dev/null
 
-package:
+publisherhelper:
+	$(MAKE) -C $(CURRENT_DIR)integrations/s3job push
+
+subscriberhelper:
+	$(MAKE) -C $(CURRENT_DIR)integrations/s3job pull
+
+package: checkenv
 	$(MAKE) -C copier publish
-	@sam build -s $(CURRENT_DIR) -b $(CURRENT_DIR)/build --template $(CURRENT_DIR)/deployment/s3job.yaml --use-container  $(DEBUG) 1>/dev/null
 
-clean: ## clears the build directory
-	@rm -rf build/*
-
-.PHONY: checkenv configure install clean package
+.PHONY: checkenv install package

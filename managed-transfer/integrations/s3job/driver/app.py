@@ -31,8 +31,6 @@ def lambda_handler(event, context):
     s3BucketArn = event['tasks'][0]['s3BucketArn']
     sourceBucket = s3BucketArn.split(':::')[-1]
 
-    #check read & write access to the bucket
-    destinationBucket = os.environ['DestinationBucket']
     results = []
 
     # Copy object to new bucket with new key name
@@ -51,7 +49,6 @@ def lambda_handler(event, context):
             jobDefinition=os.environ['JobDefinition'],
             parameters={
                 'Source': 's3://' + sourceBucket + '/' + sourceKey,
-                'Destination': 's3://' + destinationBucket + '/'
             }
         )
 

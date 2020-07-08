@@ -11,14 +11,6 @@ Outputs:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-accountid
 
-  PublisherRole:
-    Description: Publisher Role to perform List* operations on the bucket
-    Value:
-      Fn::GetAtt: CrossAccountRole.Arn
-    Export:
-      Name:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
-
 Metadata:
 
   License:
@@ -70,50 +62,12 @@ Parameters:
 
 Resources:
 
-
-  # alternative to assuming role for sending events
-  # PutEventsPermission:
-  #   Type: AWS::Events::EventBusPolicy
-  #   Properties:
-  #     Action:
-  #       events:PutEvents
-  #     EventBusName:
-  #       Fn::ImportValue:
-  #           Fn::Sub: mxc-${AWS::Region}-${Environment}-events
-  #     Principal:
-  #       Ref: PublisherAccountId
-  #     StatementId:
-  #       Fn::Sub: "Sid${PublisherName}Events"
-
-
-  CrossAccountRole:
-    Type: 'AWS::IAM::Role'
+  PutEventsPermission:
+    Type: AWS::Events::EventBusPolicy
     Properties:
-      Description: Cross accont role for publisher send events through eventbridge.
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              AWS:
-                Ref: PublisherAccountId
-            Action: 'sts:AssumeRole'
-
-      Path: /
-      Policies:
-        -
-          PolicyName: mxc-publisher-access
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              -
-                Effect: Allow
-                Action:
-                  - events:PutEvents
-                Resource:
-                  - Fn::Join:
-                    - /
-                    - - Fn::Sub: arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus
-                      - Fn::ImportValue:
-                          Fn::Sub: mxc-${AWS::Region}-${Environment}-events
+      Action:
+        events:PutEvents
+      Principal:
+        Ref: PublisherAccountId
+      StatementId:
+        Fn::Sub: "Sid${PublisherName}Events"

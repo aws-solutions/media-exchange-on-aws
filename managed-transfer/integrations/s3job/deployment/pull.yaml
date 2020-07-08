@@ -1,7 +1,7 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 Description: >
-  Cloudformation template for batch transfer utlity for large files.
+  Cloudformation template for batch transfer utlity integration helper for subscribers pulling assets from mediaexchange.
 
 Metadata:
 
@@ -29,17 +29,29 @@ Metadata:
           default: "Deployment Configuration"
         Parameters:
           - Environment
-          - DestinationBucket
+          - PublisherName
+          - SubscriberName
+          - DestinationBucketName
+
 
 Parameters:
   Environment:
     Type: String
     Description: Deployment Environment Name
     Default: dev
-  DestinationBucket:
+  SubscriberName:
     Type: String
-    Description: Destination Bucket
-
+    Description: Subscriber Name
+  PublisherName:
+    Type: String
+    Description: Publisher Name
+  DestinationBucketName:
+    Type: String
+    Description: Destination S3 Bucket Name
+  ImageName:
+    Type: String
+    Description: Image Name
+    Default: mediaexchange-managedtransfer/aws-cli
 
 Resources:
 
@@ -48,6 +60,9 @@ Resources:
     Properties:
       Description: Lambda function to be invoked by s3 batch
 
+      AutoPublishAlias:
+        Ref: PublisherName
+
       CodeUri: driver/
       Handler: app.lambda_handler
       Runtime: python3.8
@@ -55,10 +70,6 @@ Resources:
 
       Policies:
         - AWSLambdaBasicExecutionRole
-        - S3ReadPolicy:
-            BucketName: '*'
-        - S3WritePolicy:
-            BucketName: '*'
         - AWSXRayDaemonWriteAccess
         - Statement:
           - Sid: xray
@@ -77,19 +88,96 @@ Resources:
             - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/*
             - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-queue/*
 
+        # for preflight check
+        - S3ReadPolicy:
+            BucketName: '*'
+        - S3WritePolicy:
+            BucketName:
+              Ref: DestinationBucketName
+        - Statement:
+          - Sid: kms
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+              - kms:DescribeKey
+            Resource: '*'
+
       Timeout: 30
       ReservedConcurrentExecutions: 2
 
       Environment:
         Variables:
-          DestinationBucket:
-            Ref: DestinationBucket
           JobDefinition:
-            Fn::ImportValue:
-              Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-copyjob
+            Ref: CopyJobDefinition
           JobQueue:
             Fn::ImportValue:
               Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-jobq
+
+
+  CopyJobDefinition:
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      Type: container
+      ContainerProperties:
+        Image:
+          Fn::Sub: ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ImageName}
+        Vcpus: 1
+        Memory: 512
+        Command:
+          - aws
+          - s3
+          - cp
+          - Ref::Source
+          - Fn::Sub: s3://${DestinationBucketName}/
+          - --copy-props
+          - metadata-directive
+        JobRoleArn:
+          Fn::GetAtt: JobRole.Arn
+      RetryStrategy:
+        Attempts: 3
+
+
+  JobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: ecs-tasks.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Policies:
+        -
+          PolicyName: KMSAndS3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                # minimal permissions
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource: '*'
+              -
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+                  - s3:PutObjectVersionAcl
+                  - s3:AbortMultipartUpload
+                  - s3:ListMultipartUploadParts
+                Resource:
+                  Fn::Sub: arn:aws:s3:::${DestinationBucketName}/*
+
+              -
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:DescribeKey
+                Resource: '*'
 
   S3BatchRole:
     Type: AWS::IAM::Role

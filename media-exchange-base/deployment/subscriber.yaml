@@ -90,13 +90,10 @@ Resources:
   CustomNotifySubscriberRule:
     Type: AWS::Events::Rule
     Properties:
-      Description: "Notify Content Published"
-      EventBusName:
-        Fn::ImportValue:
-          Fn::Sub: mxc-${AWS::Region}-${Environment}-events
+      Description: "Forward Custom Events"
       EventPattern:
         source:
-          - publisher.mxc.amazonaws.com
+          - Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher
         detail-type:
           - Fn::Sub: 'source=ApplicationEvent,subscribername=${SubscriberName}'
 
@@ -107,6 +104,11 @@ Resources:
           InputPath: $.detail
           Arn:
             Ref: "NotificationTopic"
+        # -
+        #   Id: "XAccount"
+        #   Arn:
+        #     Fn::Sub: arn:aws:events:${AWS::Region}:${SubscriberAccountId}:event-bus/default
+
 
   NotificationTopic:
     Type: AWS::SNS::Topic

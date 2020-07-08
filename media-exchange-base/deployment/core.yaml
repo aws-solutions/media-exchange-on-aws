@@ -49,14 +49,6 @@ Parameters:
       - custom
 
 Outputs:
-  EventBusName:
-    Description: Event Bus Name
-    Value:
-      Ref: EventBus
-    Export:
-      Name:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-events
-
   LogBucketName:
     Description: Logging Bucket Name
     Value:
@@ -178,7 +170,7 @@ Resources:
             - Type: 'AWS::S3::Object'
               Values:
                 - 'arn:aws:s3:::'
-          IncludeManagementEvents: true
+          IncludeManagementEvents: false
           ReadWriteType: All
       S3BucketName:
         Ref: ExchangeCloudTrailBucket
@@ -186,13 +178,6 @@ Resources:
         Fn::GetAtt: ExchangeCloudTrailLogGroup.Arn
       CloudWatchLogsRoleArn:
         Fn::GetAtt: ExchangeCloudTrailLogGroupRole.Arn
-
-  #central eventbus
-  EventBus:
-    Type: AWS::Events::EventBus
-    Properties:
-      Name:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-events
 
   S3EventForwarderFunctionRole:
     Type: 'AWS::IAM::Role'
@@ -220,7 +205,7 @@ Resources:
                 Action:
                   - events:PutEvents
                 Resource:
-                  Fn::GetAtt: EventBus.Arn
+                  Fn::Sub: arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
 
 
   #lambda to send s3 events to EventBus
@@ -236,10 +221,10 @@ Resources:
       Handler: index.handler
       Environment:
         Variables:
-          EventBusName:
-            Ref: EventBus
           NotificationConfiguration:
             Ref: Notifications
+          SourceName:
+            Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher
 
       Code:
         ZipFile: |
@@ -268,10 +253,9 @@ Resources:
               response = client.put_events(
                 Entries=[
                     {
-                        'Source': 'publisher.mxc.amazonaws.com',
+                        'Source': os.environ['SourceName'],
                         'DetailType': routing_data,
                         'Detail': json.dumps(event),
-                        'EventBusName': os.environ['EventBusName']
                     },
                 ]
               )
