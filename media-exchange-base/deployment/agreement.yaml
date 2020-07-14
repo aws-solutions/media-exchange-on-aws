@@ -13,7 +13,7 @@ Outputs:
           - Fn::Sub: PUBLISHER_NAME=${PublisherName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
           - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
-          - Fn::Sub: MEDIAEXCHNAGE_ACCOUNTID=${AWS::AccountId}
+          - Fn::Sub: MEDIAEXCHANGE_ACCOUNTID=${AWS::AccountId}
 
   ConsoleUrl:
     Description: Use this url to directly access the shared bucket.
@@ -27,7 +27,7 @@ Outputs:
         - ' '
         - - Fn::Sub: PUBLISHER_NAME=${PublisherName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
-          - Fn::Sub: MEDIAEXCHNAGE_ACCOUNTID=${AWS::AccountId}
+          - Fn::Sub: MEDIAEXCHANGE_ACCOUNTID=${AWS::AccountId}
           - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
           - Fn::Sub: SUBSCRIBER_NAME=${SubscriberName}
           - Fn::Sub: KMS_KEY_ID="${CMK.Arn}"

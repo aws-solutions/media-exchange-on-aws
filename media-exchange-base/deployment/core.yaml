@@ -163,15 +163,8 @@ Resources:
     Properties:
       IsLogging: true
       EnableLogFileValidation: true
-      IncludeGlobalServiceEvents: false
+      IncludeGlobalServiceEvents: true
       IsMultiRegionTrail: false
-      EventSelectors:
-        - DataResources:
-            - Type: 'AWS::S3::Object'
-              Values:
-                - 'arn:aws:s3:::'
-          IncludeManagementEvents: false
-          ReadWriteType: All
       S3BucketName:
         Ref: ExchangeCloudTrailBucket
       CloudWatchLogsLogGroupArn:

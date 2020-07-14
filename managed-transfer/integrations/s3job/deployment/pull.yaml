@@ -48,10 +48,19 @@ Parameters:
   DestinationBucketName:
     Type: String
     Description: Destination S3 Bucket Name
+  Checksum:
+    Description: Whether a checksum should be calculated and delivered as metadata.
+    Default: false
+    Type: String
+    AllowedValues: [true, false]
   ImageName:
     Type: String
     Description: Image Name
     Default: mediaexchange-managedtransfer/aws-cli
+
+Conditions:
+  DoCheckSum:
+    Fn::Equals: [true, !Ref Checksum]
 
 Resources:
 
@@ -108,7 +117,10 @@ Resources:
       Environment:
         Variables:
           JobDefinition:
-            Ref: CopyJobDefinition
+            Fn::If:
+              - DoCheckSum
+              - Ref: CopyAndCheckSumJobDefinition
+              - Ref: CopyJobDefinition
           JobQueue:
             Fn::ImportValue:
               Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-jobq
@@ -131,6 +143,24 @@ Resources:
           - Fn::Sub: s3://${DestinationBucketName}/
           - --copy-props
           - metadata-directive
+        JobRoleArn:
+          Fn::GetAtt: JobRole.Arn
+      RetryStrategy:
+        Attempts: 3
+
+  CopyAndCheckSumJobDefinition:
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      Type: container
+      ContainerProperties:
+        Image:
+          Fn::Sub: ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ImageName}
+        Vcpus: 4
+        Memory: 7168
+        Command:
+          - pullWithCheckSum.sh
+          - Ref::Source
+          - Fn::Sub: s3://${DestinationBucketName}/
         JobRoleArn:
           Fn::GetAtt: JobRole.Arn
       RetryStrategy:

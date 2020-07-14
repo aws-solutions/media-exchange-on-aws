@@ -175,10 +175,10 @@ Resources:
       ContainerProperties:
         Image:
           Fn::Sub: ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ImageName}
-        Vcpus: 2
-        Memory: 3584
+        Vcpus: 4
+        Memory: 7168
         Command:
-          - copyWithSHA256.sh
+          - pushWithCheckSum.sh
           - Ref::Source
           - Fn::Sub: s3://${BucketName}/
           - Ref: KMSKeyArn

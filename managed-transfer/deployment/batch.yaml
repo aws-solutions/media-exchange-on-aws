@@ -72,7 +72,7 @@ Resources:
 
       ComputeResources:
         MinvCpus: 0
-        DesiredvCpus: 2
+        DesiredvCpus: 0
         MaxvCpus: 32
         InstanceTypes:
           - optimal
