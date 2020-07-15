@@ -55,6 +55,7 @@ Resources:
   JobQueue:
     Type: AWS::Batch::JobQueue
     Properties:
+      JobQueueName: mediaexchange-managedtransfer-queue
       Priority: 1
       ComputeEnvironmentOrder:
         -

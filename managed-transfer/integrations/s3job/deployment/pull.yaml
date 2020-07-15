@@ -155,8 +155,8 @@ Resources:
       ContainerProperties:
         Image:
           Fn::Sub: ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ImageName}
-        Vcpus: 4
-        Memory: 7168
+        Vcpus: 2
+        Memory: 3584
         Command:
           - pullWithCheckSum.sh
           - Ref::Source
