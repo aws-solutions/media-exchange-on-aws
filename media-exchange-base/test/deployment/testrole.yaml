@@ -1,0 +1,118 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Cloudformation template for media exchange publisher role for testing.
+
+Metadata:
+
+  License:
+    Description: |
+      Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+      Permission is hereby granted, free of charge, to any person obtaining a copy of this
+      software and associated documentation files (the "Software"), to deal in the Software
+      without restriction, including without limitation the rights to use, copy, modify,
+      merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+      permit persons to whom the Software is furnished to do so.
+
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+      INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+      PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+      HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+      OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+      SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Deployment Configuration"
+        Parameters:
+          - Environment
+      -
+        Label:
+          default: "Test Configuration"
+        Parameters:
+          - TestAccountId
+          - ExchangeBucket
+          - KMSKeyArn
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+
+  ExchangeBucket:
+    Type: String
+    Description: The Mediaexchange S3 Bucket Name.
+    Default: $BUCKET_NAME
+
+  TestAccountId:
+    Type: String
+    Description: The accountId of the MediaExchange.
+    ConstraintDescription: AccountId is a 12 digit number
+    AllowedPattern: '^\d{12}$'
+    Default: $MEDIAEXCHANGE_ACCOUNTID
+
+  KMSKeyArn:
+    Type: String
+    Description: KMS Key Arn
+    Default: $KMS_KEY_ID
+
+
+Resources:
+
+  TestRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: mediaexchange-test-role
+      AssumeRolePolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              AWS:
+                Ref: TestAccountId
+        Version: "2012-10-17"
+      Path: /
+      Policies:
+        -
+          PolicyName: KMSAndS3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - s3:Get*
+                  - s3:List*
+                Resource:
+                  - Fn::Join:
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - Ref: ExchangeBucket
+                      - '/*'
+              -
+                Effect: Allow
+                Action:
+                  - s3:Put*
+                  - s3:AbortMultipartUpload
+                  - s3:ListMultipartUploadParts
+                Resource:
+                  - Fn::Join:
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - Ref: ExchangeBucket
+                      - '/*'
+
+              -
+                Effect: Allow
+                Action:
+                  - kms:Encrypt
+                  - kms:Decrypt
+                  - kms:ReEncrypt*
+                  - kms:GenerateDataKey*
+                  - kms:DescribeKey
+                Resource:
+                  Ref: KMSKeyArn

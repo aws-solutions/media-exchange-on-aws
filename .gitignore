@@ -248,3 +248,4 @@ $RECYCLE.BIN/
 *.toml
 
 *.env
+media-exchange-base/test/template.yaml
