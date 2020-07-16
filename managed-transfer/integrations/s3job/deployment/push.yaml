@@ -29,9 +29,7 @@ Metadata:
           default: "Deployment Configuration"
         Parameters:
           - Environment
-          - PublisherName
-          - SubscriberName
-          - BucketName
+          - MediaExchangeBucketName
           - KMSKeyArn
           - SubscriberCannoicalAccountID
 
@@ -40,15 +38,9 @@ Parameters:
     Type: String
     Description: Deployment Environment Name
     Default: dev
-  SubscriberName:
+  MediaExchangeBucketName:
     Type: String
-    Description: Subscriber Name
-  PublisherName:
-    Type: String
-    Description: Publisher Name
-  BucketName:
-    Type: String
-    Description: S3 Bucket Name
+    Description: MediaExchange S3 Bucket Name
   KMSKeyArn:
     Type: String
     Description: KMS Key Arn
@@ -77,9 +69,6 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: Lambda function to be invoked by s3 batch
-
-      AutoPublishAlias:
-        Ref: SubscriberName
 
       CodeUri: driver/
       Handler: app.lambda_handler
@@ -111,7 +100,7 @@ Resources:
             BucketName: '*'
         - S3WritePolicy:
             BucketName:
-              Ref: BucketName
+              Ref: MediaExchangeBucketName
         - Statement:
           - Sid: kms
             Effect: Allow
@@ -137,6 +126,8 @@ Resources:
           JobQueue:
             Fn::ImportValue:
               Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-jobq
+          DestinationBucketName:
+            Ref: MediaExchangeBucketName
 
 
   CopyJobDefinition:
@@ -152,8 +143,8 @@ Resources:
           - aws
           - s3
           - cp
-          - Ref::Source
-          - Fn::Sub: s3://${BucketName}/
+          - Ref::SourceS3Uri
+          - Ref::DestinationS3Uri
           - --copy-props
           - metadata-directive
           - --sse
@@ -179,8 +170,8 @@ Resources:
         Memory: 3584
         Command:
           - pushWithCheckSum.sh
-          - Ref::Source
-          - Fn::Sub: s3://${BucketName}/
+          - Ref::SourceS3Uri
+          - Ref::DestinationS3Uri
           - Ref: KMSKeyArn
           - Ref: SubscriberCannoicalAccountID
         JobRoleArn:
@@ -221,7 +212,7 @@ Resources:
                   - s3:AbortMultipartUpload
                   - s3:ListMultipartUploadParts
                 Resource:
-                  Fn::Sub: arn:aws:s3:::${BucketName}/*
+                  Fn::Sub: arn:aws:s3:::${MediaExchangeBucketName}/*
 
               -
                 Effect: Allow
@@ -237,6 +228,8 @@ Resources:
   S3BatchRole:
     Type: AWS::IAM::Role
     Properties:
+      RoleName:
+        Fn::Sub: mxc-managedtransfer-${AWS::Region}-${Environment}-s3job-publisher-role
       AssumeRolePolicyDocument:
         Statement:
           -
