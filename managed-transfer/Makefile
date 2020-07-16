@@ -19,6 +19,10 @@ checkenv: ## checks environment
 	@echo starting deployment of $@ at $(AWS_REGION)
 	@aws --region $(AWS_REGION) cloudformation deploy --template-file $(CURRENT_DIR)deployment/$@.yaml --stack-name $(STACKPREFIX)-$@-$(ENV)-stack --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) $(DEBUG) 1>/dev/null
 
+
+package: checkenv
+	$(MAKE) -C copier publish
+
 install: network batch
 
 publisherhelper:
@@ -27,7 +31,8 @@ publisherhelper:
 subscriberhelper:
 	$(MAKE) -C $(CURRENT_DIR)integrations/s3job pull
 
-package: checkenv
-	$(MAKE) -C copier publish
+bashhelper:
+	$(MAKE) -C $(CURRENT_DIR)integrations/bash install
+
 
 .PHONY: checkenv install package

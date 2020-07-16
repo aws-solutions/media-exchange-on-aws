@@ -68,6 +68,8 @@ Resources:
   DriverFunction:
     Type: AWS::Serverless::Function
     Properties:
+      FunctionName:
+        Fn::Sub: mxc-managedtransfer-${AWS::Region}-${Environment}-s3job-publisher-driver
       Description: Lambda function to be invoked by s3 batch
 
       CodeUri: driver/

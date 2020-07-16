@@ -249,3 +249,13 @@ $RECYCLE.BIN/
 
 *.env
 media-exchange-base/test/template.yaml
+.classpath
+.gradle
+.project
+.vscode
+.factorypath
+.settings
+bin/
+build.gradle
+checkstyle.*
+gradle/*
