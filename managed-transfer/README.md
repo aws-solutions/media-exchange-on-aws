@@ -21,7 +21,8 @@ export MEDIAEXCHANGE_BUCKET_NAME=<MediaExchange bucket name from the on-boarding
 export KMS_KEY_ID=<.. from the onboarding summary>
 export SUBSCRIBER_CANONICAL_ACCOUNT_ID=< .. from on-boarding summary >
 
-make package install publisherhelper
+make package install publisherhelper bashhelper
+
 ```
 
 ### Subscriber
@@ -31,7 +32,7 @@ export AWS_REGION=<aws region>
 export CFN_BUCKET=<a s3 bucket in the same region to store deployment artifacts>
 export DESTINATION_BUCKET_NAME=<a s3 bucket where the assets will be copied to>
 
-make package install subscriberhelper
+make package install subscriberhelper bashhelper
 ```
 
 ### CheckSums
@@ -68,3 +69,10 @@ The S3 Batch operations works with a CSV formatted inventory list file. You can 
 1. Check if there are any pending jobs in the JobQueue and if all the Jobs were successful. Of any of the tasks failed, you can navigate to the details page and there is a link to the cloudwatch log stream where job outputs are saved.
 1. Optionally you can check the EC2 spot fleet section to see how many instances were created and how long they were used for.
 1. Once you have verified that the job was successful, check the destination S3 buckets.
+
+
+### Using the bash integration
+
+#### Run a Transfer
+
+There are two scripts included under integrations/driver/ (a) push.sh is for publishers and (b) pull.sh is for subscribers. Both of them take a source and destination S3URI and has an option (-c) to deliver checksums.  
