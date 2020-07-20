@@ -60,6 +60,8 @@ Resources:
     Type: AWS::Serverless::Function
     Properties:
       Description: Lambda function to be invoked by s3 batch
+      FunctionName:
+        Fn::Sub: mxc-managedtransfer-${AWS::Region}-${Environment}-s3job-subscriber-driver
       CodeUri: driver/
       Handler: app.lambda_handler
       Runtime: python3.8
