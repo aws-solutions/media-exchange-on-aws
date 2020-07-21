@@ -1,0 +1,158 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Cloudformation template for media exchange publisher/subscriber role for testing.
+
+
+Outputs:
+  SubscriberRoleArn:
+    Description: Subscriber Role Arn
+    Value:
+      Fn::GetAtt:
+        - SubscriberRole
+        - Arn
+  PublisherRoleArn:
+    Description: Publisher Role Arn
+    Value:
+      Fn::GetAtt:
+        - PublisherRole
+        - Arn
+
+Metadata:
+
+  License:
+    Description: |
+        Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+        Licensed under the Apache License, Version 2.0 (the "License").
+        You may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+
+Parameters:
+  TestAccountId:
+    Type: String
+    Description: The AWS accountId of mediaexchange.
+
+Resources:
+
+  SubscriberBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          -
+            BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+
+  SubscriberRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: subscriber-role
+      AssumeRolePolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              AWS:
+                Fn::Sub: ${TestAccountId}
+        Version: "2012-10-17"
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+      # Policies:
+      #   -
+      #     PolicyName: KMSAndS3
+      #     PolicyDocument:
+      #       Version: 2012-10-17
+      #       Statement:
+      #         -
+      #           Effect: Allow
+      #           Action:
+      #             - s3:Get*
+      #             - s3:List*
+      #           Resource: '*'
+      #         -
+      #           Effect: Allow
+      #           Action:
+      #             - kms:Decrypt
+      #             - kms:DescribeKey
+      #           Resource: '*'
+
+
+  PublisherBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          -
+            BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+
+  PublisherRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: publisher-role
+      AssumeRolePolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              AWS:
+                Fn::Sub: ${TestAccountId}
+        Version: "2012-10-17"
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/AdministratorAccess
+      # Policies:
+      #   -
+      #     PolicyName: KMSAndS3
+      #     PolicyDocument:
+      #       Version: 2012-10-17
+      #       Statement:
+      #         -
+      #           Effect: Allow
+      #           Action:
+      #             - s3:Get*
+      #             - s3:List*
+      #           Resource: '*'
+      #
+      #         -
+      #           Effect: Allow
+      #           Action:
+      #             - s3:Put*
+      #             - s3:Delete*
+      #             - s3:AbortMultipartUpload
+      #             - s3:ListMultipartUploadParts
+      #           Resource: '*'
+      #         -
+      #           Effect: Allow
+      #           Action:
+      #             - kms:Encrypt
+      #             - kms:Decrypt
+      #             - kms:ReEncrypt*
+      #             - kms:GenerateDataKey*
+      #             - kms:DescribeKey
+      #           Resource: '*'

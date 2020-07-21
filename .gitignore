@@ -259,3 +259,9 @@ bin/
 build.gradle
 checkstyle.*
 gradle/*
+
+.envrc
+
+**/global-s3-assets
+**/regional-s3-assets
+**/open-source

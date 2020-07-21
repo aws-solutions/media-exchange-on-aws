@@ -1,0 +1,519 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  (__SOLUTION_ID__) - __SOLUTION_NAME__ __VERSION__ - core and service catalog setup
+
+Metadata:
+
+  License:
+    Description: |
+        Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+        Licensed under the Apache License, Version 2.0 (the "License").
+        You may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+
+  AWS::cloudformation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: Deployment Configuration
+        Parameters:
+          - Environment
+      -
+        Label:
+          default: Support information
+        Parameters:
+          - Owner
+          - OwnerEmail
+
+Mappings:
+  SourceCode:
+    General:
+      Bucket: __BUCKET_NAME__
+      Path: __SOLUTION_NAME__
+      Version: __VERSION__
+  AnonymousData:
+    SendAnonymousData:
+      Data: Yes
+
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter Environment must only contain uppercase and lowercase letters and numbers
+    MaxLength: 10
+    MinLength: 2
+  Owner:
+    Type: String
+    Description: Mainatner Group
+    Default: mediaops
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter Owner must only contain uppercase and lowercase letters and numbers
+    MaxLength: 64
+    MinLength: 2
+  OwnerEmail:
+    Type: String
+    Description: Mainatner Group Email
+    Default: mediaops@yourcompany.com
+    AllowedPattern: '[\w-\.]+@([\w-]+\.)+[\w-]+'
+
+Outputs:
+  ConsoleUrl:
+    Description: ServiceCatalog portfolio manager url.
+    Value:
+      Fn::Sub: https://signin.aws.amazon.com/switchrole?roleName=${ServiceCatalogUserRole}&account=${AWS::AccountId}&region=${AWS::Region}&redirect_uri=https://console.aws.amazon.com/servicecatalog/home?region=${AWS::Region}&isSceuc=true#/products
+
+Resources:
+
+  ServiceCatalogUserRole:
+    Type: 'AWS::IAM::Role'
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "(W11) IAM role should not allow * resource on its permissions policy"
+    Properties:
+      Description: User role for Service Catalog access
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: ${AWS::AccountId}
+            Action: 'sts:AssumeRole'
+      Policies:
+        -
+          PolicyName: mxc-servicecatalog-cfn
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStacks
+                  - cloudformation:SetStackPolicy
+                  - cloudformation:ValidateTemplate
+                  - cloudformation:UpdateStack
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:ListChangeSets
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:TagResource
+                  - cloudformation:CreateStackSet
+                  - cloudformation:CreateStackInstances
+                  - cloudformation:UpdateStackSet
+                  - cloudformation:UpdateStackInstances
+                  - cloudformation:DeleteStackSet
+                  - cloudformation:DeleteStackInstances
+                  - cloudformation:DescribeStackSet
+                  - cloudformation:DescribeStackInstance
+                  - cloudformation:DescribeStackSetOperation
+                  - cloudformation:ListStackInstances
+                  - cloudformation:ListStackResources
+                  - cloudformation:ListStackSetOperations
+                  - cloudformation:ListStackSetOperationResults
+                Resource:
+                  - arn:aws:cloudformation:*:*:stack/SC-*
+                  - arn:aws:cloudformation:*:*:stack/StackSet-SC-*
+                  - arn:aws:cloudformation:*:*:changeSet/SC-*
+                  - arn:aws:cloudformation:*:*:stackset/SC-*
+              - Effect: Allow
+                Action:
+                  - cloudformation:GetTemplateSummary
+                  - servicecatalog:DescribeProduct
+                  - servicecatalog:DescribeProductView
+                  - servicecatalog:DescribeProvisioningParameters
+                  - servicecatalog:ListLaunchPaths
+                  - servicecatalog:ProvisionProduct
+                  - servicecatalog:SearchProducts
+                  - ssm:DescribeDocument
+                  - ssm:GetAutomationExecution
+                  - config:DescribeConfigurationRecorders
+                  - config:DescribeConfigurationRecorderStatus
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - servicecatalog:DescribeProvisionedProduct
+                  - servicecatalog:DescribeRecord
+                  - servicecatalog:ListRecordHistory
+                  - servicecatalog:ListStackInstancesForProvisionedProduct
+                  - servicecatalog:ScanProvisionedProducts
+                  - servicecatalog:TerminateProvisionedProduct
+                  - servicecatalog:UpdateProvisionedProduct
+                  - servicecatalog:SearchProvisionedProducts
+                  - servicecatalog:CreateProvisionedProductPlan
+                  - servicecatalog:DescribeProvisionedProductPlan
+                  - servicecatalog:ExecuteProvisionedProductPlan
+                  - servicecatalog:DeleteProvisionedProductPlan
+                  - servicecatalog:ListProvisionedProductPlans
+                  - servicecatalog:ListServiceActionsForProvisioningArtifact
+                  - servicecatalog:ExecuteProvisionedProductServiceAction
+                  - servicecatalog:DescribeServiceActionExecutionParameters
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    servicecatalog:accountLevel: self
+
+  # portfolio and products
+  Portfolio:
+    Type: AWS::ServiceCatalog::Portfolio
+    Properties:
+      DisplayName: Media Exchange On AWS
+      ProviderName: AWS Solutions Library
+      Description: Group of products related to Media Exchange On AWS solution.
+
+  PortfolioAccess:
+    Type: AWS::ServiceCatalog::PortfolioPrincipalAssociation
+    Properties:
+      PortfolioId: !Ref Portfolio
+      PrincipalARN: !GetAtt ServiceCatalogUserRole.Arn
+      PrincipalType: IAM
+
+  Publisher:
+    Type: AWS::ServiceCatalog::CloudFormationProduct
+    Properties:
+      Description: Publisher onboarding template for Media Exchange On AWS Solution
+      Name: Publisher
+      Owner:
+        Ref: Owner
+      SupportDescription: Please contact mediaops
+      SupportEmail:
+        Ref: OwnerEmail
+      SupportUrl: https://mediaops.yourcompany.com
+      Distributor: AWS Solutions Library / Media Exchange
+      ProvisioningArtifactParameters:
+        - Info:
+            LoadTemplateFromURL:
+              Fn::Join:
+                - /
+                -
+                  - 'https://s3.amazonaws.com'
+                  - Fn::FindInMap: [ SourceCode, General, Bucket ]
+                  - Fn::FindInMap: [ SourceCode, General, Path ]
+                  - Fn::FindInMap: [ SourceCode, General, Version ]
+                  - publisher.template
+          Name:
+            Fn::FindInMap: [ SourceCode, General, Version ]
+
+
+  AddPublisherToPortfolio:
+    Type: AWS::ServiceCatalog::PortfolioProductAssociation
+    Properties:
+      PortfolioId:
+        Ref: Portfolio
+      ProductId:
+        Ref: Publisher
+
+  Subscriber:
+    Type: AWS::ServiceCatalog::CloudFormationProduct
+    Properties:
+      Description: Subscriber onboarding template for Media Exchange On AWS Solution
+      Name: Subscriber
+      Owner:
+        Ref: Owner
+      SupportDescription: Please contact mediaops
+      SupportEmail:
+        Ref: OwnerEmail
+      SupportUrl: https://mediaops.yourcompany.com
+      Distributor: AWS Solutions Library / Media Exchange
+      ProvisioningArtifactParameters:
+        - Info:
+            LoadTemplateFromURL:
+              Fn::Join:
+                - /
+                -
+                  - 'https://s3.amazonaws.com'
+                  - Fn::FindInMap: [ SourceCode, General, Bucket ]
+                  - Fn::FindInMap: [ SourceCode, General, Path ]
+                  - Fn::FindInMap: [ SourceCode, General, Version ]
+                  - subscriber.template
+          Name:
+            Fn::FindInMap: [ SourceCode, General, Version ]
+
+
+  AddSubscriberToPortfolio:
+    Type: AWS::ServiceCatalog::PortfolioProductAssociation
+    Properties:
+      PortfolioId:
+        Ref: Portfolio
+      ProductId:
+        Ref: Subscriber
+
+  Agreement:
+    Type: AWS::ServiceCatalog::CloudFormationProduct
+    Properties:
+      Description: Template to setup shared S3 bucket between publisher and subscriber interchange.
+      Name: Transfer agreement
+      Owner:
+        Ref: Owner
+      SupportDescription: Please contact mediaops
+      SupportEmail:
+        Ref: OwnerEmail
+      SupportUrl: https://mediaops.yourcompany.com
+      Distributor: AWS Solutions Library / Media Exchange
+      ProvisioningArtifactParameters:
+        - Info:
+            LoadTemplateFromURL:
+              Fn::Join:
+                - /
+                -
+                  - 'https://s3.amazonaws.com'
+                  - Fn::FindInMap: [ SourceCode, General, Bucket ]
+                  - Fn::FindInMap: [ SourceCode, General, Path ]
+                  - Fn::FindInMap: [ SourceCode, General, Version ]
+                  - agreement.template
+          Name:
+            Fn::FindInMap: [ SourceCode, General, Version ]
+
+
+  AddAgreementToPortfolio:
+    Type: AWS::ServiceCatalog::PortfolioProductAssociation
+    Properties:
+      PortfolioId:
+        Ref: Portfolio
+      ProductId:
+        Ref: Agreement
+
+
+  CFNDeployRole:
+    Type: 'AWS::IAM::Role'
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: F3
+            reason: "(F3) IAM role should not allow * action on its permissions policy"
+          - id: F38
+            reason: "(F38) IAM role should not allow * resource with PassRole action on its permissions policy"
+          - id: W11
+            reason: "(W11) IAM role should not allow * resource on its permissions policy"
+          - id: W28
+            reason: "(W28) Resource found with an explicit name, this disallows updates that require replacement of this resource"
+    Properties:
+      RoleName:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-cloudformation-service-role
+      Description: Role for ServiceCatalog/Cloudformation.
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service: servicecatalog.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      Policies:
+        -
+          PolicyName: mxc-servicecatalog-base
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - servicecatalog:*
+                  - cloudformation:CreateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStacks
+                  - cloudformation:GetTemplateSummary
+                  - cloudformation:SetStackPolicy
+                  - cloudformation:ValidateTemplate
+                  - cloudformation:UpdateStack
+                  - s3:GetObject
+                Resource: '*'
+        -
+          PolicyName: mxc-publisher-deploy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - events:PutPermission
+                  - events:RemovePermission
+
+                  - s3:List*
+                  - s3:Get*
+                  - s3:Describe*
+                  - s3:CreateBucket
+                  - s3:DeleteBucket
+                  - s3:PutBucketPolicy
+                  - s3:DeleteBucketPolicy
+                  - s3:PutBucketAcl
+                  - s3:PutAccountPublicAccessBlock
+                  - s3:PutBucketPublicAccessBlock
+                  - s3:PutBucketLogging
+                  - s3:PutBucketTagging
+                  - s3:PutBucketVersioning
+                  - s3:PutEncryptionConfiguration
+                  - s3:PutLifecycleConfiguration
+
+                Resource: '*'
+        -
+          PolicyName: mxc-subscriber-deploy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - sns:Get*
+                  - sns:Describe*
+                  - sns:CreateTopic
+                  - sns:DeleteTopic
+                  - sns:List*
+                  - sns:SetTopicAttributes
+                  - sns:TagResource
+                  - sns:UntagResource
+                  - sns:ListTagsForResource
+                  - sns:Subscribe
+                  - sns:Unsubscribe
+                  - sns:AddPermission
+                  - sns:RemovePermission
+                  - sns:ListSubscriptions
+                  - sns:ListSubscriptionsByTopic
+
+                  - kms:Create*
+                  - kms:Describe*
+                  - kms:Enable*
+                  - kms:List*
+                  - kms:Put*
+                  - kms:Update*
+                  - kms:Revoke*
+                  - kms:Disable*
+                  - kms:Get*
+                  - kms:Delete*
+                  - kms:TagResource
+                  - kms:UntagResource
+                  - kms:ScheduleKeyDeletion
+                  - kms:CancelKeyDeletion
+                Resource: '*'
+        -
+          PolicyName: mxc-agreement-deploy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - s3:List*
+                  - s3:Get*
+                  - s3:Describe*
+                  - s3:CreateBucket
+                  - s3:DeleteBucket
+                  - s3:PutBucketPolicy
+                  - s3:DeleteBucketPolicy
+                  - s3:PutAccountPublicAccessBlock
+                  - s3:PutBucketPublicAccessBlock
+                  - s3:PutBucketLogging
+                  - s3:PutBucketNotification
+                  - s3:PutBucketTagging
+                  - s3:PutBucketVersioning
+                  - s3:PutEncryptionConfiguration
+                  - s3:PutLifecycleConfiguration
+
+                  - lambda:List*
+                  - lambda:Get*
+                  - lambda:Describe*
+                  - lambda:AddPermission
+                  - lambda:RemovePermission
+                  - lambda:CreateFunction
+                  - lambda:DeleteFunction
+                  - lambda:PublishVersion
+                  - lambda:Update*
+                  - lambda:TagResource
+                  - lambda:UntagResource
+
+                  - iam:CreateRole
+                  - iam:DeleteRole
+                  - iam:CreateServiceLinkedRole
+                  - iam:AttachRolePolicy
+                  - iam:DetachRolePolicy
+                  - iam:GetRolePolicy
+                  - iam:PutRolePolicy
+                  - iam:UpdateAssumeRolePolicy
+                  - iam:DeleteRolePolicy
+                  - iam:TagRole
+                  - iam:UntagRole
+                  - iam:GetRole
+                  - iam:PassRole
+
+                  - events:List*
+                  - events:Get*
+                  - events:Describe*
+                  - events:EnableRule
+                  - events:DisableRule
+                  - events:DeleteRule
+                  - events:PutRule
+                  - events:PutTargets
+                  - events:RemoveTargets
+                  - events:TagResource
+                  - events:UntagResource
+
+                  - kms:Create*
+                  - kms:Describe*
+                  - kms:Enable*
+                  - kms:List*
+                  - kms:Put*
+                  - kms:Update*
+                  - kms:Revoke*
+                  - kms:Disable*
+                  - kms:Get*
+                  - kms:Delete*
+                  - kms:TagResource
+                  - kms:UntagResource
+                  - kms:ScheduleKeyDeletion
+                  - kms:CancelKeyDeletion
+                Resource: '*'
+
+
+  #Constraints
+  LaunchRoleConstraintPublisher:
+    Type: AWS::ServiceCatalog::LaunchRoleConstraint
+    Properties:
+      Description: Administrative role for deploing publishers to Media Exchange
+      LocalRoleName:
+        Ref: CFNDeployRole
+      PortfolioId:
+        Ref: Portfolio
+      ProductId:
+        Ref: Publisher
+
+  LaunchRoleConstraintSubscriber:
+    Type: AWS::ServiceCatalog::LaunchRoleConstraint
+    Properties:
+      Description: Administrative role for deploing Subscribers to Media Exchange
+      LocalRoleName:
+        Ref: CFNDeployRole
+      PortfolioId:
+        Ref: Portfolio
+      ProductId:
+        Ref: Subscriber
+
+  LaunchRoleConstraintAgreement:
+    Type: AWS::ServiceCatalog::LaunchRoleConstraint
+    Properties:
+      Description: Administrative role for deploing publisher & subscriber agreement to Media Exchange
+      LocalRoleName:
+        Ref: CFNDeployRole
+      PortfolioId:
+        Ref: Portfolio
+      ProductId:
+        Ref: Agreement

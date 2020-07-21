@@ -1,0 +1,196 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  (__SOLUTION_ID__) - __SOLUTION_NAME__ __VERSION__ - setup publisher
+
+Outputs:
+
+  LogBucketName:
+    Description: Logging Bucket Name
+    Value:
+      Ref: ExchangeLogBucket
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-logs
+
+  PublisherRole:
+    Description: Publisher's S3 Access role
+    Value:
+      Fn::If:
+        - HasRole
+        - Ref: PublisherRole
+        - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
+
+Metadata:
+
+  License:
+    Description: |
+        Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+        Licensed under the Apache License, Version 2.0 (the "License").
+        You may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Deployment Configuration"
+        Parameters:
+          - Environment
+      -
+        Label:
+          default: "Publisher Configuration"
+        Parameters:
+          - PublisherName
+          - PublisherAccountId
+          - PublisherRole
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter Environment must only contain uppercase and lowercase letters and numbers
+    MaxLength: 10
+    MinLength: 2
+
+  PublisherName:
+    Type: String
+    Description: Name of the publisher
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter PublisherName must only contain uppercase and lowercase letters and numbers
+    MaxLength: 64
+    MinLength: 3
+
+  PublisherAccountId:
+    Type: String
+    Description: The AWS accountId of the publisher. This parameter is ignored if you specify PublisherRole.
+    AllowedPattern: '^\d{12}$'
+    ConstraintDescription: Malformed input-Parameter PublisherAccountId must be a 12 digit number
+
+  PublisherRole:
+    Description: Publisher's Role. Defaults to arn:aws:iam::$PublisherAccountId:root.
+    Type: String
+    AllowedPattern: "[A-Za-z0-9:/-]*"
+    Default: ''
+
+Conditions:
+  HasRole:
+    Fn::Not:
+      - Fn::Equals:
+        - ""
+        - Ref: PublisherRole
+
+
+Resources:
+
+  #bucket for storing S3 Access Logs
+  ExchangeLogBucket:
+    Type: AWS::S3::Bucket
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: "(W35) S3 Bucket should have access logging configured"
+    DeletionPolicy: Retain
+    Properties:
+      AccessControl: LogDeliveryWrite
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          -
+            BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          -
+            Id: Expire
+            Status: Enabled
+            Transitions:
+              -
+                StorageClass: GLACIER
+                TransitionInDays: 90
+
+
+  ExchangeLogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: ExchangeLogBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+
+          # TLS only
+          -
+            Sid: "RequireTLS"
+            Action:
+              - "s3:*"
+            Effect: "Deny"
+            Resource:
+              - Fn::Sub: arn:aws:s3:::${ExchangeLogBucket}/*
+            Principal: "*"
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+
+          -
+            Sid: "AllowGetOpPublisher"
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:GetObjectAcl
+              - s3:GetObjectVersionAcl
+              - s3:GetObjectTagging
+              - s3:GetObjectVersionTagging
+            Resource:
+              Fn::Sub: arn:aws:s3:::${ExchangeLogBucket}/*
+            Principal:
+              AWS:
+                - Fn::If:
+                  - HasRole
+                  - Ref: PublisherRole
+                  - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
+          -
+            Sid: "AllowBasicConsole"
+            Effect: Allow
+            Action:
+              - s3:Get*
+              - s3:List*
+            Resource:
+              Fn::Sub: arn:aws:s3:::${ExchangeLogBucket}
+            Principal:
+              AWS:
+                - Fn::If:
+                  - HasRole
+                  - Ref: PublisherRole
+                  - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
+
+
+  PutEventsPermission:
+    Type: AWS::Events::EventBusPolicy
+    Properties:
+      Action:
+        events:PutEvents
+      Principal:
+        Ref: PublisherAccountId
+      StatementId:
+        Fn::Sub: "Sid${PublisherName}${Environment}${AWS::Region}Events"

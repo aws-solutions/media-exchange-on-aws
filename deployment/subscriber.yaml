@@ -1,0 +1,270 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  (__SOLUTION_ID__) - __SOLUTION_NAME__ __VERSION__ - subscriber setup
+
+Outputs:
+  SubscriberCanonicalUserID:
+    Description: Subscriber's Canonical Id
+    Value:
+      Ref: CanonicalID
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-canonicalid
+  SubscriberNotificationsTopic:
+    Description: Subscriber's notifications topic name
+    Value:
+      Ref: NotificationTopic
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
+  SubscriberNotificationsDLQ:
+    Description: Subscriber's notifications dead letter queue Arn
+    Value:
+      Fn::GetAtt: DLQ.Arn
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationdlq
+  SubscriberRole:
+    Description: Subscriber's S3 Access role
+    Value:
+      Fn::If:
+        - HasRole
+        - Ref: SubscriberRole
+        - Fn::Sub: arn:aws:iam::${SubscriberAccountId}:root
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-role
+
+Metadata:
+
+  License:
+    Description: |
+        Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+        Licensed under the Apache License, Version 2.0 (the "License").
+        You may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Deployment Configuration"
+        Parameters:
+          - Environment
+      -
+        Label:
+          default: "Subscriber Configuration"
+        Parameters:
+          - SubscriberName
+          - SubscriberAccountId
+          - CanonicalID
+          - Email
+          - SubscriberRole
+
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter Environment must only contain uppercase and lowercase letters and numbers
+    MaxLength: 10
+    MinLength: 2
+
+  SubscriberAccountId:
+    Type: String
+    Description: The accountId of the Subscriber. This parameter is ignored if you specify SubscriberRole.
+    AllowedPattern: '^\d{12}$'
+    ConstraintDescription: Malformed input-Parameter SubscriberAccountId must be a 12 digit number.
+
+  CanonicalID:
+    Type: String
+    Description: The Canonical Account ID of the subscriber.
+    AllowedPattern: '^[0-9a-fA-F]{64}$'
+    ConstraintDescription: Malformed input-Parameter CanonicalID must be a 64 digit hexadecimal number.
+
+  Email:
+    Type: String
+    Description: The email address for the transfer notifications.
+    AllowedPattern: '[\w-\.]+@([\w-]+\.)+[\w-]+'
+
+  SubscriberName:
+    Type: String
+    Description: A name for subscriber account.
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter SubscriberName must only contain uppercase and lowercase letters and numbers
+    MaxLength: 64
+    MinLength: 3
+
+  SubscriberRole:
+    Description: Subscriber's Role. Defaults to arn:aws:iam::$SubscriberAccountId:root.
+    Type: String
+    Default: ''
+    AllowedPattern: "[A-Za-z0-9:/-]*"
+
+Conditions:
+  HasRole:
+    Fn::Not:
+      - Fn::Equals:
+        - ""
+        - Ref: SubscriberRole
+
+Resources:
+
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: SNS Topic for MediaExchange Subscriber notifications
+      KmsMasterKeyId:
+        Ref: CMK
+
+
+  CMK:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Symetric Key for Encrypting Messages in Media Exchange
+      Enabled: true
+      EnableKeyRotation: true
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: node-key-policy
+        Statement:
+          -
+            Sid: KeyManagement
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:TagResource
+              - kms:UntagResource
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
+              - kms:GenerateDataKey*
+              - kms:Decrypt
+            Resource: '*'
+
+          -
+            Sid: "Allow access for Key User (SNS Service Principal)"
+            Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - kms:GenerateDataKey*
+              - kms:Decrypt
+            Resource: '*'
+
+          -
+            Sid: "Allow access for Key User (Events Service Principal)"
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - kms:GenerateDataKey*
+              - kms:Decrypt
+            Resource: '*'
+
+
+
+  EventTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Sid: Allow_Publish_Events
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action: 'sns:Publish'
+            Resource:
+              Ref: NotificationTopic
+      Topics:
+        -
+          Ref: NotificationTopic
+
+  XAccontTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          - Sid: Allow_Subscribe_Events
+            Effect: Allow
+            Principal:
+              AWS:
+                Ref: SubscriberAccountId
+            Action: 'sns:Subscribe'
+            Resource:
+              Ref: NotificationTopic
+      Topics:
+        -
+          Ref: NotificationTopic
+
+  NotificationsSubscription:
+    Type: AWS::SNS::Subscription
+    Properties:
+      Endpoint:
+        Ref: Email
+      Protocol: email
+      TopicArn:
+        Ref: NotificationTopic
+
+  # also send the messages to a DLQ for retry
+  DLQ:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      KmsMasterKeyId:
+        Ref: CMK
+      KmsDataKeyReusePeriodSeconds:  86400
+      MessageRetentionPeriod: 1209600
+
+  DLQQPolicy:
+    Type: 'AWS::SQS::QueuePolicy'
+    Properties:
+      Queues:
+        - Ref: DLQ
+      PolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource:
+              Fn::GetAtt: DLQ.Arn
+
+
+  #subscriber permissions for events
+  PutEventsPermission:
+    Type: AWS::Events::EventBusPolicy
+    Properties:
+      Action:
+        events:PutEvents
+      Principal:
+        Ref: SubscriberAccountId
+      StatementId:
+        Fn::Sub: "Sid${SubscriberName}${Environment}${AWS::Region}Events"
