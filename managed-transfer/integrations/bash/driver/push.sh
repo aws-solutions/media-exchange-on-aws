@@ -1,7 +1,7 @@
-#!/bin/bash
+#!/bin/bash -e
 
-# save publihser onboarding in a file called publisher.env locally
-# push.sh s3://<source-bucket>/<source>
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 CHECKSUM=false
 KMS_KEY_ID=''

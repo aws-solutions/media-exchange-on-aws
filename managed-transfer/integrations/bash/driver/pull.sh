@@ -1,11 +1,14 @@
-#!/bin/bash -xe
+#!/bin/bash -e
+
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
 
 CHECKSUM=false
 
 while getopts ":hc" opt; do
   case ${opt} in
     h )
-      echo "Usage: push.sh [-h] [-c] s3://<source-bucket/<sourcekey> s3://<destination-bucket>/<destinationkey>"
+      echo "Usage: pull.sh [-h] [-c] s3://<source-bucket/<sourcekey> s3://<destination-bucket>/<destinationkey>"
       exit 0
       ;;
     c )

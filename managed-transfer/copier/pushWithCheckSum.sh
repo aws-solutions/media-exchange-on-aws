@@ -1,5 +1,8 @@
 #!/bin/bash -x
 
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 [[ -z "$1" ]] && { echo "Error: s3://<Source> is required"; exit 1; }
 [[ -z "$2" ]] && { echo "Error: s3://<Destination> is required"; exit 1; }
 [[ -z "$3" ]] && { echo "Error: KMS Key Arn is required"; exit 1; }

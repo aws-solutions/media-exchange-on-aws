@@ -1,5 +1,8 @@
 #!/bin/bash -e
 
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 source ./env.d/common.env
 source ./env.d/publisher.env
 source ./env.d/subscriber.env
