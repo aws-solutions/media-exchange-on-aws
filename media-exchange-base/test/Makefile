@@ -23,10 +23,10 @@ configure:
 	@aws --region $(AWS_REGION) cloudformation describe-stacks --stack-name $(STACKPREFIX)-agreement-$(PUBLISHER_NAME)-$(SUBSCRIBER_NAME)-$(ENV)-stack --query "Stacks[0].Outputs[?OutputKey == 'PublisherOnboardingSummary'].OutputValue" --output text > $(CURRENT_DIR)/env.d/publisher.env
 
 	@echo "saving pre-processed cloudformation template to ./template.yaml. Please deploy this in the publihser and subscriber account(s) to create the test-role before running the tests."
-	@source env.d/publisher.env && envsubst < deployment/testrole.yaml > template.yaml
+	@source $(CURRENT_DIR)/env.d/publisher.env && envsubst < $(CURRENT_DIR)/deployment/template.yaml > $(CURRENT_DIR)/template.yaml
 
 	@echo saving subscriber onboarding info at env.d/subscriber.env
-	@echo SUBSCRIBER_ACCOUNT_ID=$(SUBSCRIBER_ACCOUNT_ID) >> env.d/common.env
+	@echo SUBSCRIBER_ACCOUNT_ID=$(SUBSCRIBER_ACCOUNT_ID) >> $(CURRENT_DIR)/env.d/common.env
 
 	@aws --region $(AWS_REGION) cloudformation describe-stacks --stack-name $(STACKPREFIX)-agreement-$(PUBLISHER_NAME)-$(SUBSCRIBER_NAME)-$(ENV)-stack --query "Stacks[0].Outputs[?OutputKey == 'SubscriberOnboardingSummary'].OutputValue" --output text > $(CURRENT_DIR)/env.d/subscriber.env
 

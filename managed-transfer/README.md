@@ -12,6 +12,9 @@ This tool can also be used for cross region transfers. If you are aggregating co
 
 It is configured slightly differently for publishers and subscribers.
 
+## Dependencies
+The install requires awscli, aws sam cli and docker on the deployment machine.
+
 ### Publisher
 
 ```code

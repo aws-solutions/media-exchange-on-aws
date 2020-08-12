@@ -28,14 +28,14 @@ shift $((OPTIND -1))
 if [[ "$CHECKSUM" == "true" ]] ; then
   jobid=$(aws batch submit-job --job-name CopyJobFromBash --job-definition Copy --job-queue mediaexchange-managedtransfer-queue  --container-overrides command=pullWithCheckSum.sh,$1,$2 --query jobId --output text)
 else
-  jobid=$(aws batch submit-job --job-name CopyJobFromBash --job-definition Copy --job-queue mediaexchange-managedtransfer-queue  --container-overrides command=aws,s3,cp,$1,$2,'--copy-props',metadata-directive,'--acl',bucket-owner-full-control --query jobId --output text)
+  jobid=$(aws batch submit-job --job-name CopyJobFromBash --job-definition Copy --job-queue mediaexchange-managedtransfer-queue  --container-overrides command=aws,s3,cp,$1,$2,'--recursive','--copy-props',metadata-directive,'--acl',bucket-owner-full-control --query jobId --output text)
 fi
 
 SECONDS=0
 STATUS=$(aws batch describe-jobs --jobs $jobid --query "jobs[0].status" --output text)
 
-while [ "$STATUS" != "SUCCEEDED" ]; do
-  printf "\r$STATUS.... for $SECONDS seconds"
+while [ "$STATUS" != "SUCCEEDED" ] && [ "$STATUS" != "FAILED" ] ; do
+  printf "\r$STATUS.... total: $SECONDS seconds"
   sleep 1
   STATUS=$(aws batch describe-jobs --jobs $jobid --query "jobs[0].status" --output text)
 done

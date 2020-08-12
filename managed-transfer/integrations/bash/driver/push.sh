@@ -51,8 +51,8 @@ fi
 SECONDS=0
 STATUS=$(aws batch describe-jobs --jobs $jobid --query "jobs[0].status" --output text)
 
-while [ "$STATUS" != "SUCCEEDED" ]; do
-  printf "\r$STATUS.... for $SECONDS seconds"
+while [ "$STATUS" != "SUCCEEDED" ] && [ "$STATUS" != "FAILED" ] ; do
+  printf "\r$STATUS.... total: $SECONDS seconds"
   sleep 1
   STATUS=$(aws batch describe-jobs --jobs $jobid --query "jobs[0].status" --output text)
 done

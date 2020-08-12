@@ -61,6 +61,9 @@ Parameters:
 
 Resources:
 
+  Bucket:
+    Type: AWS::S3::Bucket
+
   TestRole:
     Type: AWS::IAM::Role
     Properties:
@@ -92,6 +95,11 @@ Resources:
                     - - 'arn:aws:s3:::'
                       - Ref: ExchangeBucket
                       - '/*'
+                  - Fn::Join:
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - Ref: Bucket
+                      - '/*'
               -
                 Effect: Allow
                 Action:
@@ -103,6 +111,11 @@ Resources:
                     - ''
                     - - 'arn:aws:s3:::'
                       - Ref: ExchangeBucket
+                      - '/*'
+                  - Fn::Join:
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - Ref: Bucket
                       - '/*'
 
               -

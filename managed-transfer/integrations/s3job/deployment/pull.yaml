@@ -182,6 +182,7 @@ Resources:
                 Action:
                   - s3:GetObject
                   - s3:GetObjectVersion
+                  - s3:ListBucket
                 Resource: '*'
               -
                 Effect: Allow
