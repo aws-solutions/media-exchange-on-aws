@@ -100,8 +100,8 @@ Resources:
               - kms:DescribeKey
             Resource: '*'
 
-      Timeout: 30
-      ReservedConcurrentExecutions: 2
+      Timeout: 300
+      ReservedConcurrentExecutions: 256
 
       Environment:
         Variables:
@@ -115,6 +115,11 @@ Resources:
               Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-jobq
           DestinationBucketName:
             Ref: DestinationBucketName
+          MinSizeForBatchinBytes:
+            Fn::If:
+              - DoCheckSum
+              - 0
+              - 524288000 #500MB
 
   CopyJobDefinition:
     Type: AWS::Batch::JobDefinition
@@ -135,6 +140,8 @@ Resources:
           - metadata-directive
           - --acl
           - bucket-owner-full-control
+          - --expected-size
+          - Ref::Size
         JobRoleArn:
           Fn::GetAtt: JobRole.Arn
       RetryStrategy:

@@ -114,8 +114,8 @@ Resources:
             Resource:
               Ref: KMSKeyArn
 
-      Timeout: 30
-      ReservedConcurrentExecutions: 2
+      Timeout: 300
+      ReservedConcurrentExecutions: 256
 
       Environment:
         Variables:
@@ -129,7 +129,11 @@ Resources:
               Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-jobq
           DestinationBucketName:
             Ref: MediaExchangeBucketName
-
+          MinSizeForBatchinBytes:
+            Fn::If:
+              - DoCheckSum
+              - 0
+              - 524288000 #500MB
 
   CopyJobDefinition:
     Type: AWS::Batch::JobDefinition
@@ -146,6 +150,8 @@ Resources:
           - cp
           - Ref::SourceS3Uri
           - Ref::DestinationS3Uri
+          - --expected-size
+          - Ref::Size
           - --copy-props
           - metadata-directive
           - --sse
@@ -203,7 +209,7 @@ Resources:
                 Action:
                   - s3:GetObject
                   - s3:GetObjectVersion
-                  - s3:ListBucket                  
+                  - s3:ListBucket
                 Resource: '*'
               -
                 Effect: Allow

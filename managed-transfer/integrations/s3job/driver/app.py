@@ -6,58 +6,100 @@ import logging
 import boto3
 import json
 import urllib
+import jsonpickle
 from botocore.exceptions import ClientError
 
 from aws_xray_sdk.core import xray_recorder
 from aws_xray_sdk.core import patch_all
 
 logger = logging.getLogger()
-logger.setLevel(logging.DEBUG)
+logger.setLevel(logging.INFO)
 
 lambdaclient = boto3.client('lambda')
 lambdaclient.get_account_settings()
 patch_all()
 
-client = boto3.client('batch')
+batchclient = boto3.client('batch')
+s3client = boto3.client('s3')
 
 def lambda_handler(event, context):
+
+    logger.debug('## EVENT\r' + jsonpickle.encode(dict(**event)))
 
     jobId = event['job']['id']
     invocationId = event['invocationId']
     invocationSchemaVersion = event['invocationSchemaVersion']
 
     taskId = event['tasks'][0]['taskId']
-    sourceKey = urllib.parse.unquote(event['tasks'][0]['s3Key'])
+    sourceKey = urllib.parse.unquote_plus(event['tasks'][0]['s3Key'])
     s3BucketArn = event['tasks'][0]['s3BucketArn']
     sourceBucket = s3BucketArn.split(':::')[-1]
 
     results = []
+    # Prepare result code and string
+    resultCode = None
+    resultString = None
+
+    minsizeforbatch = int(os.environ['MinSizeForBatchinBytes'])
 
     # Copy object to new bucket with new key name
     try:
-        # Prepare result code and string
-        resultCode = None
-        resultString = None
+        logger.debug("preflight check start")
 
-        logger.debug("subumitting job")
-
-        #Add preflight checks _read_ + _write_
-        destinationBucket=os.environ['DestinationBucketName']
-
-        response = client.submit_job(
-            jobName="CopyStartedByS3Batch",
-            jobQueue=os.environ['JobQueue'],
-            jobDefinition=os.environ['JobDefinition'],
-            parameters={
-                'SourceS3Uri': 's3://' + sourceBucket + '/' + sourceKey,
-                'DestinationS3Uri': 's3://' + destinationBucket + '/' + sourceKey,
-            }
+        #preflight checks _read_
+        pre_flight_response = s3client.head_object(
+            Bucket=sourceBucket,
+            Key=sourceKey
         )
 
-        logger.debug("job submission complete")
-        # Mark as succeeded
+        logger.debug('## PREFLIGHT_RESPONSE\r' + jsonpickle.encode(dict(**pre_flight_response)))
+
+        if 'DeleteMarker' in pre_flight_response:
+            if  pre_flight_response['pre_flight_response'] == True:
+                raise Exception('Object ' + sourceKey + ' is deleted')
+
+        if 'StorageClass' in pre_flight_response:
+            if pre_flight_response['StorageClass'] in ['GLACIER', 'DEEP_ARCHIVE']:
+                raise Exception('Object ' + sourceKey + ' is in unsupported StorageClass '  + pre_flight_response['StorageClass'])
+
+        size = pre_flight_response['ContentLength']
+
+        destinationBucket=os.environ['DestinationBucketName']
+
+        logger.debug("preflight check end")
+
+        if (size > minsizeforbatch):
+
+            #preflight checks _write_
+            s3client.put_object(
+                Bucket=destinationBucket,
+                Key='scratch/job-'+event['job']['id']
+            )
+
+            logger.debug("job submission start")
+
+            #submit job
+            response = batchclient.submit_job(
+                jobName="CopyStartedByS3Batch",
+                jobQueue=os.environ['JobQueue'],
+                jobDefinition=os.environ['JobDefinition'],
+                parameters={
+                    'SourceS3Uri': 's3://' + sourceBucket + '/' + sourceKey,
+                    'DestinationS3Uri': 's3://' + destinationBucket + '/' + sourceKey,
+                    'Size': str(size)
+                }
+            )
+
+            logger.debug('## BATCH_RESPONSE\r' + jsonpickle.encode(dict(**pre_flight_response)))
+            logger.debug("job submission complete")
+            resultString = 'Invoked batch Copy Job'
+            # Mark as succeeded
+        else:
+            s3client.copy({'Bucket': sourceBucket,'Key': sourceKey}, destinationBucket, sourceKey)
+            resultString = 'Lambda copy complete'
+
         resultCode = 'Succeeded'
-        # resultString = str(response)
+
 
     except ClientError as e:
         # If request timed out, mark as a temp failure
@@ -68,19 +110,21 @@ def lambda_handler(event, context):
 
         logger.debug(errorMessage)
 
-        if errorCode == 'RequestTimeout':
+        if errorCode == 'TooManyRequestsException':
             resultCode = 'TemporaryFailure'
-            resultString = 'Retry request to Amazon S3 due to timeout.'
+            resultString = 'Retry request to batch due to throttling.'
         else:
-            resultCode = 'PermanentFailure'
-            resultString = '{}: {}'.format(errorCode, errorMessage)
+            if errorCode == 'RequestTimeout':
+                resultCode = 'TemporaryFailure'
+                resultString = 'Retry request to Amazon S3 due to timeout.'
+            else:
+                resultCode = 'PermanentFailure'
+                resultString = '{}: {}'.format(errorCode, errorMessage)
 
     except Exception as e:
         # Catch all exceptions to permanently fail the task
         resultCode = 'PermanentFailure'
         resultString = 'Exception: {}'.format(e)
-        logger.debug(resultString)
-        raise e
 
     finally:
         results.append({
@@ -88,6 +132,7 @@ def lambda_handler(event, context):
             'resultCode': resultCode,
             'resultString': resultString
         })
+        logger.info(resultCode + " # " + resultString)
 
     return {
         'invocationSchemaVersion': invocationSchemaVersion,
