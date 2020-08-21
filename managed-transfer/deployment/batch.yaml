@@ -54,7 +54,6 @@ Resources:
   JobQueue:
     Type: AWS::Batch::JobQueue
     Properties:
-      JobQueueName: mediaexchange-managedtransfer-queue
       Priority: 1
       ComputeEnvironmentOrder:
         -
@@ -73,7 +72,7 @@ Resources:
       ComputeResources:
         MinvCpus: 0
         DesiredvCpus: 0
-        MaxvCpus: 32
+        MaxvCpus: 256
         InstanceTypes:
           - optimal
 
