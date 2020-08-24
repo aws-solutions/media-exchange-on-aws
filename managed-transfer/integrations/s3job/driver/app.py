@@ -58,17 +58,29 @@ def lambda_handler(event, context):
             if  pre_flight_response['pre_flight_response'] == True:
                 raise Exception('Object ' + sourceKey + ' is deleted')
 
-        if 'StorageClass' in pre_flight_response:
-            if pre_flight_response['StorageClass'] in ['GLACIER', 'DEEP_ARCHIVE']:
-                raise Exception('Object ' + sourceKey + ' is in unsupported StorageClass '  + pre_flight_response['StorageClass'])
-
         size = pre_flight_response['ContentLength']
-
         destinationBucket=os.environ['DestinationBucketName']
 
         logger.debug("preflight check end")
 
         if (size > minsizeforbatch):
+
+            unsupportedStorageClass = False
+
+            if 'StorageClass' in pre_flight_response:
+                if pre_flight_response['StorageClass'] in ['GLACIER', 'DEEP_ARCHIVE']:
+                    #check restore status:
+                    if 'Restore' in pre_flight_response:
+                        restore = pre_flight_response['Restore']
+                        logger.debug(restore)
+                        if 'ongoing-request="false"' not in restore:
+                            logger.info('restore is in progress')
+                            raise Exception('Object ' + sourceKey + ' is restoring from '  + pre_flight_response['StorageClass'])
+                    else:
+                        unsupportedStorageClass = True
+
+            if (unsupportedStorageClass):
+                raise Exception('Object ' + sourceKey + ' is in unsupported StorageClass '  + pre_flight_response['StorageClass'])
 
             #preflight checks _write_
             s3client.put_object(
@@ -118,8 +130,12 @@ def lambda_handler(event, context):
                 resultCode = 'TemporaryFailure'
                 resultString = 'Retry request to Amazon S3 due to timeout.'
             else:
-                resultCode = 'PermanentFailure'
-                resultString = '{}: {}'.format(errorCode, errorMessage)
+                if (errorCode == '304'):
+                    resultCode = 'Succeeded'
+                    resultString = 'Not modified'
+                else:
+                    resultCode = 'PermanentFailure'
+                    resultString = '{}: {}'.format(errorCode, errorMessage)
 
     except Exception as e:
         # Catch all exceptions to permanently fail the task
