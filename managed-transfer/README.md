@@ -79,3 +79,8 @@ The S3 Batch operations works with a CSV formatted inventory list file. You can 
 #### Run a Transfer
 
 There are two scripts included under integrations/driver/ (a) push.sh is for publishers and (b) pull.sh is for subscribers. Both of them take a source and destination S3URI and has an option (-c) to deliver checksums.  
+
+
+### Bulk Transfer best practices
+
+S3 has a limitations on the number of reads and writes per partition. Though it is a high number, you can potentially hit that limit if too many reads and writes are concentrated on the same partition. One easy option is to hash sort (sort -R) the inventory or csv file so that as the s3 batch job invokes the copy jobs in random order and there is no concentration read/write on one single partition. 

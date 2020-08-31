@@ -67,6 +67,7 @@ def lambda_handler(event, context):
 
             unsupportedStorageClass = False
 
+            #Storage class check
             if 'StorageClass' in pre_flight_response:
                 if pre_flight_response['StorageClass'] in ['GLACIER', 'DEEP_ARCHIVE']:
                     #check restore status:
@@ -82,10 +83,10 @@ def lambda_handler(event, context):
             if (unsupportedStorageClass):
                 raise Exception('Object ' + sourceKey + ' is in unsupported StorageClass '  + pre_flight_response['StorageClass'])
 
-            #preflight checks _write_
+            #preflight check _write_
             s3client.put_object(
                 Bucket=destinationBucket,
-                Key='scratch/job-'+event['job']['id']
+                Key=sourceKey
             )
 
             logger.debug("job submission start")
@@ -125,17 +126,18 @@ def lambda_handler(event, context):
         if errorCode == 'TooManyRequestsException':
             resultCode = 'TemporaryFailure'
             resultString = 'Retry request to batch due to throttling.'
+        elif errorCode == 'RequestTimeout':
+            resultCode = 'TemporaryFailure'
+            resultString = 'Retry request to Amazon S3 due to timeout.'
+        elif (errorCode == '304'):
+            resultCode = 'Succeeded'
+            resultString = 'Not modified'
+        elif (errorCode == 'SlowDown'):
+            resultCode = 'TemporaryFailure'
+            resultString = 'Retry request to s3 due to throttling.'
         else:
-            if errorCode == 'RequestTimeout':
-                resultCode = 'TemporaryFailure'
-                resultString = 'Retry request to Amazon S3 due to timeout.'
-            else:
-                if (errorCode == '304'):
-                    resultCode = 'Succeeded'
-                    resultString = 'Not modified'
-                else:
-                    resultCode = 'PermanentFailure'
-                    resultString = '{}: {}'.format(errorCode, errorMessage)
+            resultCode = 'PermanentFailure'
+            resultString = '{}: {}'.format(errorCode, errorMessage)
 
     except Exception as e:
         # Catch all exceptions to permanently fail the task
