@@ -8,6 +8,7 @@ import json
 import urllib
 import jsonpickle
 from botocore.exceptions import ClientError
+import unicodedata
 
 from aws_xray_sdk.core import xray_recorder
 from aws_xray_sdk.core import patch_all
@@ -31,9 +32,12 @@ def lambda_handler(event, context):
     invocationSchemaVersion = event['invocationSchemaVersion']
 
     taskId = event['tasks'][0]['taskId']
-    sourceKey = urllib.parse.unquote_plus(event['tasks'][0]['s3Key'])
+    key = urllib.parse.unquote_plus(event['tasks'][0]['s3Key'])
     s3BucketArn = event['tasks'][0]['s3BucketArn']
     sourceBucket = s3BucketArn.split(':::')[-1]
+
+    #NFC for unicodedata
+    sourceKey = unicodedata.normalize('NFC', key)
 
     results = []
     # Prepare result code and string
