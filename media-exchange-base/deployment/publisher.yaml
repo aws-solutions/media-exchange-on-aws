@@ -1,0 +1,73 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Cloudformation template to setup publisher in media exchange.
+
+Outputs:
+  PublisherAccountId:
+    Description: Publisher's AWS AccountId
+    Value:
+      Ref: PublisherAccountId
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-accountid
+
+Metadata:
+
+  License:
+    Description: |
+      Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+      Permission is hereby granted, free of charge, to any person obtaining a copy of this
+      software and associated documentation files (the "Software"), to deal in the Software
+      without restriction, including without limitation the rights to use, copy, modify,
+      merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+      permit persons to whom the Software is furnished to do so.
+
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+      INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+      PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+      HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+      OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+      SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Deployment Configuration"
+        Parameters:
+          - Environment
+      -
+        Label:
+          default: "Publisher Configuration"
+        Parameters:
+          - PublisherName
+          - PublisherAccountId
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+
+  PublisherName:
+    Type: String
+    Description: Name of the publisher
+
+  PublisherAccountId:
+    Type: String
+    Description: The AWS accountId of the publisher
+    ConstraintDescription: AccountId is a 12 digit number
+    AllowedPattern: '^\d{12}$'
+
+Resources:
+
+  PutEventsPermission:
+    Type: AWS::Events::EventBusPolicy
+    Properties:
+      Action:
+        events:PutEvents
+      Principal:
+        Ref: PublisherAccountId
+      StatementId:
+        Fn::Sub: "Sid${PublisherName}Events"

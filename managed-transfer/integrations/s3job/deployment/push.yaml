@@ -1,0 +1,257 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: >
+  Cloudformation template for batch transfer utlity integration helper for publisher's pushing assets to mediaexchange.
+
+Metadata:
+
+  License:
+    Description: |
+      Copyright 2020 Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+      Permission is hereby granted, free of charge, to any person obtaining a copy of this
+      software and associated documentation files (the "Software"), to deal in the Software
+      without restriction, including without limitation the rights to use, copy, modify,
+      merge, publish, distribute, sublicense, and/or sell copies of the Software, and to
+      permit persons to whom the Software is furnished to do so.
+
+      THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR IMPLIED,
+      INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY, FITNESS FOR A
+      PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE AUTHORS OR COPYRIGHT
+      HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER LIABILITY, WHETHER IN AN ACTION
+      OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT OF OR IN CONNECTION WITH THE
+      SOFTWARE OR THE USE OR OTHER DEALINGS IN THE SOFTWARE.
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Deployment Configuration"
+        Parameters:
+          - Environment
+          - MediaExchangeBucketName
+          - KMSKeyArn
+          - SubscriberCannoicalAccountID
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+  MediaExchangeBucketName:
+    Type: String
+    Description: MediaExchange S3 Bucket Name
+  KMSKeyArn:
+    Type: String
+    Description: KMS Key Arn
+  SubscriberCannoicalAccountID:
+    Type: String
+    Description: Subscriber Cannoical ID
+  Checksum:
+    Description: Whether a checksum should be calculated and delivered as metadata.
+    Default: false
+    Type: String
+    AllowedValues: [true, false]
+  ImageName:
+    Type: String
+    Description: Image Name
+    Default: mediaexchange-managedtransfer/aws-cli
+
+
+
+Conditions:
+  DoCheckSum:
+    Fn::Equals: [true, !Ref Checksum]
+
+Resources:
+
+  DriverFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName:
+        Fn::Sub: mxc-managedtransfer-${AWS::Region}-${Environment}-s3job-publisher-driver
+      Description: Lambda function to be invoked by s3 batch
+
+      CodeUri: driver/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      MemorySize: 128
+
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSXRayDaemonWriteAccess
+        - Statement:
+          - Sid: xray
+            Effect: Allow
+            Action:
+            - lambda:GetAccountSettings
+            Resource: '*'
+        - Statement:
+          - Sid: batch
+            Effect: Allow
+            Action:
+              - batch:SubmitJob
+              - batch:DescribeJobs
+              - batch:TerminateJob
+            Resource:
+            - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/*
+            - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-queue/*
+
+        # for preflight check
+        - S3ReadPolicy:
+            BucketName: '*'
+        - S3WritePolicy:
+            BucketName:
+              Ref: MediaExchangeBucketName
+        - Statement:
+          - Sid: kms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource:
+              Ref: KMSKeyArn
+
+      Timeout: 30
+      ReservedConcurrentExecutions: 2
+
+      Environment:
+        Variables:
+          JobDefinition:
+            Fn::If:
+              - DoCheckSum
+              - Ref: CopyAndCheckSumJobDefinition
+              - Ref: CopyJobDefinition
+          JobQueue:
+            Fn::ImportValue:
+              Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-jobq
+          DestinationBucketName:
+            Ref: MediaExchangeBucketName
+
+
+  CopyJobDefinition:
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      Type: container
+      ContainerProperties:
+        Image:
+          Fn::Sub: ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ImageName}
+        Vcpus: 1
+        Memory: 512
+        Command:
+          - aws
+          - s3
+          - cp
+          - Ref::SourceS3Uri
+          - Ref::DestinationS3Uri
+          - --copy-props
+          - metadata-directive
+          - --sse
+          - 'aws:kms'
+          - --sse-kms-key-id
+          - Ref: KMSKeyArn
+          - --grants
+          - Fn::Sub: read=id=${SubscriberCannoicalAccountID}
+        JobRoleArn:
+          Fn::GetAtt: JobRole.Arn
+      RetryStrategy:
+        Attempts: 3
+
+
+  CopyAndCheckSumJobDefinition:
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      Type: container
+      ContainerProperties:
+        Image:
+          Fn::Sub: ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ImageName}
+        Vcpus: 2
+        Memory: 3584
+        Command:
+          - pushWithCheckSum.sh
+          - Ref::SourceS3Uri
+          - Ref::DestinationS3Uri
+          - Ref: KMSKeyArn
+          - Ref: SubscriberCannoicalAccountID
+        JobRoleArn:
+          Fn::GetAtt: JobRole.Arn
+      RetryStrategy:
+        Attempts: 3
+
+  JobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: ecs-tasks.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Policies:
+        -
+          PolicyName: KMSAndS3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                # minimal permissions
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                Resource: '*'
+              -
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+                  - s3:PutObjectVersionAcl
+                  - s3:AbortMultipartUpload
+                  - s3:ListMultipartUploadParts
+                Resource:
+                  Fn::Sub: arn:aws:s3:::${MediaExchangeBucketName}/*
+
+              -
+                Effect: Allow
+                Action:
+                  - kms:Encrypt
+                  - kms:Decrypt
+                  - kms:ReEncrypt*
+                  - kms:GenerateDataKey*
+                  - kms:DescribeKey
+                Resource:
+                  Ref: KMSKeyArn
+
+  S3BatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: mxc-managedtransfer-${AWS::Region}-${Environment}-s3job-publisher-role
+      AssumeRolePolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: batchoperations.s3.amazonaws.com
+        Version: "2012-10-17"
+      Path: /
+      Policies:
+        -
+          PolicyName: S3BatchRolePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:PutObject
+                  - lambda:InvokeFunction
+                Effect: Allow
+                Resource: '*'
