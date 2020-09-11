@@ -46,7 +46,7 @@ Parameters:
   Owner:
     Type: String
     Description: Mainatner Group
-    Default: mediaops@yourcompany.com
+    Default: mediaops
   CfnBucket:
     Type: String
     Description: Bucket for storing CloudFormation products.
@@ -116,7 +116,7 @@ Resources:
       Name: Publisher
       Owner:
         Ref: Owner
-      SupportDescription: Please contact mediaops@yourcompany.com
+      SupportDescription: Please contact mediaops
       SupportEmail:
         Ref: Owner
       SupportUrl: https://mediaops.yourcompany.com
@@ -150,7 +150,7 @@ Resources:
       Name: Subscriber
       Owner:
         Ref: Owner
-      SupportDescription: Please contact mediaops@yourcompany.com
+      SupportDescription: Please contact mediaops
       SupportEmail:
         Ref: Owner
       SupportUrl: https://mediaops.yourcompany.com
@@ -184,7 +184,7 @@ Resources:
       Name: Transfer agreement
       Owner:
         Ref: Owner
-      SupportDescription: Please contact mediaops@yourcompany.com
+      SupportDescription: Please contact mediaops
       SupportEmail:
         Ref: Owner
       SupportUrl: https://mediaops.yourcompany.com
