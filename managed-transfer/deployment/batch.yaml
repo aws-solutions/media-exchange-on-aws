@@ -1,0 +1,144 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Cloudformation template for batch transfer utlity for large files.
+
+Metadata:
+
+  License:
+    Description: |
+        Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+        Licensed under the Apache License, Version 2.0 (the "License").
+        You may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Deployment Configuration"
+        Parameters:
+          - Environment
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+
+  ImageName:
+    Type: String
+    Description: Image Name
+    Default: mediaexchange-managed-transfer/aws-cli
+
+Outputs:
+  JobQueue:
+    Description: Job Queue Arn
+    Value:
+      Ref: JobQueue
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-jobq
+
+
+Resources:
+
+  JobQueue:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      Priority: 1
+      ComputeEnvironmentOrder:
+        -
+          Order: 1
+          ComputeEnvironment:
+            Ref: SPOTComputeEnvironment
+
+
+  SPOTComputeEnvironment:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties:
+      Type: MANAGED
+      ServiceRole:
+        Fn::GetAtt: BatchServiceRole.Arn
+
+      ComputeResources:
+        MinvCpus: 0
+        DesiredvCpus: 0
+        MaxvCpus: 96
+        InstanceTypes:
+          - optimal
+
+        Type: SPOT
+        BidPercentage: 50
+        SpotIamFleetRole:
+          Ref: SPOTFleetRole
+
+        Subnets:
+          Fn::Split:
+            - ','
+            -
+              Fn::ImportValue:
+                Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-subnets
+
+        InstanceRole:
+          Ref: IAMInstanceProfile
+        SecurityGroupIds:
+          - Fn::ImportValue:
+              Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-sg
+
+  BatchServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: batch.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
+
+
+  IAMInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - Ref: ECSInstanceRole
+
+  ECSInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+
+  SPOTFleetRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: spotfleet.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole

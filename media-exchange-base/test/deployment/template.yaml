@@ -1,0 +1,130 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  Cloudformation template for media exchange publisher role for testing.
+
+Metadata:
+
+  License:
+    Description: |
+        Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+        Licensed under the Apache License, Version 2.0 (the "License").
+        You may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Deployment Configuration"
+        Parameters:
+          - Environment
+      -
+        Label:
+          default: "Test Configuration"
+        Parameters:
+          - TestAccountId
+          - ExchangeBucket
+          - KMSKeyArn
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+
+  ExchangeBucket:
+    Type: String
+    Description: The Mediaexchange S3 Bucket Name.
+    Default: $BUCKET_NAME
+
+  TestAccountId:
+    Type: String
+    Description: The accountId of the MediaExchange.
+    ConstraintDescription: AccountId is a 12 digit number
+    AllowedPattern: '^\d{12}$'
+    Default: $MEDIAEXCHANGE_ACCOUNTID
+
+  KMSKeyArn:
+    Type: String
+    Description: KMS Key Arn
+    Default: $KMS_KEY_ID
+
+
+Resources:
+
+  Bucket:
+    Type: AWS::S3::Bucket
+
+  TestRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: mediaexchange-test-role
+      AssumeRolePolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              AWS:
+                Ref: TestAccountId
+        Version: "2012-10-17"
+      Path: /
+      Policies:
+        -
+          PolicyName: KMSAndS3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - s3:Get*
+                  - s3:List*
+                Resource:
+                  - Fn::Join:
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - Ref: ExchangeBucket
+                      - '/*'
+                  - Fn::Join:
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - Ref: Bucket
+                      - '/*'
+              -
+                Effect: Allow
+                Action:
+                  - s3:Put*
+                  - s3:AbortMultipartUpload
+                  - s3:ListMultipartUploadParts
+                Resource:
+                  - Fn::Join:
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - Ref: ExchangeBucket
+                      - '/*'
+                  - Fn::Join:
+                    - ''
+                    - - 'arn:aws:s3:::'
+                      - Ref: Bucket
+                      - '/*'
+
+              -
+                Effect: Allow
+                Action:
+                  - kms:Encrypt
+                  - kms:Decrypt
+                  - kms:ReEncrypt*
+                  - kms:GenerateDataKey*
+                  - kms:DescribeKey
+                Resource:
+                  Ref: KMSKeyArn
