@@ -169,17 +169,7 @@ Resources:
       PolicyDocument:
         Version: 2012-10-17
         Statement:
-          # deny direct deletes, updates are allowed
-          -
-            Sid: "DenyDeletes"
-            Action:
-              - "s3:DeleteObject"
-              - "s3:DeleteObjectVersion"
-            Effect: "Deny"
-            Resource:
-              - Fn::Sub: arn:aws:s3:::${ExchangeBucket}/*
-            Principal: "*"
-
+          
           # TLS only
           -
             Sid: "RequireTLS"
