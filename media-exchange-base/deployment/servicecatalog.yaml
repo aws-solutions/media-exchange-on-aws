@@ -45,8 +45,12 @@ Parameters:
     Default: dev
   Owner:
     Type: String
-    Description: Mainatner Group
+    Description: Maintainer Group
     Default: mediaops
+  OwnerEmail:
+    Type: String
+    Description: Maintainer Group Email
+    Default: mediaops@yourcompany.com
   CfnBucket:
     Type: String
     Description: Bucket for storing CloudFormation products.
@@ -118,7 +122,7 @@ Resources:
         Ref: Owner
       SupportDescription: Please contact mediaops
       SupportEmail:
-        Ref: Owner
+        Ref: OwnerEmail
       SupportUrl: https://mediaops.yourcompany.com
       Distributor: AWS Solutions Library / Media Exchange
       ProvisioningArtifactParameters:
@@ -152,7 +156,7 @@ Resources:
         Ref: Owner
       SupportDescription: Please contact mediaops
       SupportEmail:
-        Ref: Owner
+        Ref: OwnerEmail
       SupportUrl: https://mediaops.yourcompany.com
       Distributor: AWS Solutions Library / Media Exchange
       ProvisioningArtifactParameters:
@@ -186,7 +190,7 @@ Resources:
         Ref: Owner
       SupportDescription: Please contact mediaops
       SupportEmail:
-        Ref: Owner
+        Ref: OwnerEmail
       SupportUrl: https://mediaops.yourcompany.com
       Distributor: AWS Solutions Library / Media Exchange
       ProvisioningArtifactParameters:
