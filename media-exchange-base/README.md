@@ -21,7 +21,7 @@ You will need three AWS accounts to test this effectively (a) publisher, (b) sub
 The easiest install path is to use the included Makefile. This uses awscli to package and install the CloudFormation templates. It also deploys the products in service catalog so that you can subsequently use service catalog to on-board publishers and subscribers to MediaExchange. If you choose not to use this option, or do not have awscli installed, you can follow the alternative install process.
 
 * Initialize a shell with the necessary credentials to deploy to MediaExchange account. You can do this by adding AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN as environment variables or by selecting the appropriate profile by adding AWS_PROFILE environment variable.
-* Additionally, you will need to set the environment variable AWS_REGION (the region you want to deploy the MediaExchange). You will also need to use a S3 Bucket in the same region for storing the packaged CloudFormation templates. Set that bucket name to environment variable called CFNBUCKET.  
+* Additionally, you will need to set the environment variable AWS_REGION (the region you want to deploy the MediaExchange). You will also need to use a S3 Bucket in the same region for storing the packaged CloudFormation templates. Set that bucket name to environment variable called CFN_BUCKET.  
 * At the command prompt type `make install`. Once complete, it will print out a URL to launch service catalog. Login into your MediaExchange account with that URL to on-board publishers and subscribers. See the on-boarding section for those instructions.
 
 ### Alternative Install (NO CLI)
