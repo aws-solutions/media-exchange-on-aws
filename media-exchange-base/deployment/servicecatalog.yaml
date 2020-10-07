@@ -27,10 +27,17 @@ Metadata:
           default: Deployment Configuration
         Parameters:
           - Environment
+      -
+        Label:
+          default: Support information
+        Parameters:
+          - Owner
+          - OwnerEmail
 
 Mappings:
   SourceCode:
     General:
+      Bucket: https://media-solutions-bucket.s3.amazonaws.com
       Path: media-exchange-on-aws
       Version: v1.0.0
   AnonymousData:
@@ -47,10 +54,10 @@ Parameters:
     Type: String
     Description: Mainatner Group
     Default: mediaops
-  CfnBucket:
+  OwnerEmail:
     Type: String
-    Description: Bucket for storing CloudFormation products.
-
+    Description: Mainatner Group Email
+    Default: mediaops@yourcompany.com
 
 Outputs:
   ConsoleUrl:
@@ -70,7 +77,8 @@ Resources:
         Fn::Join:
           - /
           -
-            - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
+            # - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
+            - Fn::FindInMap: [ SourceCode, General, Bucket ]
             - Fn::FindInMap: [ SourceCode, General, Path ]
             - Fn::FindInMap: [ SourceCode, General, Version ]
             - core.yaml
@@ -118,7 +126,7 @@ Resources:
         Ref: Owner
       SupportDescription: Please contact mediaops
       SupportEmail:
-        Ref: Owner
+        Ref: OwnerEmail
       SupportUrl: https://mediaops.yourcompany.com
       Distributor: AWS Solutions Library / Media Exchange
       ProvisioningArtifactParameters:
@@ -127,7 +135,7 @@ Resources:
               Fn::Join:
                 - /
                 -
-                  - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
+                  - Fn::FindInMap: [ SourceCode, General, Bucket ]
                   - Fn::FindInMap: [ SourceCode, General, Path ]
                   - Fn::FindInMap: [ SourceCode, General, Version ]
                   - publisher.yaml
@@ -152,7 +160,7 @@ Resources:
         Ref: Owner
       SupportDescription: Please contact mediaops
       SupportEmail:
-        Ref: Owner
+        Ref: OwnerEmail
       SupportUrl: https://mediaops.yourcompany.com
       Distributor: AWS Solutions Library / Media Exchange
       ProvisioningArtifactParameters:
@@ -161,7 +169,7 @@ Resources:
               Fn::Join:
                 - /
                 -
-                  - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
+                  - Fn::FindInMap: [ SourceCode, General, Bucket ]
                   - Fn::FindInMap: [ SourceCode, General, Path ]
                   - Fn::FindInMap: [ SourceCode, General, Version ]
                   - subscriber.yaml
@@ -186,7 +194,7 @@ Resources:
         Ref: Owner
       SupportDescription: Please contact mediaops
       SupportEmail:
-        Ref: Owner
+        Ref: OwnerEmail
       SupportUrl: https://mediaops.yourcompany.com
       Distributor: AWS Solutions Library / Media Exchange
       ProvisioningArtifactParameters:
@@ -195,7 +203,7 @@ Resources:
               Fn::Join:
                 - /
                 -
-                  - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
+                  - Fn::FindInMap: [ SourceCode, General, Bucket ]
                   - Fn::FindInMap: [ SourceCode, General, Path ]
                   - Fn::FindInMap: [ SourceCode, General, Version ]
                   - agreement.yaml

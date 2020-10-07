@@ -1,6 +1,21 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Cloudformation template for media exchange publisher role for testing.
+  Cloudformation template for media exchange publisher/subscriber role for testing.
+
+
+Outputs:
+  SubscriberRoleArn:
+    Description: Subscriber Role Arn
+    Value:
+      Fn::GetAtt:
+        - SubscriberRole
+        - Arn
+  PublisherRoleArn:
+    Description: Publisher Role Arn
+    Value:
+      Fn::GetAtt:
+        - PublisherRole
+        - Arn
 
 Metadata:
 
@@ -20,54 +35,17 @@ Metadata:
         See the License for the specific language governing permissions and
         limitations under the License.
 
-  AWS::CloudFormation::Interface:
-    ParameterGroups:
-      -
-        Label:
-          default: "Deployment Configuration"
-        Parameters:
-          - Environment
-      -
-        Label:
-          default: "Test Configuration"
-        Parameters:
-          - TestAccountId
-          - ExchangeBucket
-          - KMSKeyArn
-
 Parameters:
-  Environment:
-    Type: String
-    Description: Deployment Environment Name
-    Default: dev
-
-  ExchangeBucket:
-    Type: String
-    Description: The Mediaexchange S3 Bucket Name.
-    Default: $BUCKET_NAME
-
   TestAccountId:
     Type: String
-    Description: The accountId of the MediaExchange.
-    ConstraintDescription: AccountId is a 12 digit number
-    AllowedPattern: '^\d{12}$'
-    Default: $MEDIAEXCHANGE_ACCOUNTID
-
-  KMSKeyArn:
-    Type: String
-    Description: KMS Key Arn
-    Default: $KMS_KEY_ID
-
+    Description: The AWS accountId of mediaexchange.
 
 Resources:
 
-  Bucket:
-    Type: AWS::S3::Bucket
-
-  TestRole:
+  SubscriberRole:
     Type: AWS::IAM::Role
     Properties:
-      RoleName: mediaexchange-test-role
+      RoleName: subscriber-role
       AssumeRolePolicyDocument:
         Statement:
           -
@@ -75,7 +53,7 @@ Resources:
             Action: sts:AssumeRole
             Principal:
               AWS:
-                Ref: TestAccountId
+                Fn::Sub: ${TestAccountId}
         Version: "2012-10-17"
       Path: /
       Policies:
@@ -89,35 +67,49 @@ Resources:
                 Action:
                   - s3:Get*
                   - s3:List*
-                Resource:
-                  - Fn::Join:
-                    - ''
-                    - - 'arn:aws:s3:::'
-                      - Ref: ExchangeBucket
-                      - '/*'
-                  - Fn::Join:
-                    - ''
-                    - - 'arn:aws:s3:::'
-                      - Ref: Bucket
-                      - '/*'
+                Resource: '*'
+              -
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:DescribeKey
+                Resource: '*'
+
+  PublisherRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName: publisher-role
+      AssumeRolePolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              AWS:
+                Fn::Sub: ${TestAccountId}
+        Version: "2012-10-17"
+      Path: /
+      Policies:
+        -
+          PolicyName: KMSAndS3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - s3:Get*
+                  - s3:List*
+                Resource: '*'
+
               -
                 Effect: Allow
                 Action:
                   - s3:Put*
+                  - s3:Delete* 
                   - s3:AbortMultipartUpload
                   - s3:ListMultipartUploadParts
-                Resource:
-                  - Fn::Join:
-                    - ''
-                    - - 'arn:aws:s3:::'
-                      - Ref: ExchangeBucket
-                      - '/*'
-                  - Fn::Join:
-                    - ''
-                    - - 'arn:aws:s3:::'
-                      - Ref: Bucket
-                      - '/*'
-
+                Resource: '*'
               -
                 Effect: Allow
                 Action:
@@ -126,5 +118,4 @@ Resources:
                   - kms:ReEncrypt*
                   - kms:GenerateDataKey*
                   - kms:DescribeKey
-                Resource:
-                  Ref: KMSKeyArn
+                Resource: '*'

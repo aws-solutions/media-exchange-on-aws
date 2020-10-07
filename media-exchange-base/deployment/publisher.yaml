@@ -3,13 +3,17 @@ Description: >
   Cloudformation template to setup publisher in media exchange.
 
 Outputs:
-  PublisherAccountId:
-    Description: Publisher's AWS AccountId
+
+  PublisherRole:
+    Description: Publisher's S3 Access role
     Value:
-      Ref: PublisherAccountId
+      Fn::If:
+        - HasRole
+        - Ref: PublisherRole
+        - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
     Export:
       Name:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-accountid
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
 
 Metadata:
 
@@ -42,6 +46,7 @@ Metadata:
         Parameters:
           - PublisherName
           - PublisherAccountId
+          - PublisherRole
 
 Parameters:
   Environment:
@@ -55,9 +60,20 @@ Parameters:
 
   PublisherAccountId:
     Type: String
-    Description: The AWS accountId of the publisher
-    ConstraintDescription: AccountId is a 12 digit number
-    AllowedPattern: '^\d{12}$'
+    Description: The AWS accountId of the publisher. This parameter is ignored if you specify PublisherRole.
+
+  PublisherRole:
+    Description: Publisher's Role. Defaults to arn:aws:iam::$PublisherAccountId:root.
+    Type: String
+    Default: ''
+
+Conditions:
+  HasRole:
+    Fn::Not:
+      - Fn::Equals:
+        - ""
+        - Ref: PublisherRole
+
 
 Resources:
 
@@ -69,4 +85,4 @@ Resources:
       Principal:
         Ref: PublisherAccountId
       StatementId:
-        Fn::Sub: "Sid${PublisherName}Events"
+        Fn::Sub: "Sid${PublisherName}${Environment}Events"
