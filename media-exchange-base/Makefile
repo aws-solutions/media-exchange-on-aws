@@ -1,4 +1,6 @@
 all: help
+help:
+	@echo 'deploys Media Exchange cloudformation templates'
 
 GUIDED ?= --guided
 ENV ?= dev
@@ -6,17 +8,20 @@ CURRENT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 RELEASE_VERSION?=v1.0.0
 SOLUTIONS_BUCKET_NAME?=media-solutions-bucket
 
-help:
-	@echo 'deploys Media Exchange cloudformation templates'
-
 ACCOUNT_ID = $(shell aws sts get-caller-identity --query Account --output text)
 TEST_ACCOUNT_ID ?= $(ACCOUNT_ID)
 PUBLISHER_ACCOUNT_ID ?= $(ACCOUNT_ID)
 SUBSCRIBER_ACCOUNT_ID ?= $(ACCOUNT_ID)
 SUBSCRIBER_CANONICAL_ID ?= $(shell aws s3api list-buckets --query "Owner.ID" --output text)
 PARAMETER_OVERRIDES := Environment=$(ENV)
-PUBLISHER_ROLE ?= arn:aws:iam::$(PUBLISHER_ACCOUNT_ID):role/publisher-role
-SUBSCRIBER_ROLE ?= arn:aws:iam::$(SUBSCRIBER_ACCOUNT_ID):role/subscriber-role
+
+ifeq ($(PUBLISHER_ACCOUNT_ID), $(ACCOUNT_ID))
+	PUBLISHER_ROLE ?= arn:aws:iam::$(ACCOUNT_ID):role/publisher-role
+endif
+ifeq ($(SUBSCRIBER_ACCOUNT_ID), $(ACCOUNT_ID))
+	SUBSCRIBER_ROLE ?= arn:aws:iam::$(ACCOUNT_ID):role/subscriber-role
+endif
+
 
 %-stack: deployment/%.yaml
 	sam deploy -t $(CURRENT_DIR)/$< --stack-name mediaexchange-$@-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $@ $(GUIDED)
@@ -65,4 +70,4 @@ install: configure
 
 	- @rm /tmp/servicecatalog.yaml.template
 
-.PHONY: install quickstart test
+.PHONY: install quickstart test localinstall configure

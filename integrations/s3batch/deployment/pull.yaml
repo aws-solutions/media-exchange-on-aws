@@ -39,19 +39,10 @@ Parameters:
   DestinationBucketName:
     Type: String
     Description: Destination S3 Bucket Name
-  Checksum:
-    Description: Whether a checksum should be calculated and delivered as metadata.
-    Default: false
-    Type: String
-    AllowedValues: [true, false]
   ImageName:
     Type: String
     Description: Image Name
     Default: mediaexchange-managedtransfer/aws-cli
-
-Conditions:
-  DoCheckSum:
-    Fn::Equals: [true, !Ref Checksum]
 
 Resources:
 
@@ -60,8 +51,8 @@ Resources:
     Properties:
       Description: Lambda function to be invoked by s3 batch
       FunctionName:
-        Fn::Sub: mxc-managedtransfer-${AWS::Region}-${Environment}-s3job-subscriber-driver
-      CodeUri: driver/
+        Fn::Sub: mediaexchange-${AWS::Region}-${Environment}-s3batch-subscriber-driver
+      CodeUri: lambda/driver/
       Handler: app.lambda_handler
       Runtime: python3.8
       MemorySize: 128
@@ -106,20 +97,13 @@ Resources:
       Environment:
         Variables:
           JobDefinition:
-            Fn::If:
-              - DoCheckSum
-              - Ref: CopyAndCheckSumJobDefinition
-              - Ref: CopyJobDefinition
+            Ref: CopyJobDefinition
           JobQueue:
             Fn::ImportValue:
               Fn::Sub: mxc-${AWS::Region}-${Environment}-managedtransfer-jobq
           DestinationBucketName:
             Ref: DestinationBucketName
-          MinSizeForBatchinBytes:
-            Fn::If:
-              - DoCheckSum
-              - 0
-              - 524288000 #500MB
+          MinSizeForBatchinBytes: 524288000 #500MB
 
   CopyJobDefinition:
     Type: AWS::Batch::JobDefinition
@@ -146,25 +130,6 @@ Resources:
           Fn::GetAtt: JobRole.Arn
       RetryStrategy:
         Attempts: 3
-
-  CopyAndCheckSumJobDefinition:
-    Type: AWS::Batch::JobDefinition
-    Properties:
-      Type: container
-      ContainerProperties:
-        Image:
-          Fn::Sub: ${AWS::AccountId}.dkr.ecr.${AWS::Region}.amazonaws.com/${ImageName}
-        Vcpus: 2
-        Memory: 3584
-        Command:
-          - pullWithCheckSum.sh
-          - Ref::SourceS3Uri
-          - Ref::DestinationS3Uri
-        JobRoleArn:
-          Fn::GetAtt: JobRole.Arn
-      RetryStrategy:
-        Attempts: 3
-
 
   JobRole:
     Type: AWS::IAM::Role
@@ -213,7 +178,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName:
-        Fn::Sub: mxc-managedtransfer-${AWS::Region}-${Environment}-s3job-subscriber-role
+        Fn::Sub: mediaexchange-${AWS::Region}-${Environment}-s3batch-subscriber-role
       AssumeRolePolicyDocument:
         Statement:
           -

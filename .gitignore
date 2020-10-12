@@ -259,3 +259,5 @@ bin/
 build.gradle
 checkstyle.*
 gradle/*
+
+.envrc

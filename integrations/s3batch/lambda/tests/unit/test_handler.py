@@ -3,9 +3,8 @@
 
 import json
 import pytest
-
-from driver import app
-
+import os
+from moto import mock_s3, mock_lambda
 
 @pytest.fixture()
 def s3_batch_event():
@@ -27,8 +26,13 @@ def s3_batch_event():
         }
 
 
-
+@mock_lambda
 def test_lambda_handler(s3_batch_event, mocker):
+
+    os.environ["AWS_ACCESS_KEY_ID"] = "test"
+    os.environ["AWS_SECRET_ACCESS_KEY"] = "test"
+
+    from driver import app
 
     ret = app.lambda_handler(s3_batch_event, "")
 

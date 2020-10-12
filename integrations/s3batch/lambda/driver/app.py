@@ -32,12 +32,9 @@ def lambda_handler(event, context):
     invocationSchemaVersion = event['invocationSchemaVersion']
 
     taskId = event['tasks'][0]['taskId']
-    key = urllib.parse.unquote_plus(event['tasks'][0]['s3Key'])
+    sourceKey = urllib.parse.unquote_plus(event['tasks'][0]['s3Key'])
     s3BucketArn = event['tasks'][0]['s3BucketArn']
     sourceBucket = s3BucketArn.split(':::')[-1]
-
-    #NFC for unicodedata
-    sourceKey = unicodedata.normalize('NFC', key)
 
     results = []
     # Prepare result code and string
@@ -86,6 +83,10 @@ def lambda_handler(event, context):
 
             if (unsupportedStorageClass):
                 raise Exception('Object ' + sourceKey + ' is in unsupported StorageClass '  + pre_flight_response['StorageClass'])
+
+            #NFC for unicodedata
+            if unicodedata.is_normalized('NFC', sourceKey) == false:
+                raise Exception('Object ' + sourceKey + ' is not in Normalized Form C' )
 
             #preflight check _write_
             s3client.put_object(

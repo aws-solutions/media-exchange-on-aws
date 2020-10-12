@@ -1,0 +1,4 @@
+pytest
+pytest-env
+boto3
+moto
