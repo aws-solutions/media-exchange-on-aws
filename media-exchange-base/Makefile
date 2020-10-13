@@ -26,7 +26,7 @@ endif
 %-stack: deployment/%.yaml
 	sam deploy -t $(CURRENT_DIR)/$< --stack-name mediaexchange-$@-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $@ $(GUIDED)
 
-testrole-stack:  PARAMETER_OVERRIDES += 'TestAccountId=$(TEST_ACCOUNT_ID)'
+testrole-stack:  GUIDED="--guided" PARAMETER_OVERRIDES += 'TestAccountId=$(TEST_ACCOUNT_ID)'
 publisher-stack: PARAMETER_OVERRIDES += 'PublisherRole=$(PUBLISHER_ROLE) PublisherAccountId=$(PUBLISHER_ACCOUNT_ID) PublisherName=studio'
 subscriber-stack: PARAMETER_OVERRIDES += 'SubscriberRole=$(SUBSCRIBER_ROLE) SubscriberAccountId=$(SUBSCRIBER_ACCOUNT_ID) SubscriberName=network CanonicalID=$(SUBSCRIBER_CANONICAL_ID) Email=nomail@email.com'
 agreement-stack: PARAMETER_OVERRIDES += 'PublisherName=studio SubscriberName=network'
@@ -41,13 +41,14 @@ ifneq ($(SUBSCRIBER_ACCOUNT_ID), $(ACCOUNT_ID))
 	$(info ****ACTION**** please deploy cloudformation template :testrole.yaml: to create the test role in $(SUBSCRIBER_ACCOUNT_ID))
 endif
 
-	@echo saving publihser onboarding info at test/publisher.env
-	@aws cloudformation describe-stacks --stack-name mediaexchange-agreement-stack-$(ENV) --query "Stacks[0].Outputs[?OutputKey == 'PublisherOnboardingSummary'].OutputValue" --output text > $(CURRENT_DIR)/test/publisher.env
+	@echo saving publihser onboarding info at tests/publisher.env
+	@aws cloudformation describe-stacks --stack-name mediaexchange-agreement-stack-$(ENV) --query "Stacks[0].Outputs[?OutputKey == 'PublisherOnboardingSummary'].OutputValue" --output text > $(CURRENT_DIR)/tests/publisher.env
 
-	@echo saving subscriber onboarding info at test/subscriber.env
-	@aws cloudformation describe-stacks --stack-name mediaexchange-agreement-stack-$(ENV) --query "Stacks[0].Outputs[?OutputKey == 'SubscriberOnboardingSummary'].OutputValue" --output text > $(CURRENT_DIR)/test/subscriber.env
+	@echo saving subscriber onboarding info at tests/subscriber.env
+	@aws cloudformation describe-stacks --stack-name mediaexchange-agreement-stack-$(ENV) --query "Stacks[0].Outputs[?OutputKey == 'SubscriberOnboardingSummary'].OutputValue" --output text > $(CURRENT_DIR)/tests/subscriber.env
 
-	@cd $(CURRENT_DIR)/test; ./test_push_pull.sh
+	#TODO: containers?
+	@cd $(CURRENT_DIR)/tests; python -m pytest -s python/
 
 localinstall: GUIDED=''
 localinstall: testrole-stack quickstart test
