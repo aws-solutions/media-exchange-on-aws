@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Cloudformation template for media exchange core and service catalog setup.
+  (%%SOLUTION_ID%%) - AWS Media Exchange %%VERSION%% - core and service catalog setup
 
 Metadata:
 

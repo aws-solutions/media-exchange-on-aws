@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Cloudformation template to setup publisher in media exchange.
+  (%%SOLUTION_ID%%) - %%SOLUTION_NAME%% %%VERSION%% - setup publisher
 
 Outputs:
 

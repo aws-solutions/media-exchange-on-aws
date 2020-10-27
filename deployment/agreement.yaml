@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Cloudformation template for media exchange publisher and subscriber shared resources for asset exchange.
+  (%%SOLUTION_ID%%) - %%SOLUTION_NAME%% %%VERSION%% - publisher and subscriber shared resources for asset exchange.
 
 Outputs:
 

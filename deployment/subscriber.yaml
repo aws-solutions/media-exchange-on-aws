@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  Cloudformation template for media exchange subscriber setup.
+  (%%SOLUTION_ID%%) - %%SOLUTION_NAME%% %%VERSION%% - subscriber setup
 
 Outputs:
   SubscriberCanonicalUserID:
