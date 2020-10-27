@@ -37,7 +37,7 @@ Metadata:
 Mappings:
   SourceCode:
     General:
-      Bucket: https://%%BUCKET_NAME%%.s3.amazonaws.com
+      Bucket: %%BUCKET_NAME%%
       Path: %%SOLUTION_NAME%%
       Version: %%VERSION%%
   AnonymousData:
