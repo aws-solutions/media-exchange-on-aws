@@ -37,9 +37,9 @@ Metadata:
 Mappings:
   SourceCode:
     General:
-      Bucket: https://media-solutions-bucket.s3.amazonaws.com
-      Path: media-exchange-on-aws
-      Version: v1.0.0
+      Bucket: https://%%BUCKET_NAME%%.s3.amazonaws.com
+      Path: %%SOLUTION_NAME%%
+      Version: %%VERSION%%
   AnonymousData:
     SendAnonymousData:
       Data: Yes
