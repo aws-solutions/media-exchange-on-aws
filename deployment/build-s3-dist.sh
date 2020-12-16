@@ -44,8 +44,8 @@ mkdir -p $build_dist_dir
 echo "------------------------------------------------------------------------------"
 echo "[Packing] Templates"
 echo "------------------------------------------------------------------------------"
-echo "cp $template_dir/*.template $template_dist_dir/"
-cp $template_dir/*.template $template_dist_dir/
+# echo "cp $template_dir/*.template $template_dist_dir/"
+# cp $template_dir/*.template $template_dist_dir/
 echo "copy yaml templates and rename"
 cp $template_dir/*.yaml $template_dist_dir/
 cd $template_dist_dir
