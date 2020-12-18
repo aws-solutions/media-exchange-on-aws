@@ -5,5 +5,5 @@ media-exchange-base/README.md:34
 ^deployment/open-source/
 CODE_OF_CONDUCT.md:4
 CONTRIBUTING.md:52
-deployment/servicecatalog.yaml:60
+deployment/media-exchange-on-aws.yaml:60
 deployment/integration_test.py:64
