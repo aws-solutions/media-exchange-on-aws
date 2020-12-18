@@ -51,15 +51,17 @@ echo "cp $template_dir/*.yaml $template_dist_dir/"
 cp $template_dir/*.yaml $template_dist_dir/
 echo "cd $template_dist_dir"
 cd $template_dist_dir
-ls
+
 # Rename all *.yaml to *.template
 for f in *.yaml; do 
     mv -- "$f" "${f%.yaml}.template"
 done
-ls
+
 echo "cd .."
 cd ..
-ls
+echo "ls $template_dist_dir/"
+ls $template_dist_dir/
+
 echo "Updating code source bucket in template with $1"
 replace="s/%%BUCKET_NAME%%/$1/g"
 echo "sed -i '' -e $replace $template_dist_dir/*.template"
