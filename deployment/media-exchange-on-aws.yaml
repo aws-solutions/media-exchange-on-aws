@@ -465,25 +465,6 @@ Resources:
                 Resource: '*'
 
 
-  #Service catalog role
-  ServiceRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      Description: Service role for Service Catalog
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              Service: servicecatalog.amazonaws.com
-            Action: 'sts:AssumeRole'
-
-      Path: /
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AdministratorAccess
-
-
   #Constraints
   LaunchRoleConstraintPublisher:
     Type: AWS::ServiceCatalog::LaunchRoleConstraint

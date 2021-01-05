@@ -41,5 +41,5 @@
 # npm test
 
 echo "------------------------------------------------------------------------------"
-echo "[INFO] Solutions has no code to unit test."
+echo "[INFO] Solutions has no unit tests to run"
 echo "------------------------------------------------------------------------------"

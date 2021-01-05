@@ -449,7 +449,7 @@ Resources:
       Handler: index.handler
       Environment:
         Variables:
-          LogLevel: DEBUG
+          LogLevel: INFO
 
       Code:
         ZipFile: |

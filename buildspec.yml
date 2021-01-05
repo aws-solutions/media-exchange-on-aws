@@ -3,7 +3,6 @@ version: 0.2
 phases:
   install:
     runtime-versions:
-      nodejs: 12
       python: 3.8
     commands:
       - echo "nothing to do in install"
@@ -31,4 +30,4 @@ artifacts:
   files:
       - deployment/**/*
       - CHANGELOG.md
-      - buildspec.yml      
+      - buildspec.yml

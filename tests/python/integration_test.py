@@ -17,7 +17,7 @@ def config():
     onboarding_info['FILE_NAME'] = '/tmp/media-exchange-test-object'
 
     with open(onboarding_info['FILE_NAME'], 'wb') as f:
-        f.write(os.urandom(1024*1024)) #1 MB
+        f.write(os.urandom(1024*100)) #100 KB
 
     hasher = hashlib.sha256()
     with open(onboarding_info['FILE_NAME'], 'rb') as f:
