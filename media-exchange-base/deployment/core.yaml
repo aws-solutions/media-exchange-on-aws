@@ -27,25 +27,16 @@ Metadata:
           default: Deployment Configuration
         Parameters:
           - Environment
-      -
-        Label:
-          default: "Notifications Configuration"
-        Parameters:
-          - Notifications
 
 Parameters:
   Environment:
     Type: String
     Description: Deployment Environment Name
     Default: dev
-
-  Notifications:
-    Type: String
-    Description: Select auto to forward default S3 notifications to subscribers.
-    Default: auto
-    AllowedValues:
-      - auto
-      - custom
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter Environment must only contain uppercase and lowercase letters and numbers
+    MaxLength: 10
+    MinLength: 2
 
 Outputs:
   LogBucketName:
@@ -55,14 +46,6 @@ Outputs:
     Export:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-logs
-
-  S3EventForwarederFunctionArn:
-    Description: S3 event forwarder function
-    Value:
-      Ref: S3ForwarderFunction
-    Export:
-      Name:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-s3eventfn
 
 Resources:
 
@@ -77,6 +60,12 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          -
+            BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
 
 
   #bucket for storing cloudtrails
@@ -89,6 +78,13 @@ Resources:
         BlockPublicPolicy: true
         IgnorePublicAcls: true
         RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          -
+            BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+              
 
   ExchangeCloudTrailBucketPolicy:
     Type: AWS::S3::BucketPolicy
@@ -122,7 +118,7 @@ Resources:
   ExchangeCloudTrailLogGroup:
     Type: AWS::Logs::LogGroup
     Properties:
-      RetentionInDays: 7
+      RetentionInDays: 365
 
   ExchangeCloudTrailLogGroupRole:
     Type: 'AWS::IAM::Role'
@@ -170,91 +166,3 @@ Resources:
         Fn::GetAtt: ExchangeCloudTrailLogGroup.Arn
       CloudWatchLogsRoleArn:
         Fn::GetAtt: ExchangeCloudTrailLogGroupRole.Arn
-
-  S3EventForwarderFunctionRole:
-    Type: 'AWS::IAM::Role'
-    Properties:
-      Description: Role for EventForwarer Lambda.
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: 'sts:AssumeRole'
-      Path: /
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
-      Policies:
-        -
-          PolicyName: mxc-lambda-putevents
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              -
-                Effect: Allow
-                Action:
-                  - events:PutEvents
-                Resource:
-                  Fn::Sub: arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
-
-
-  #lambda to send s3 events to EventBus
-  S3ForwarderFunction:
-    Type: AWS::Lambda::Function
-    Properties:
-      Description: Lambda function to forward the S3 event notifications to EventBridge
-      MemorySize: 128
-      Role:
-        Fn::GetAtt: S3EventForwarderFunctionRole.Arn
-      Runtime: python3.7
-      Timeout: 10
-      Handler: index.handler
-      Environment:
-        Variables:
-          NotificationConfiguration:
-            Ref: Notifications
-          SourceName:
-            Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher
-
-      Code:
-        ZipFile: |
-          import os
-          import logging
-          import boto3
-          import json
-
-          logger = logging.getLogger()
-          logger.setLevel(logging.INFO)
-
-          #events client
-          client = boto3.client('events')
-
-          def handler(event, context):
-            # logger.debug("Event received", json.dumps(event))
-
-            try:
-              logger.info("forwarding Event to EventBridge")
-
-              bucket = event["Records"][0]["s3"]["bucket"]["name"]
-
-              routing_data = 'source=s3:ObjectCreated:*,notify='+ os.environ['NotificationConfiguration'] +',bucket=' + bucket
-              logger.info("routing_data=" + routing_data)
-
-              response = client.put_events(
-                Entries=[
-                    {
-                        'Source': os.environ['SourceName'],
-                        'DetailType': routing_data,
-                        'Detail': json.dumps(event),
-                    },
-                ]
-              )
-
-              logger.debug("finished forwarding event")
-
-            except Exception as e:
-                # Catch all exceptions
-                result = 'Exception: {}'.format(e)
-                logger.error(result)

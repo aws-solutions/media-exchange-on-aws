@@ -63,34 +63,47 @@ Metadata:
           - Email
           - SubscriberRole
 
+
 Parameters:
   Environment:
     Type: String
     Description: Deployment Environment Name
     Default: dev
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter Environment must only contain uppercase and lowercase letters and numbers
+    MaxLength: 10
+    MinLength: 2
 
   SubscriberAccountId:
     Type: String
     Description: The accountId of the Subscriber. This parameter is ignored if you specify SubscriberRole.
-    ConstraintDescription: AccountId is a 12 digit number
     AllowedPattern: '^\d{12}$'
+    ConstraintDescription: Malformed input-Parameter SubscriberAccountId must be a 12 digit number.
 
   CanonicalID:
     Type: String
     Description: The Canonical Account ID of the subscriber.
+    AllowedPattern: '^[0-9a-fA-F]{64}$'
+    ConstraintDescription: Malformed input-Parameter CanonicalID must be a 64 digit hexadecimal number.
 
   Email:
     Type: String
     Description: The email address for the transfer notifications.
+    AllowedPattern: '[\w-\.]+@([\w-]+\.)+[\w-]+'
 
   SubscriberName:
     Type: String
     Description: A name for subscriber account.
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter SubscriberName must only contain uppercase and lowercase letters and numbers
+    MaxLength: 64
+    MinLength: 3
 
   SubscriberRole:
     Description: Subscriber's Role. Defaults to arn:aws:iam::$SubscriberAccountId:root.
     Type: String
     Default: ''
+    AllowedPattern: "[A-Za-z0-9:/-]*"
 
 Conditions:
   HasRole:
@@ -101,31 +114,68 @@ Conditions:
 
 Resources:
 
-  CustomNotifySubscriberRule:
-    Type: AWS::Events::Rule
-    Properties:
-      Description: "Forward Custom Events"
-      EventPattern:
-        source:
-          - Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher
-        detail-type:
-          - Fn::Sub: 'source=ApplicationEvent,subscribername=${SubscriberName}'
-
-      State: "ENABLED"
-      Targets:
-        -
-          Id: "SNSEvent"
-          InputPath: $.detail
-          Arn:
-            Ref: "NotificationTopic"
-        # -
-        #   Id: "XAccount"
-        #   Arn:
-        #     Fn::Sub: arn:aws:events:${AWS::Region}:${SubscriberAccountId}:event-bus/default
-
-
   NotificationTopic:
     Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: SNS Topic for MediaExchange Subscriber notifications
+      KmsMasterKeyId:
+        Ref: CMK
+
+
+  CMK:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Symetric Key for Encrypting Messages in Media Exchange
+      Enabled: true
+      EnableKeyRotation: true
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: node-key-policy
+        Statement:
+          -
+            Sid: KeyManagement
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
+            Action:
+              - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:TagResource
+              - kms:UntagResource
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
+            Resource: '*'
+
+          -
+            Sid: "Allow access for Key User (SNS Service Principal)"
+            Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - kms:GenerateDataKey*
+              - kms:Decrypt
+            Resource: '*'
+
+          -
+            Sid: "Allow access for Key User (Events Service Principal)"
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - kms:GenerateDataKey*
+              - kms:Decrypt
+            Resource: '*'
+
 
   EventTopicPolicy:
     Type: 'AWS::SNS::TopicPolicy'
@@ -136,6 +186,21 @@ Resources:
             Principal:
               Service: events.amazonaws.com
             Action: 'sns:Publish'
+            Resource: '*'
+      Topics:
+        -
+          Ref: NotificationTopic
+
+  XAccontTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    Properties:
+      PolicyDocument:
+        Statement:
+          - Effect: Allow
+            Principal:
+              AWS:
+                Ref: SubscriberAccountId
+            Action: 'sns:Subscribe'
             Resource: '*'
       Topics:
         -
