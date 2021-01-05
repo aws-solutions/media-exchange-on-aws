@@ -77,6 +77,8 @@ Metadata:
         Parameters:
           - PublisherName
           - SubscriberName
+          - ExpirationInDays
+          - Notifications
 
 
 Parameters:
@@ -84,18 +86,47 @@ Parameters:
     Type: String
     Description: Deployment Environment Name
     Default: dev
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter MyParameter must only contain uppercase and lowercase letters and numbers
+    MaxLength: 10
+    MinLength: 2
 
   PublisherName:
     Type: String
-    Description: The name of the publisher, case sensetive, as registerd in this Media Exchange deployment.
+    Description: The name of the publisher, case sensitive, as registered in this Media Exchange deployment.
+    ConstraintDescription: Malformed input-Parameter PublisherName must only contain uppercase and lowercase letters and numbers
+    MaxLength: 64
+    MinLength: 3
 
   SubscriberName:
     Type: String
-    Description: The name of the subscriber, case sensetive, as registerd in this Media Exchange deployment.
+    Description: The name of the subscriber, case sensitive, as registered in this Media Exchange deployment.
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter SubscriberName must only contain uppercase and lowercase letters and numbers
+    MaxLength: 64
+    MinLength: 3
 
+  ExpirationInDays:
+    Type: Number
+    Description: The assets get lifecycle deleted after these many days from the MediaExchange bucket.
+    MinValue: 3
+    Default: 10
+
+  Notifications:
+    Type: String
+    Description: Select yes to forward all S3 notifications.
+    Default: "no"
+    AllowedValues:
+      - "yes"
+      - "no"
+
+Conditions:
+  EnableS3Notifications:
+    Fn::Equals:
+    - "yes"
+    - Ref: Notifications
 
 Resources:
-
 
   ExchangeBucket:
     Type: AWS::S3::Bucket
@@ -118,27 +149,20 @@ Resources:
           Fn::ImportValue:
             Fn::Sub: mxc-${AWS::Region}-${Environment}-logs
 
-      # default encryption does not go well with x-account CMKs
-      # BucketEncryption:
-      #   ServerSideEncryptionConfiguration:
-      #     -
-      #       ServerSideEncryptionByDefault:
-      #         SSEAlgorithm: 'aws:kms'
-      #         KMSMasterKeyID:
-      #           Ref: CMK
-
       #Expire objects after the lifecycle period
       LifecycleConfiguration:
         Rules:
           -
             Id: Expire
             Status: Enabled
-            ExpirationInDays: 10
+            ExpirationInDays:
+              Ref: ExpirationInDays
 
           -
             Id: AutoRemove
             Status: Enabled
-            NoncurrentVersionExpirationInDays: 10
+            NoncurrentVersionExpirationInDays:
+              Ref: ExpirationInDays
 
           -
             Id: CleanupIncompleteUploads
@@ -151,11 +175,8 @@ Resources:
           -
             Event: 's3:ObjectCreated:*'
             Function:
-              Fn::Join:
-                - ':'
-                - - Fn::Sub: arn:aws:lambda:${AWS::Region}:${AWS::AccountId}:function
-                  - Fn::ImportValue:
-                      Fn::Sub: mxc-${AWS::Region}-${Environment}-s3eventfn
+              Fn::GetAtt: S3EventForwarderFunction.Arn
+
 
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
@@ -272,16 +293,7 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-role
 
-  LambdaPermissionForS3Bucket:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: 'lambda:InvokeFunction'
-      FunctionName:
-        Fn::ImportValue:
-          Fn::Sub: mxc-${AWS::Region}-${Environment}-s3eventfn
-      Principal: s3.amazonaws.com
-      SourceAccount:
-        Ref: AWS::AccountId
+
 
   CMK:
     Type: AWS::KMS::Key
@@ -345,15 +357,47 @@ Resources:
             Resource: '*'
 
 
-  AutoNotifySubscriberRule:
+  LambdaPermissionForS3Bucket:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: 'lambda:InvokeFunction'
+      FunctionName:
+        Ref: S3EventForwarderFunction
+      Principal: s3.amazonaws.com
+      SourceAccount:
+        Ref: AWS::AccountId
+
+  S3NotifySubscriberRule:
     Type: AWS::Events::Rule
     Properties:
       Description: "Notify Content Published"
       EventPattern:
         source:
-          - Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher
+          - mxc.s3
         detail-type:
-          - Fn::Sub: 'source=s3:ObjectCreated:*,notify=auto,bucket=${ExchangeBucket}'
+          - Fn::Sub: bucket=${ExchangeBucket}
+      State:
+        Fn::If:
+          - EnableS3Notifications
+          - "ENABLED"
+          - "DISABLED"
+      Targets:
+        -
+          Id: "SNSEvent"
+          InputPath: $.detail
+          Arn:
+            Fn::ImportValue:
+              Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
+
+  NotifySubscriberRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Notify Publisher Messages"
+      EventPattern:
+        source:
+          - mxc.publisher
+        detail-type:
+          - Fn::Sub: bucket=${ExchangeBucket}
       State: "ENABLED"
       Targets:
         -
@@ -362,13 +406,86 @@ Resources:
           Arn:
             Fn::ImportValue:
               Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
-        # -
-        #   Id: "XAccount"
-        #   Arn:
-        #     Fn::Join:
-        #       - ':'
-        #       - - arn:aws:events
-        #         - Ref: AWS::Region
-        #         - Fn::ImportValue:
-        #             Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-accountid
-        #         - event-bus/default
+
+
+  S3EventForwarderFunctionRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      Description: Role for EventForwarer Lambda.
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service: lambda.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Path: /
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSLambdaBasicExecutionRole
+      Policies:
+        -
+          PolicyName: mxc-lambda-putevents
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - events:PutEvents
+                Resource:
+                  Fn::Sub: arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
+
+  #lambda to send s3 events to EventBus
+  S3EventForwarderFunction:
+    Type: AWS::Lambda::Function
+    Properties:
+      Description: Lambda function to forward the S3 event notifications to EventBridge
+      MemorySize: 128
+      Role:
+        Fn::GetAtt: S3EventForwarderFunctionRole.Arn
+      Runtime: python3.7
+      Timeout: 10
+      Handler: index.handler
+      Environment:
+        Variables:
+          LogLevel: DEBUG
+
+      Code:
+        ZipFile: |
+          import os
+          import logging
+          import boto3
+          import json
+
+          logger = logging.getLogger()
+          logger.setLevel(os.environ['LogLevel'])
+
+          #events client
+          client = boto3.client('events')
+
+          def handler(event, context):
+            try:
+              logger.info("forwarding Event to EventBridge")
+
+              bucket = event["Records"][0]["s3"]["bucket"]["name"]
+              logger.debug(bucket)
+              detail = json.dumps(event)
+              logger.debug(detail)
+
+              response = client.put_events(
+                Entries=[
+                    {
+                        'Source': "mxc.s3",
+                        'DetailType': "bucket="+bucket,
+                        'Detail': detail
+                    },
+                ]
+              )
+
+              logger.debug("finished forwarding event")
+
+            except Exception as e:
+                # Catch all exceptions
+                result = 'Exception: {}'.format(e)
+                logger.error(result)

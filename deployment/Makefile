@@ -13,23 +13,25 @@ TEST_ACCOUNT_ID ?= $(ACCOUNT_ID)
 PUBLISHER_ACCOUNT_ID ?= $(ACCOUNT_ID)
 SUBSCRIBER_ACCOUNT_ID ?= $(ACCOUNT_ID)
 SUBSCRIBER_CANONICAL_ID ?= $(shell aws s3api list-buckets --query "Owner.ID" --output text)
+SUBSCRIBER_EMAIL ?= nomail@email.com
 PARAMETER_OVERRIDES := Environment=$(ENV)
 
 ifeq ($(PUBLISHER_ACCOUNT_ID), $(ACCOUNT_ID))
 	PUBLISHER_ROLE ?= arn:aws:iam::$(ACCOUNT_ID):role/publisher-role
 endif
+
 ifeq ($(SUBSCRIBER_ACCOUNT_ID), $(ACCOUNT_ID))
 	SUBSCRIBER_ROLE ?= arn:aws:iam::$(ACCOUNT_ID):role/subscriber-role
 endif
 
 
 %-stack: deployment/%.yaml
-	sam deploy -t $(CURRENT_DIR)/$< --stack-name mediaexchange-$@-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $@ $(GUIDED)
+	sam deploy -t $(CURRENT_DIR)/$< --stack-name mediaexchange-$@-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $@ $(GUIDED) --region $(AWS_REGION) 
 
-testrole-stack:  GUIDED="--guided" PARAMETER_OVERRIDES += 'TestAccountId=$(TEST_ACCOUNT_ID)'
+testrole-stack:  GUIDED="--guided"
 publisher-stack: PARAMETER_OVERRIDES += 'PublisherRole=$(PUBLISHER_ROLE) PublisherAccountId=$(PUBLISHER_ACCOUNT_ID) PublisherName=studio'
-subscriber-stack: PARAMETER_OVERRIDES += 'SubscriberRole=$(SUBSCRIBER_ROLE) SubscriberAccountId=$(SUBSCRIBER_ACCOUNT_ID) SubscriberName=network CanonicalID=$(SUBSCRIBER_CANONICAL_ID) Email=nomail@email.com'
-agreement-stack: PARAMETER_OVERRIDES += 'PublisherName=studio SubscriberName=network'
+subscriber-stack: PARAMETER_OVERRIDES += 'SubscriberRole=$(SUBSCRIBER_ROLE) SubscriberAccountId=$(SUBSCRIBER_ACCOUNT_ID) SubscriberName=network CanonicalID=$(SUBSCRIBER_CANONICAL_ID) Email=$(SUBSCRIBER_EMAIL)'
+agreement-stack: PARAMETER_OVERRIDES += 'PublisherName=studio SubscriberName=network Notifications=yes'
 
 quickstart: core-stack publisher-stack subscriber-stack agreement-stack
 

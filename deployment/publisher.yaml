@@ -53,18 +53,29 @@ Parameters:
     Type: String
     Description: Deployment Environment Name
     Default: dev
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter Environment must only contain uppercase and lowercase letters and numbers
+    MaxLength: 10
+    MinLength: 2
 
   PublisherName:
     Type: String
     Description: Name of the publisher
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter PublisherName must only contain uppercase and lowercase letters and numbers
+    MaxLength: 64
+    MinLength: 3
 
   PublisherAccountId:
     Type: String
     Description: The AWS accountId of the publisher. This parameter is ignored if you specify PublisherRole.
+    AllowedPattern: '^\d{12}$'
+    ConstraintDescription: Malformed input-Parameter PublisherAccountId must be a 12 digit number
 
   PublisherRole:
     Description: Publisher's Role. Defaults to arn:aws:iam::$PublisherAccountId:root.
     Type: String
+    AllowedPattern: "[A-Za-z0-9:/-]*"
     Default: ''
 
 Conditions:
@@ -85,4 +96,4 @@ Resources:
       Principal:
         Ref: PublisherAccountId
       StatementId:
-        Fn::Sub: "Sid${PublisherName}${Environment}Events"
+        Fn::Sub: "Sid${PublisherName}${Environment}${AWS::Region}Events"
