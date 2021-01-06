@@ -7,3 +7,7 @@ CODE_OF_CONDUCT.md:4
 CONTRIBUTING.md:52
 deployment/media-exchange-on-aws.yaml:60
 deployment/integration_test.py:64
+README.md:42
+tests/python/integration_test.py:64
+CONTRIBUTING.md:50
+deployment/media-exchange-on-aws.yaml:68
