@@ -4,6 +4,14 @@ Description: >
 
 Outputs:
 
+  LogBucketName:
+    Description: Logging Bucket Name
+    Value:
+      Ref: ExchangeLogBucket
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-logs
+
   PublisherRole:
     Description: Publisher's S3 Access role
     Value:
@@ -87,6 +95,90 @@ Conditions:
 
 
 Resources:
+
+  #bucket for storing S3 Access Logs
+  ExchangeLogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      AccessControl: LogDeliveryWrite
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          -
+            BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          -
+            Id: Expire
+            Status: Enabled
+            Transitions:
+              -
+                StorageClass: GLACIER
+                TransitionInDays: 90
+
+
+  ExchangeLogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: ExchangeLogBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+
+          # TLS only
+          -
+            Sid: "RequireTLS"
+            Action:
+              - "s3:*"
+            Effect: "Deny"
+            Resource:
+              - Fn::Sub: arn:aws:s3:::${ExchangeLogBucket}/*
+            Principal: "*"
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+
+          -
+            Sid: "AllowGetOpPublisher"
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:GetObjectAcl
+              - s3:GetObjectVersionAcl
+              - s3:GetObjectTagging
+              - s3:GetObjectVersionTagging
+            Resource:
+              Fn::Sub: arn:aws:s3:::${ExchangeLogBucket}/*
+            Principal:
+              AWS:
+                - Fn::If:
+                  - HasRole
+                  - Ref: PublisherRole
+                  - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
+          -
+            Sid: "AllowBasicConsole"
+            Effect: Allow
+            Action:
+              - s3:Get*
+              - s3:List*
+            Resource:
+              Fn::Sub: arn:aws:s3:::${ExchangeLogBucket}
+            Principal:
+              AWS:
+                - Fn::If:
+                  - HasRole
+                  - Ref: PublisherRole
+                  - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
+
 
   PutEventsPermission:
     Type: AWS::Events::EventBusPolicy

@@ -16,6 +16,8 @@ SUBSCRIBER_CANONICAL_ID ?= $(shell aws s3api list-buckets --query "Owner.ID" --o
 SUBSCRIBER_EMAIL ?= nomail@email.com
 PARAMETER_OVERRIDES := Environment=$(ENV)
 
+
+
 ifeq ($(PUBLISHER_ACCOUNT_ID), $(ACCOUNT_ID))
 	PUBLISHER_ROLE ?= arn:aws:iam::$(ACCOUNT_ID):role/publisher-role
 endif
@@ -32,7 +34,7 @@ publisher-stack: PARAMETER_OVERRIDES += 'PublisherRole=$(PUBLISHER_ROLE) Publish
 subscriber-stack: PARAMETER_OVERRIDES += 'SubscriberRole=$(SUBSCRIBER_ROLE) SubscriberAccountId=$(SUBSCRIBER_ACCOUNT_ID) SubscriberName=network CanonicalID=$(SUBSCRIBER_CANONICAL_ID) Email=$(SUBSCRIBER_EMAIL)'
 agreement-stack: PARAMETER_OVERRIDES += 'PublisherName=studio SubscriberName=network Notifications=yes'
 
-quickstart: core-stack publisher-stack subscriber-stack agreement-stack
+quickstart: publisher-stack subscriber-stack agreement-stack
 
 test:
 ifneq ($(PUBLISHER_ACCOUNT_ID), $(ACCOUNT_ID))
@@ -56,20 +58,16 @@ localinstall: testrole-stack quickstart test
 
 ################
 
-AWS_REGION ?= $(shell aws configure get region )
-TEMPLATE_REPO_BUCKET ?=mxc-$(AWS_REGION)-$(ENV)-$(ACCOUNT_ID)-templaterepo
+EXT_VERSION = $(VERSION)-$(shell date +"%s")
 
-configure: templaterepo-stack
+install:
 
-install: configure
+	@cd $(CURRENT_DIR)/deployment/ && ./build-s3-dist.sh $(DIST_OUTPUT_BUCKET) $(SOLUTION_NAME) $(EXT_VERSION)
 
-	@for product in core publisher subscriber agreement; do \
-	aws s3 cp $(CURRENT_DIR)/deployment/$$product.yaml s3://$(TEMPLATE_REPO_BUCKET)/media-exchange-on-aws/$(RELEASE_VERSION)/$$product.yaml --no-progress --only-show-errors; \
-	done; \
-	sed "s/$(SOLUTIONS_BUCKET_NAME)/$(TEMPLATE_REPO_BUCKET)/g" < $(CURRENT_DIR)/deployment/servicecatalog.yaml > /tmp/servicecatalog.yaml.template
+	@for product in publisher subscriber agreement; do \
+		aws s3 cp $(CURRENT_DIR)/deployment/global-s3-assets/$$product.template s3://$(DIST_OUTPUT_BUCKET)/$(SOLUTION_NAME)/$(EXT_VERSION)/$$product.template --no-progress --only-show-errors; \
+	done
 
-	@sam deploy -t /tmp/servicecatalog.yaml.template $(GUIDED) --stack-name mediaexchange-servicecatalog-stack-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) --config-env servicecatalog-stack
+	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/media-exchange-on-aws.template $(GUIDED) --stack-name mediaexchange-servicecatalog-stack-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) --config-env servicecatalog-stack
 
-	- @rm /tmp/servicecatalog.yaml.template
-
-.PHONY: install quickstart test localinstall configure
+.PHONY: install quickstart test localinstall

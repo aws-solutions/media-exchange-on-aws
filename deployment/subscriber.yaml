@@ -154,6 +154,8 @@ Resources:
               - kms:UntagResource
               - kms:ScheduleKeyDeletion
               - kms:CancelKeyDeletion
+              - kms:GenerateDataKey*
+              - kms:Decrypt
             Resource: '*'
 
           -
@@ -181,12 +183,16 @@ Resources:
     Type: 'AWS::SNS::TopicPolicy'
     Properties:
       PolicyDocument:
+        Version: 2012-10-17
         Statement:
-          - Effect: Allow
+          -
+            Sid: Allow_Publish_Events
+            Effect: Allow
             Principal:
               Service: events.amazonaws.com
             Action: 'sns:Publish'
-            Resource: '*'
+            Resource:
+              Ref: NotificationTopic
       Topics:
         -
           Ref: NotificationTopic
@@ -195,13 +201,16 @@ Resources:
     Type: 'AWS::SNS::TopicPolicy'
     Properties:
       PolicyDocument:
+        Version: 2012-10-17
         Statement:
-          - Effect: Allow
+          - Sid: Allow_Subscribe_Events
+            Effect: Allow
             Principal:
               AWS:
                 Ref: SubscriberAccountId
             Action: 'sns:Subscribe'
-            Resource: '*'
+            Resource:
+              Ref: NotificationTopic
       Topics:
         -
           Ref: NotificationTopic
@@ -214,3 +223,35 @@ Resources:
       Protocol: email
       TopicArn:
         Ref: NotificationTopic
+
+  # also send the messages to a Q for local reference / used for integration testing
+  # RefQ:
+  #   Type: 'AWS::SQS::Queue'
+  #
+  # RefQPolicy:
+  #   Type: 'AWS::SQS::QueuePolicy'
+  #   Properties:
+  #     Queues:
+  #       - Ref: RefQ
+  #     PolicyDocument:
+  #       Version: 2012-10-17
+  #       Id: sns-sqs-policy
+  #       Statement:
+  #         -
+  #           Sid: snspermissions
+  #           Effect: Allow
+  #           Principal:
+  #             Service: sns.amazonaws.com
+  #           Action:
+  #             - SQS:SendMessage
+  #           Resource:
+  #             Fn::GetAtt: RefQ.Arn
+  #
+  # RefQSubscription:
+  #   Type: AWS::SNS::Subscription
+  #   Properties:
+  #     Endpoint:
+  #       Fn::GetAtt: RefQ.Arn
+  #     Protocol: sqs
+  #     TopicArn:
+  #       Ref: NotificationTopic

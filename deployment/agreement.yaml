@@ -37,6 +37,11 @@ Outputs:
           - Fn::Sub: EVENT_SOURCE_NAME=mxc-${AWS::Region}-${Environment}-publisher
           - Fn::Join:
             - ''
+            - - LOG_BUCKET_NAME=
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-logs
+          - Fn::Join:
+            - ''
             - - SUBSCRIBER_CANONICAL_USER_ID=
               - Fn::ImportValue:
                   Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-canonicalid
@@ -144,10 +149,10 @@ Resources:
 
       LoggingConfiguration:
         LogFilePrefix:
-          Ref: PublisherName
+          Fn::Sub: logs/${SubscriberName}/
         DestinationBucketName:
           Fn::ImportValue:
-            Fn::Sub: mxc-${AWS::Region}-${Environment}-logs
+            Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-logs
 
       #Expire objects after the lifecycle period
       LifecycleConfiguration:

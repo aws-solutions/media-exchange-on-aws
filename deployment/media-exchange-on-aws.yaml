@@ -76,23 +76,6 @@ Outputs:
 
 Resources:
 
-  MediaExchangeCore:
-    Type: AWS::CloudFormation::Stack
-    Properties:
-      Parameters:
-        Environment :
-          Ref: Environment
-      TemplateURL:
-        Fn::Join:
-          - /
-          -
-            # - Fn::Sub: https://${CfnBucket}.s3.${AWS::Region}.amazonaws.com
-            - Fn::FindInMap: [ SourceCode, General, Bucket ]
-            - Fn::FindInMap: [ SourceCode, General, Path ]
-            - Fn::FindInMap: [ SourceCode, General, Version ]
-            - core.yaml
-      TimeoutInMinutes: 5
-
   ServiceCatalogUserRole:
     Type: 'AWS::IAM::Role'
     Properties:
@@ -216,10 +199,11 @@ Resources:
               Fn::Join:
                 - /
                 -
+                  - 'https://s3.amazonaws.com'
                   - Fn::FindInMap: [ SourceCode, General, Bucket ]
                   - Fn::FindInMap: [ SourceCode, General, Path ]
                   - Fn::FindInMap: [ SourceCode, General, Version ]
-                  - publisher.yaml
+                  - publisher.template
           Name:
             Fn::FindInMap: [ SourceCode, General, Version ]
 
@@ -250,10 +234,11 @@ Resources:
               Fn::Join:
                 - /
                 -
+                  - 'https://s3.amazonaws.com'
                   - Fn::FindInMap: [ SourceCode, General, Bucket ]
                   - Fn::FindInMap: [ SourceCode, General, Path ]
                   - Fn::FindInMap: [ SourceCode, General, Version ]
-                  - subscriber.yaml
+                  - subscriber.template
           Name:
             Fn::FindInMap: [ SourceCode, General, Version ]
 
@@ -284,10 +269,11 @@ Resources:
               Fn::Join:
                 - /
                 -
+                  - 'https://s3.amazonaws.com'
                   - Fn::FindInMap: [ SourceCode, General, Bucket ]
                   - Fn::FindInMap: [ SourceCode, General, Path ]
                   - Fn::FindInMap: [ SourceCode, General, Version ]
-                  - agreement.yaml
+                  - agreement.template
           Name:
             Fn::FindInMap: [ SourceCode, General, Version ]
 
@@ -346,6 +332,23 @@ Resources:
                 Action:
                   - events:PutPermission
                   - events:RemovePermission
+
+                  - s3:List*
+                  - s3:Get*
+                  - s3:Describe*
+                  - s3:CreateBucket
+                  - s3:DeleteBucket
+                  - s3:PutBucketPolicy
+                  - s3:DeleteBucketPolicy
+                  - s3:PutBucketAcl
+                  - s3:PutAccountPublicAccessBlock
+                  - s3:PutBucketPublicAccessBlock
+                  - s3:PutBucketLogging
+                  - s3:PutBucketTagging
+                  - s3:PutBucketVersioning
+                  - s3:PutEncryptionConfiguration
+                  - s3:PutLifecycleConfiguration
+
                 Resource: '*'
         -
           PolicyName: mxc-subscriber-deploy

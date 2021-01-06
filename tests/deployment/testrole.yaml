@@ -42,6 +42,22 @@ Parameters:
 
 Resources:
 
+  SubscriberBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          -
+            BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+
   SubscriberRole:
     Type: AWS::IAM::Role
     Properties:
@@ -57,7 +73,7 @@ Resources:
         Version: "2012-10-17"
       Path: /
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/AdministratorAccess
+        - arn:aws:iam::aws:policy/AdministratorAccess
       # Policies:
       #   -
       #     PolicyName: KMSAndS3
@@ -77,6 +93,23 @@ Resources:
       #             - kms:DescribeKey
       #           Resource: '*'
 
+
+  PublisherBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          -
+            BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: 'aws:kms'
+
   PublisherRole:
     Type: AWS::IAM::Role
     Properties:
@@ -92,7 +125,7 @@ Resources:
         Version: "2012-10-17"
       Path: /
       ManagedPolicyArns:
-      - arn:aws:iam::aws:policy/AdministratorAccess
+        - arn:aws:iam::aws:policy/AdministratorAccess
       # Policies:
       #   -
       #     PolicyName: KMSAndS3
