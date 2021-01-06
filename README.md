@@ -17,7 +17,6 @@ This is a seamless addition to the current workflow for your customers who use S
 ![](assets/Architecture.png)
 
 ## Supported Workflows
-
 In a typical content owner workflow, the content owner or studio is onboarded as a publisher, and the MediaExchange is hosted by the distributor. The Distributor's MAM/DAM/Ingest service is onboarded as a subscriber to MediaExchange. In a content distributor workflow, the distributor is onboarded as a publisher to deliver assets to a partner (e.g. OTT service) and the subscriber is the downstream OTT service.
 
 The subscriber pushes the assets and publishers pull the assets from MediaExchange. This push/pull model also enables simple setup and enforcement of both lifecycle policies and alignment with delivery SLAs.
