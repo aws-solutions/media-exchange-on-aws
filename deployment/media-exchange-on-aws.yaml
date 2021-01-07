@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  (%%SOLUTION_ID%%) - AWS Media Exchange %%VERSION%% - core and service catalog setup
+  (__SOLUTION_ID__) - __SOLUTION_NAME__ __VERSION__ - core and service catalog setup
 
 Metadata:
 
@@ -37,9 +37,9 @@ Metadata:
 Mappings:
   SourceCode:
     General:
-      Bucket: %%BUCKET_NAME%%
-      Path: %%SOLUTION_NAME%%
-      Version: %%VERSION%%
+      Bucket: __BUCKET_NAME__
+      Path: __SOLUTION_NAME__
+      Version: __VERSION__
   AnonymousData:
     SendAnonymousData:
       Data: Yes

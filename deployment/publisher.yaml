@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  (%%SOLUTION_ID%%) - %%SOLUTION_NAME%% %%VERSION%% - setup publisher
+  (__SOLUTION_ID__) - __SOLUTION_NAME__ __VERSION__ - setup publisher
 
 Outputs:
 

@@ -12,14 +12,14 @@ echo "Please provide an initial description for the README.md file:"
 read solution_description
 
 # Update build-s3-dist.sh with $solution_name
-replace="s/%%SOLUTION_NAME%%/$solution_name/g"
+replace="s/__SOLUTION_NAME__/$solution_name/g"
 
 # Update CONTRIBUTING.md from $solution_name
 echo "sed -i '' -e $replace CONTRIBUTING.md"
 sed -i '' -e $replace CONTRIBUTING.md
 
 # Update solution ids with $solution_id
-replace="s/%%SOLUTION_ID%%/$solution_id/g"
+replace="s/__SOLUTION_ID__/$solution_id/g"
 echo "sed -i '' -e '$replace' deployment/example.yaml"
 sed -i '' -e "$replace" deployment/example.yaml
 
@@ -27,7 +27,7 @@ sed -i '' -e "$replace" deployment/example.yaml
 mv deployment/example.yaml deployment/$solution_name.yaml
 
 # Update README.md solution name with $readme_name
-replace="s/%%SOLUTION_NAME%%/$readme_name/g"
+replace="s/__SOLUTION_NAME__/$readme_name/g"
 echo "sed -i '' -e '$replace' README.md"
 sed -i '' -e "$replace" README.md
 
@@ -36,7 +36,7 @@ echo "sed -i '' -e $replace NOTICE.txt"
 sed -i '' -e "$replace" NOTICE.txt
 
 # Update README.md description with $solution_description
-replace="s/%%SOLUTION_DESCRIPTION%%/$solution_description/g"
+replace="s/__SOLUTION_DESCRIPTION__/$solution_description/g"
 echo "sed -i '' -e '$replace' README.md"
 sed -i '' -e "$replace" README.md
 
