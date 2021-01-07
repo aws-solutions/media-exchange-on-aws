@@ -73,9 +73,9 @@ replace="s/__VERSION__/$3/g"
 echo "sed -i -e $replace $template_dist_dir/*.template"
 sed -i -e $replace $template_dist_dir/*.template
 
-# echo "------------------------------------------------------------------------------"
-# echo "[Rebuild] Example Function"
-# echo "------------------------------------------------------------------------------"
-# cd $source_dir/example-function-js
-# npm run build
-# cp ./dist/example-function-js.zip $build_dist_dir/example-function-js.zip
+echo "------------------------------------------------------------------------------"
+echo "[Rebuild] Creating Dummy File"
+echo "------------------------------------------------------------------------------"
+# the build process needs something to exist in the $build_dist_dir or it will break
+cd $source_dir/dummy-file
+cp note.txt $build_dist_dir/note.txt
