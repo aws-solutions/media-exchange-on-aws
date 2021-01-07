@@ -11,4 +11,4 @@ README.md:42
 tests/python/integration_test.py:64
 CONTRIBUTING.md:50
 deployment/media-exchange-on-aws.yaml:68
-deployment/media-exchange-on-aws.yaml:145
+deployment/media-exchange-on-aws.yaml:150
