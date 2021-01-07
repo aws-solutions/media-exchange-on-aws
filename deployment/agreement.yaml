@@ -135,6 +135,11 @@ Resources:
 
   ExchangeBucket:
     Type: AWS::S3::Bucket
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W41
+            reason: "(W41) S3 Bucket should have encryption option set"
 
     Properties:
 

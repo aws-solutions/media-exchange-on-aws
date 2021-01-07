@@ -99,6 +99,11 @@ Resources:
   #bucket for storing S3 Access Logs
   ExchangeLogBucket:
     Type: AWS::S3::Bucket
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W35
+            reason: "(W35) S3 Bucket should have access logging configured"
     DeletionPolicy: Retain
     Properties:
       AccessControl: LogDeliveryWrite

@@ -78,6 +78,11 @@ Resources:
 
   ServiceCatalogUserRole:
     Type: 'AWS::IAM::Role'
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "(W11) IAM role should not allow * resource on its permissions policy"
     Properties:
       Description: User role for Service Catalog access
       Path: /
@@ -289,6 +294,17 @@ Resources:
 
   CFNDeployRole:
     Type: 'AWS::IAM::Role'
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: F3
+            reason: "(F3) IAM role should not allow * action on its permissions policy"
+          - id: F38
+            reason: "(F38) IAM role should not allow * resource with PassRole action on its permissions policy"
+          - id: W11
+            reason: "(W11) IAM role should not allow * resource on its permissions policy"
+          - id: W28
+            reason: "(W28) Resource found with an explicit name, this disallows updates that require replacement of this resource"
     Properties:
       RoleName:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-cloudformation-service-role
