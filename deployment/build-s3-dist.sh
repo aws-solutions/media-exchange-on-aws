@@ -79,3 +79,4 @@ echo "--------------------------------------------------------------------------
 # the build process needs something to exist in the $build_dist_dir or it will break
 cd $source_dir/dummy-file
 cp note.txt $build_dist_dir/note.txt
+echo "copying note.txt to $build_dist_dir"
