@@ -85,7 +85,7 @@ def lambda_handler(event, context):
                 raise Exception('Object ' + sourceKey + ' is in unsupported StorageClass '  + pre_flight_response['StorageClass'])
 
             #NFC for unicodedata
-            if unicodedata.is_normalized('NFC', sourceKey) == false:
+            if unicodedata.is_normalized('NFC', sourceKey) == False:
                 raise Exception('Object ' + sourceKey + ' is not in Normalized Form C' )
 
             #preflight check _write_
