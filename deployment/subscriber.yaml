@@ -17,6 +17,13 @@ Outputs:
     Export:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
+  SubscriberNotificationsDLQ:
+    Description: Subscriber's notifications dead letter queue Arn
+    Value:
+      Fn::GetAtt: DLQ.Arn
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationdlq
   SubscriberRole:
     Description: Subscriber's S3 Access role
     Value:
@@ -179,6 +186,7 @@ Resources:
             Resource: '*'
 
 
+
   EventTopicPolicy:
     Type: 'AWS::SNS::TopicPolicy'
     Properties:
@@ -224,34 +232,27 @@ Resources:
       TopicArn:
         Ref: NotificationTopic
 
-  # also send the messages to a Q for local reference / used for integration testing
-  # RefQ:
-  #   Type: 'AWS::SQS::Queue'
-  #
-  # RefQPolicy:
-  #   Type: 'AWS::SQS::QueuePolicy'
-  #   Properties:
-  #     Queues:
-  #       - Ref: RefQ
-  #     PolicyDocument:
-  #       Version: 2012-10-17
-  #       Id: sns-sqs-policy
-  #       Statement:
-  #         -
-  #           Sid: snspermissions
-  #           Effect: Allow
-  #           Principal:
-  #             Service: sns.amazonaws.com
-  #           Action:
-  #             - SQS:SendMessage
-  #           Resource:
-  #             Fn::GetAtt: RefQ.Arn
-  #
-  # RefQSubscription:
-  #   Type: AWS::SNS::Subscription
-  #   Properties:
-  #     Endpoint:
-  #       Fn::GetAtt: RefQ.Arn
-  #     Protocol: sqs
-  #     TopicArn:
-  #       Ref: NotificationTopic
+  # also send the messages to a DLQ for retry
+  DLQ:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      KmsMasterKeyId:
+        Ref: CMK
+      KmsDataKeyReusePeriodSeconds:  86400
+      MessageRetentionPeriod: 1209600
+
+  DLQQPolicy:
+    Type: 'AWS::SQS::QueuePolicy'
+    Properties:
+      Queues:
+        - Ref: DLQ
+      PolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource:
+              Fn::GetAtt: DLQ.Arn

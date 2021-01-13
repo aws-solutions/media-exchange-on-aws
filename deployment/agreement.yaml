@@ -229,6 +229,18 @@ Resources:
               StringNotEquals:
                 s3:x-amz-server-side-encryption: aws:kms
 
+          -
+            Sid: "DenyBucketOwnerFullControl"
+            Action:
+              - "s3:PutObject"
+            Effect: "Deny"
+            Resource:
+              - Fn::Sub: arn:aws:s3:::${ExchangeBucket}/*
+            Principal: "*"
+            Condition:
+              StringEquals:
+                s3:x-amz-acl: bucket-owner-full-control
+
           ## Need to specify the KMS Key Id
           -
             Sid: "DenyNoCMKHeader"
@@ -398,6 +410,10 @@ Resources:
           Arn:
             Fn::ImportValue:
               Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
+          DeadLetterConfig:
+            Arn:
+              Fn::ImportValue:
+                Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationdlq
 
   NotifySubscriberRule:
     Type: AWS::Events::Rule
@@ -416,6 +432,10 @@ Resources:
           Arn:
             Fn::ImportValue:
               Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
+          DeadLetterConfig:
+            Arn:
+              Fn::ImportValue:
+                Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationdlq
 
 
   S3EventForwarderFunctionRole:
