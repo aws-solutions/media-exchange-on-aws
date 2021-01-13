@@ -165,17 +165,6 @@ Resources:
   #     VpcId:
   #       Ref: VPC
 
-  # ECREndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     ServiceName:
-  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecr.dkr
-  #     RouteTableIds:
-  #       - Ref: RouteTable
-  #     VpcEndpointType: Gateway
-  #     VpcId:
-  #       Ref: VPC
-
   S3Endpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
@@ -366,6 +355,8 @@ Resources:
     Type: AWS::Batch::JobQueue
     Properties:
       Priority: 1
+      JobQueueName:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-copier
       ComputeEnvironmentOrder:
         -
           Order: 1
@@ -411,7 +402,7 @@ Resources:
     Properties:
       Description: Lambda function to be invoked by s3 batch
       FunctionName:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-s3batch-driver
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-s3batch-copier
       CodeUri: lambda/driver/
       Handler: app.lambda_handler
       Runtime: python3.8
@@ -638,7 +629,7 @@ Resources:
     Type: AWS::IAM::Role
     Properties:
       RoleName:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-s3batch-role
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-s3batch-copier-role
       AssumeRolePolicyDocument:
         Statement:
           -

@@ -7,9 +7,9 @@ GUIDED ?= --guided
 VERSION ?= latest
 ENV ?= dev
 
-STACKPREFIX = mediaexchange-integrations-s3batch
+STACKPREFIX = mediaexchange-integrations-copy
 CURRENT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-IMAGENAME = amazon/aws-cli
+IMAGENAME = mediaexchange-batch-transfer/aws-cli
 ACCOUNT_ID = $(shell aws sts get-caller-identity --query Account --output text)
 
 PARAMETER_OVERRIDES := Environment=$(ENV)
@@ -41,7 +41,7 @@ package: repository-stack publish
 
 repository-stack:	PARAMETER_OVERRIDES += 'RepositoryName=${IMAGENAME}'
 
-copy-stack: PARAMETER_OVERRIDES += 'ImageName=${IMAGENAME} DestinationBucketName=$(DestinationBucketName)'
+copy-stack: PARAMETER_OVERRIDES += 'ImageName=$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(IMAGENAME) DestinationBucketName=$(DestinationBucketName)'
 copy-stack: copy-build
 	sam deploy -t $(CURRENT_DIR)/build/template.yaml --stack-name $(STACKPREFIX)-$@-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $@ $(GUIDED) --region $(AWS_REGION) --config-file $(CURRENT_DIR)/deployment/samconfig.toml
 
@@ -55,4 +55,4 @@ install: copy-stack
 clean: ## clears the build directory
 	@rm -rf build/*
 
-.PHONY: install package publish clean
+.PHONY: install package publish clean build

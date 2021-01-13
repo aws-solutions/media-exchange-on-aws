@@ -1,0 +1,2 @@
+aws-xray-sdk==2.4.3
+jsonpickle==1.3
