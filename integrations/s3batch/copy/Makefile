@@ -28,7 +28,7 @@ build:
 
 %-stack: deployment/%.yaml
 	@echo "deploying cloudformation template"
-	sam deploy -t $(CURRENT_DIR)/$< --stack-name $(STACKPREFIX)-$@-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $@ $(GUIDED) --region $(AWS_REGION)
+	sam deploy -t $(CURRENT_DIR)/$< --stack-name $(STACKPREFIX)-$@-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $@ $(GUIDED) --region $(AWS_REGION) 
 
 publish: configure build
 	@echo "Publishing Docker image to registry..."

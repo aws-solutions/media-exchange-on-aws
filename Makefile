@@ -15,7 +15,7 @@ SUBSCRIBER_ACCOUNT_ID ?= $(ACCOUNT_ID)
 SUBSCRIBER_CANONICAL_ID ?= $(shell aws s3api list-buckets --query "Owner.ID" --output text)
 SUBSCRIBER_EMAIL ?= nomail@email.com
 PARAMETER_OVERRIDES := Environment=$(ENV)
-
+AWS_REGION ?= $(shell aws configure get region --output text)
 
 
 ifeq ($(PUBLISHER_ACCOUNT_ID), $(ACCOUNT_ID))
@@ -30,6 +30,9 @@ endif
 	sam deploy -t $(CURRENT_DIR)/$< --stack-name mediaexchange-$@-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $@ $(GUIDED) --region $(AWS_REGION)
 
 testrole-stack:  GUIDED="--guided"
+testrole-stack:
+	sam deploy -t $(CURRENT_DIR)/tests/deployment/testrole.yaml --stack-name mediaexchange-$@-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $@ $(GUIDED) --region $(AWS_REGION)
+
 publisher-stack: PARAMETER_OVERRIDES += 'PublisherRole=$(PUBLISHER_ROLE) PublisherAccountId=$(PUBLISHER_ACCOUNT_ID) PublisherName=studio'
 subscriber-stack: PARAMETER_OVERRIDES += 'SubscriberRole=$(SUBSCRIBER_ROLE) SubscriberAccountId=$(SUBSCRIBER_ACCOUNT_ID) SubscriberName=network CanonicalID=$(SUBSCRIBER_CANONICAL_ID) Email=$(SUBSCRIBER_EMAIL)'
 agreement-stack: PARAMETER_OVERRIDES += 'PublisherName=studio SubscriberName=network Notifications=yes'
