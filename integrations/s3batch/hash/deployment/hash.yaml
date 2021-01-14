@@ -56,82 +56,6 @@ Resources:
         - Key: Name
           Value: MediaExchange Hash
 
-
-  # ECSAgentEndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     SecurityGroupIds:
-  #       - Ref: SecurityGroup
-  #     ServiceName:
-  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecs-agent
-  #     SubnetIds:
-  #       - Ref: SubnetOne
-  #       - Ref: SubnetTwo
-  #       - Ref: SubnetThree
-  #     VpcEndpointType: Interface
-  #     VpcId:
-  #       Ref: VPC
-  #
-  # ECSTelemetryEndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     SecurityGroupIds:
-  #       - Ref: SecurityGroup
-  #     ServiceName:
-  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecs-telemetry
-  #     SubnetIds:
-  #       - Ref: SubnetOne
-  #       - Ref: SubnetTwo
-  #       - Ref: SubnetThree
-  #     VpcEndpointType: Interface
-  #     VpcId:
-  #       Ref: VPC
-  #
-  # ECSEndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     SecurityGroupIds:
-  #       - Ref: SecurityGroup
-  #     ServiceName:
-  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecs
-  #     SubnetIds:
-  #       - Ref: SubnetOne
-  #       - Ref: SubnetTwo
-  #       - Ref: SubnetThree
-  #     VpcEndpointType: Interface
-  #     VpcId:
-  #       Ref: VPC
-  #
-  # ECREndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     SecurityGroupIds:
-  #       - Ref: SecurityGroup
-  #     ServiceName:
-  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecr.api
-  #     SubnetIds:
-  #       - Ref: SubnetOne
-  #       - Ref: SubnetTwo
-  #       - Ref: SubnetThree
-  #     VpcEndpointType: Interface
-  #     VpcId:
-  #       Ref: VPC
-  #
-  # ECREndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     SecurityGroupIds:
-  #       - Ref: SecurityGroup
-  #     ServiceName:
-  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecr.dkr
-  #     SubnetIds:
-  #       - Ref: SubnetOne
-  #       - Ref: SubnetTwo
-  #       - Ref: SubnetThree
-  #     VpcEndpointType: Interface
-  #     VpcId:
-  #       Ref: VPC
-
   S3Endpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
@@ -395,20 +319,15 @@ Resources:
             - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/*
             - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-queue/*
 
-        # control read/write access at the bucket level
+        # control read access at the bucket level
         - S3ReadPolicy:
-            BucketName: '*'
-        - S3WritePolicy:
             BucketName: '*'
         - Statement:
           - Sid: kms
             Effect: Allow
             Action:
-              - kms:Encrypt
               - kms:Decrypt
-              - kms:ReEncrypt*
               - kms:GenerateDataKey*
-              - kms:DescribeKey
             Resource: '*'
 
       Timeout: 300
@@ -453,10 +372,10 @@ Resources:
         JobRoleArn:
           Fn::GetAtt: JobRole.Arn
 
-      RetryStrategy:
-        Attempts: 3
-        # TODO inspect exit codes for throttles
-        #  only retry for 1, and 255
+      # RetryStrategy:
+      #   Attempts: 3
+      #   # TODO inspect exit codes for throttles
+      #   #  only retry for 1, and 255
 
 
   ExecutionRole:
@@ -495,18 +414,10 @@ Resources:
                 Action:
                   - s3:GetObject
                   - s3:GetObjectVersion
-                  - s3:GetObjectAcl
-                  - s3:GetObjectVersionAcl
-                  - s3:GetObjectTagging
-                  - s3:GetObjectVersionTagging
-                  - s3:ListBucket
                 Resource: '*'
               -
                 Effect: Allow
                 Action:
-                  - s3:PutObject
-                  - s3:PutObjectAcl
-                  - s3:PutObjectVersionAcl
                   - s3:PutObjectTagging
                   - s3:AbortMultipartUpload
                   - s3:ListMultipartUploadParts
@@ -515,11 +426,8 @@ Resources:
               -
                 Effect: Allow
                 Action:
-                  - kms:Encrypt
                   - kms:Decrypt
-                  - kms:ReEncrypt*
                   - kms:GenerateDataKey*
-                  - kms:DescribeKey
                 Resource: '*'
 
   S3BatchRole:
