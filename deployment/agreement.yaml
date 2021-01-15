@@ -13,6 +13,7 @@ Outputs:
           - Fn::Sub: SUBSCRIBER_NAME=${SubscriberName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
           - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
+          - Fn::Sub: EVENT_BUS_ARN=arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default          
           - Fn::Join:
             - '='
             - - SUBSCRIBER_ROLE
@@ -33,8 +34,7 @@ Outputs:
           - Fn::Sub: SUBSCRIBER_NAME=${SubscriberName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
           - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
-          - Fn::Sub: KMS_KEY_ARN=${CMK.Arn}
-          - Fn::Sub: EVENT_SOURCE_NAME=mxc-${AWS::Region}-${Environment}-publisher
+          - Fn::Sub: EVENT_BUS_ARN=arn:aws:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
           - Fn::Join:
             - ''
             - - LOG_BUCKET_NAME=
@@ -188,6 +188,15 @@ Resources:
               Fn::GetAtt: S3EventForwarderFunction.Arn
 
 
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          -
+            BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+                KMSMasterKeyID:
+                  Fn::GetAtt: CMK.Arn
+                SSEAlgorithm: 'aws:kms'
+
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
     DependsOn: LambdaPermissionForS3Bucket
@@ -216,19 +225,6 @@ Resources:
               Bool:
                 aws:SecureTransport: false
 
-          # # require KMS for put
-          -
-            Sid: "DenyIncorrectEncryptionHeader"
-            Action:
-              - "s3:PutObject"
-            Effect: "Deny"
-            Resource:
-              - Fn::Sub: arn:aws:s3:::${ExchangeBucket}/*
-            Principal: "*"
-            Condition:
-              StringNotEquals:
-                s3:x-amz-server-side-encryption: aws:kms
-
           -
             Sid: "DenyBucketOwnerFullControl"
             Action:
@@ -240,19 +236,6 @@ Resources:
             Condition:
               StringEquals:
                 s3:x-amz-acl: bucket-owner-full-control
-
-          ## Need to specify the KMS Key Id
-          -
-            Sid: "DenyNoCMKHeader"
-            Action:
-              - "s3:PutObject"
-            Effect: "Deny"
-            Resource:
-              - Fn::Sub: arn:aws:s3:::${ExchangeBucket}/*
-            Principal: "*"
-            Condition:
-              'Null':
-                s3:x-amz-server-side-encryption-aws-kms-key-id: true
 
           -
             Sid: "AllowCopyOpPublisher"

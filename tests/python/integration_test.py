@@ -69,9 +69,7 @@ def test_push_pull(config):
             Body=f,
             Bucket=config['BUCKET_NAME'],
             GrantRead="id="+config['SUBSCRIBER_CANONICAL_USER_ID'],
-            Key=config['FILE_NAME'],
-            ServerSideEncryption='aws:kms',
-            SSEKMSKeyId=config['KMS_KEY_ARN']
+            Key=config['FILE_NAME']
         )
 
     resp = s3_client.list_buckets()

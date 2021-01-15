@@ -256,3 +256,15 @@ Resources:
               - sqs:SendMessage
             Resource:
               Fn::GetAtt: DLQ.Arn
+
+
+  #subscriber permissions for events
+  PutEventsPermission:
+    Type: AWS::Events::EventBusPolicy
+    Properties:
+      Action:
+        events:PutEvents
+      Principal:
+        Ref: SubscriberAccountId
+      StatementId:
+        Fn::Sub: "Sid${SubscriberName}${Environment}${AWS::Region}Events"
