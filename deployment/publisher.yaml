@@ -18,7 +18,7 @@ Outputs:
       Fn::If:
         - HasRole
         - Ref: PublisherRole
-        - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
+        - Fn::Sub: arn:${AWS::Partition}:iam::${PublisherAccountId}:root
     Export:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
@@ -69,7 +69,7 @@ Parameters:
   PublisherName:
     Type: String
     Description: Name of the publisher
-    AllowedPattern: "[A-Za-z0-9]+"
+    AllowedPattern: "[A-Za-z0-9-]+"
     ConstraintDescription: Malformed input-Parameter PublisherName must only contain uppercase and lowercase letters and numbers
     MaxLength: 64
     MinLength: 3
@@ -81,7 +81,7 @@ Parameters:
     ConstraintDescription: Malformed input-Parameter PublisherAccountId must be a 12 digit number
 
   PublisherRole:
-    Description: Publisher's Role. Defaults to arn:aws:iam::$PublisherAccountId:root.
+    Description: Publisher's Role. Defaults to arn:${AWS::Partition}:iam::$PublisherAccountId:root.
     Type: String
     AllowedPattern: "[A-Za-z0-9:/-]*"
     Default: ''
@@ -145,7 +145,7 @@ Resources:
               - "s3:*"
             Effect: "Deny"
             Resource:
-              - Fn::Sub: arn:aws:s3:::${ExchangeLogBucket}/*
+              - Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeLogBucket}/*
             Principal: "*"
             Condition:
               Bool:
@@ -162,13 +162,13 @@ Resources:
               - s3:GetObjectTagging
               - s3:GetObjectVersionTagging
             Resource:
-              Fn::Sub: arn:aws:s3:::${ExchangeLogBucket}/*
+              Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeLogBucket}/*
             Principal:
               AWS:
                 - Fn::If:
                   - HasRole
                   - Ref: PublisherRole
-                  - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
+                  - Fn::Sub: arn:${AWS::Partition}:iam::${PublisherAccountId}:root
           -
             Sid: "AllowBasicConsole"
             Effect: Allow
@@ -176,13 +176,13 @@ Resources:
               - s3:Get*
               - s3:List*
             Resource:
-              Fn::Sub: arn:aws:s3:::${ExchangeLogBucket}
+              Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeLogBucket}
             Principal:
               AWS:
                 - Fn::If:
                   - HasRole
                   - Ref: PublisherRole
-                  - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
+                  - Fn::Sub: arn:${AWS::Partition}:iam::${PublisherAccountId}:root
 
 
   PutEventsPermission:

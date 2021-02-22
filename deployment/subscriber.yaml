@@ -30,7 +30,7 @@ Outputs:
       Fn::If:
         - HasRole
         - Ref: SubscriberRole
-        - Fn::Sub: arn:aws:iam::${SubscriberAccountId}:root
+        - Fn::Sub: arn:${AWS::Partition}:iam::${SubscriberAccountId}:root
     Export:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-role
@@ -101,13 +101,13 @@ Parameters:
   SubscriberName:
     Type: String
     Description: A name for subscriber account.
-    AllowedPattern: "[A-Za-z0-9]+"
+    AllowedPattern: "[A-Za-z0-9-]+"
     ConstraintDescription: Malformed input-Parameter SubscriberName must only contain uppercase and lowercase letters and numbers
     MaxLength: 64
     MinLength: 3
 
   SubscriberRole:
-    Description: Subscriber's Role. Defaults to arn:aws:iam::$SubscriberAccountId:root.
+    Description: Subscriber's Role. Defaults to arn:${AWS::Partition}:iam::$SubscriberAccountId:root.
     Type: String
     Default: ''
     AllowedPattern: "[A-Za-z0-9:/-]*"
@@ -145,7 +145,7 @@ Resources:
             Effect: Allow
             Principal:
               AWS:
-                Fn::Sub: arn:aws:iam::${AWS::AccountId}:root
+                Fn::Sub: arn:${AWS::Partition}:iam::${AWS::AccountId}:root
             Action:
               - kms:Create*
               - kms:Describe*

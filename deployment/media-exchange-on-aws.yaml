@@ -130,10 +130,10 @@ Resources:
                   - cloudformation:ListStackSetOperations
                   - cloudformation:ListStackSetOperationResults
                 Resource:
-                  - arn:aws:cloudformation:*:*:stack/SC-*
-                  - arn:aws:cloudformation:*:*:stack/StackSet-SC-*
-                  - arn:aws:cloudformation:*:*:changeSet/SC-*
-                  - arn:aws:cloudformation:*:*:stackset/SC-*
+                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:stack/SC-*
+                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:stack/StackSet-SC-*
+                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:changeSet/SC-*
+                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:stackset/SC-*
               - Effect: Allow
                 Action:
                   - cloudformation:GetTemplateSummary
@@ -404,6 +404,21 @@ Resources:
                   - kms:UntagResource
                   - kms:ScheduleKeyDeletion
                   - kms:CancelKeyDeletion
+
+                  - sqs:RemovePermission
+                  - sqs:AddPermission
+                  - sqs:CreateQueue
+                  - sqs:DeleteQueue
+                  - sqs:GetQueueAttributes
+                  - sqs:SetQueueAttributes
+                  - sqs:GetQueueUrl
+                  - sqs:ListDeadLetterSourceQueues
+                  - sqs:ListQueues
+
+                  - sqs:ListQueueTags
+                  - sqs:TagQueue
+                  - sqs:UntagQueue
+
                 Resource: '*'
         -
           PolicyName: mxc-agreement-deploy
