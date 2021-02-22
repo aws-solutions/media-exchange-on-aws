@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  (__SOLUTION_ID__) - __SOLUTION_NAME__ __VERSION__ - setup publisher
+  (SO0133) - __SOLUTION_NAME__ __VERSION__ - setup a publisher
 
 Outputs:
 
@@ -18,7 +18,7 @@ Outputs:
       Fn::If:
         - HasRole
         - Ref: PublisherRole
-        - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
+        - Fn::Sub: arn:${AWS::Partition}:iam::${PublisherAccountId}:root
     Export:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
@@ -69,7 +69,7 @@ Parameters:
   PublisherName:
     Type: String
     Description: Name of the publisher
-    AllowedPattern: "[A-Za-z0-9]+"
+    AllowedPattern: "[A-Za-z0-9-]+"
     ConstraintDescription: Malformed input-Parameter PublisherName must only contain uppercase and lowercase letters and numbers
     MaxLength: 64
     MinLength: 3
@@ -103,7 +103,7 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: W35
-            reason: "(W35) S3 Bucket should have access logging configured"
+            reason: "(W35) S3 Bucket should have access logging configured: This is the logging bucket."
     DeletionPolicy: Retain
     Properties:
       AccessControl: LogDeliveryWrite
@@ -145,7 +145,7 @@ Resources:
               - "s3:*"
             Effect: "Deny"
             Resource:
-              - Fn::Sub: arn:aws:s3:::${ExchangeLogBucket}/*
+              - Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeLogBucket}/*
             Principal: "*"
             Condition:
               Bool:
@@ -162,13 +162,13 @@ Resources:
               - s3:GetObjectTagging
               - s3:GetObjectVersionTagging
             Resource:
-              Fn::Sub: arn:aws:s3:::${ExchangeLogBucket}/*
+              Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeLogBucket}/*
             Principal:
               AWS:
                 - Fn::If:
                   - HasRole
                   - Ref: PublisherRole
-                  - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
+                  - Fn::Sub: arn:${AWS::Partition}:iam::${PublisherAccountId}:root
           -
             Sid: "AllowBasicConsole"
             Effect: Allow
@@ -176,13 +176,13 @@ Resources:
               - s3:Get*
               - s3:List*
             Resource:
-              Fn::Sub: arn:aws:s3:::${ExchangeLogBucket}
+              Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeLogBucket}
             Principal:
               AWS:
                 - Fn::If:
                   - HasRole
                   - Ref: PublisherRole
-                  - Fn::Sub: arn:aws:iam::${PublisherAccountId}:root
+                  - Fn::Sub: arn:${AWS::Partition}:iam::${PublisherAccountId}:root
 
 
   PutEventsPermission:

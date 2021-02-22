@@ -53,6 +53,7 @@ def config():
 
     os.remove(onboarding_info['FILE_NAME'])
 
+
 def test_push_pull(config):
 
     sts = boto3.client("sts")
@@ -114,3 +115,14 @@ def test_push_pull(config):
         hasher.update(f.read())
 
     assert config['CHECKSUM']  == hasher.hexdigest()
+
+    #delete object
+    resp = sts.assume_role(
+        RoleArn=config['PUBLISHER_ROLE'],
+        RoleSessionName="mediaexchange-test-session"
+    )
+
+    session = boto3.session.Session(aws_access_key_id=resp['Credentials']['AccessKeyId'], aws_secret_access_key=resp['Credentials']['SecretAccessKey'], aws_session_token=resp['Credentials']['SessionToken'], region_name=config['AWS_REGION'])
+
+    s3_client = session.client('s3')
+    s3_client.delete_object(Bucket=config['BUCKET_NAME'],Key=config['FILE_NAME'])

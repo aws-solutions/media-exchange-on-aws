@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  (__SOLUTION_ID__) - __SOLUTION_NAME__ __VERSION__ - core and service catalog setup
+  (SO0133) - __SOLUTION_NAME__ __VERSION__ - mediaexchange service catalog setup
 
 Metadata:
 
@@ -73,6 +73,24 @@ Outputs:
     Description: ServiceCatalog portfolio manager url.
     Value:
       Fn::Sub: https://signin.aws.amazon.com/switchrole?roleName=${ServiceCatalogUserRole}&account=${AWS::AccountId}&region=${AWS::Region}&redirect_uri=https://console.aws.amazon.com/servicecatalog/home?region=${AWS::Region}&isSceuc=true#/products
+  # PublisherProduct:
+  #   Description: ProductId of the Publisher Product
+  #   Value: !Ref Publisher
+  # PublisherProductArtifactId:
+  #   Description: ArtifcatId of the Publisher Product
+  #   Value: !GetAtt Publisher.ProvisioningArtifactIds
+  # SubscriberProductId:
+  #   Description: ProductId of the Subscriber Product
+  #   Value: !Ref Subscriber
+  # SubscriberProductArtifactId:
+  #   Description: ArtifcatId of the Subscriber Product
+  #   Value: !GetAtt Subscriber.ProvisioningArtifactIds
+  # AgreementProductId:
+  #   Description: ProductId of the Agreement Product
+  #   Value: !Ref Agreement
+  # AgreementProductArtifactId:
+  #   Description: ArtifcatId of the Agreement Product
+  #   Value: !GetAtt Agreement.ProvisioningArtifactIds
 
 Resources:
 
@@ -82,7 +100,8 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: W11
-            reason: "(W11) IAM role should not allow * resource on its permissions policy"
+            reason: "(W11) IAM role should not allow * resource on its permissions policy: Many of the resources created/updated/deleted by this role is created on the fly, as part of the normal usage ot the solution. So, the names are not known at the deployment time."
+
     Properties:
       Description: User role for Service Catalog access
       Path: /
@@ -130,10 +149,10 @@ Resources:
                   - cloudformation:ListStackSetOperations
                   - cloudformation:ListStackSetOperationResults
                 Resource:
-                  - arn:aws:cloudformation:*:*:stack/SC-*
-                  - arn:aws:cloudformation:*:*:stack/StackSet-SC-*
-                  - arn:aws:cloudformation:*:*:changeSet/SC-*
-                  - arn:aws:cloudformation:*:*:stackset/SC-*
+                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:stack/SC-*
+                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:stack/StackSet-SC-*
+                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:changeSet/SC-*
+                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:stackset/SC-*
               - Effect: Allow
                 Action:
                   - cloudformation:GetTemplateSummary
@@ -298,16 +317,16 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: F3
-            reason: "(F3) IAM role should not allow * action on its permissions policy"
+            reason: "(F3) IAM role should not allow * action on its permissions policy: Many of the resources created/updated/deleted by this role is created on the fly, as part of the normal usage ot the solution. So, the names are not known at the deployment time."
           - id: F38
-            reason: "(F38) IAM role should not allow * resource with PassRole action on its permissions policy"
+            reason: "(F38) IAM role should not allow * resource with PassRole action on its permissions policy: See #F3"
           - id: W11
-            reason: "(W11) IAM role should not allow * resource on its permissions policy"
-          - id: W28
-            reason: "(W28) Resource found with an explicit name, this disallows updates that require replacement of this resource"
+            reason: "(W11) IAM role should not allow * resource on its permissions policy: See #F3"
+          # - id: W28
+          #   reason: "(W28) Resource found with an explicit name, this disallows updates that require replacement of this resource "
     Properties:
-      RoleName:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-cloudformation-service-role
+      # RoleName:
+      #   Fn::Sub: mxc-${AWS::Region}-${Environment}-cloudformation-service-role
       Description: Role for ServiceCatalog/Cloudformation.
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -404,6 +423,21 @@ Resources:
                   - kms:UntagResource
                   - kms:ScheduleKeyDeletion
                   - kms:CancelKeyDeletion
+
+                  - sqs:RemovePermission
+                  - sqs:AddPermission
+                  - sqs:CreateQueue
+                  - sqs:DeleteQueue
+                  - sqs:GetQueueAttributes
+                  - sqs:SetQueueAttributes
+                  - sqs:GetQueueUrl
+                  - sqs:ListDeadLetterSourceQueues
+                  - sqs:ListQueues
+
+                  - sqs:ListQueueTags
+                  - sqs:TagQueue
+                  - sqs:UntagQueue
+
                 Resource: '*'
         -
           PolicyName: mxc-agreement-deploy

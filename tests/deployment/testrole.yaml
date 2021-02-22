@@ -72,26 +72,26 @@ Resources:
                 Fn::Sub: ${TestAccountId}
         Version: "2012-10-17"
       Path: /
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AdministratorAccess
-      # Policies:
-      #   -
-      #     PolicyName: KMSAndS3
-      #     PolicyDocument:
-      #       Version: 2012-10-17
-      #       Statement:
-      #         -
-      #           Effect: Allow
-      #           Action:
-      #             - s3:Get*
-      #             - s3:List*
-      #           Resource: '*'
-      #         -
-      #           Effect: Allow
-      #           Action:
-      #             - kms:Decrypt
-      #             - kms:DescribeKey
-      #           Resource: '*'
+      # ManagedPolicyArns:
+      #   - arn:aws:iam::aws:policy/AdministratorAccess
+      Policies:
+        -
+          PolicyName: KMSAndS3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - s3:Get*
+                  - s3:List*
+                Resource: '*'
+              -
+                Effect: Allow
+                Action:
+                  - kms:Decrypt
+                  - kms:DescribeKey
+                Resource: '*'
 
 
   PublisherBucket:
@@ -124,35 +124,35 @@ Resources:
                 Fn::Sub: ${TestAccountId}
         Version: "2012-10-17"
       Path: /
-      ManagedPolicyArns:
-        - arn:aws:iam::aws:policy/AdministratorAccess
-      # Policies:
-      #   -
-      #     PolicyName: KMSAndS3
-      #     PolicyDocument:
-      #       Version: 2012-10-17
-      #       Statement:
-      #         -
-      #           Effect: Allow
-      #           Action:
-      #             - s3:Get*
-      #             - s3:List*
-      #           Resource: '*'
-      #
-      #         -
-      #           Effect: Allow
-      #           Action:
-      #             - s3:Put*
-      #             - s3:Delete*
-      #             - s3:AbortMultipartUpload
-      #             - s3:ListMultipartUploadParts
-      #           Resource: '*'
-      #         -
-      #           Effect: Allow
-      #           Action:
-      #             - kms:Encrypt
-      #             - kms:Decrypt
-      #             - kms:ReEncrypt*
-      #             - kms:GenerateDataKey*
-      #             - kms:DescribeKey
-      #           Resource: '*'
+      # ManagedPolicyArns:
+      #   - arn:aws:iam::aws:policy/AdministratorAccess
+      Policies:
+        -
+          PolicyName: KMSAndS3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - s3:Get*
+                  - s3:List*
+                Resource: '*'
+
+              -
+                Effect: Allow
+                Action:
+                  - s3:Put*
+                  - s3:Delete*
+                  - s3:AbortMultipartUpload
+                  - s3:ListMultipartUploadParts
+                Resource: '*'
+              -
+                Effect: Allow
+                Action:
+                  - kms:Encrypt
+                  - kms:Decrypt
+                  - kms:ReEncrypt*
+                  - kms:GenerateDataKey*
+                  - kms:DescribeKey
+                Resource: '*'

@@ -27,15 +27,15 @@ ifeq ($(SUBSCRIBER_ACCOUNT_ID), $(ACCOUNT_ID))
 endif
 
 %-stack: deployment/%.yaml
-	sam deploy -t $(CURRENT_DIR)/$< --stack-name mediaexchange-$@-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $@ $(GUIDED) --region $(AWS_REGION)
+	sam deploy -t $(CURRENT_DIR)/$< --stack-name mediaexchange-$*-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION)
 
-testrole-stack:  GUIDED="--guided"
 testrole-stack:
-	sam deploy -t $(CURRENT_DIR)/tests/deployment/testrole.yaml --stack-name mediaexchange-$@-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $@ $(GUIDED) --region $(AWS_REGION)
+	sam deploy -t $(CURRENT_DIR)/tests/deployment/testrole.yaml --stack-name mediaexchange-testrole-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) $(GUIDED) --region $(AWS_REGION)
 
 publisher-stack: PARAMETER_OVERRIDES += 'PublisherRole=$(PUBLISHER_ROLE) PublisherAccountId=$(PUBLISHER_ACCOUNT_ID) PublisherName=studio'
 subscriber-stack: PARAMETER_OVERRIDES += 'SubscriberRole=$(SUBSCRIBER_ROLE) SubscriberAccountId=$(SUBSCRIBER_ACCOUNT_ID) SubscriberName=network CanonicalID=$(SUBSCRIBER_CANONICAL_ID) Email=$(SUBSCRIBER_EMAIL)'
 agreement-stack: PARAMETER_OVERRIDES += 'PublisherName=studio SubscriberName=network Notifications=yes'
+testrole-stack:  PARAMETER_OVERRIDES += TestAccountId=$(PUBLISHER_ACCOUNT_ID)
 
 quickstart: publisher-stack subscriber-stack agreement-stack
 
@@ -48,15 +48,15 @@ ifneq ($(SUBSCRIBER_ACCOUNT_ID), $(ACCOUNT_ID))
 endif
 
 	@echo saving publihser onboarding info at tests/publisher.env
-	@aws cloudformation describe-stacks --stack-name mediaexchange-agreement-stack-$(ENV) --query "Stacks[0].Outputs[?OutputKey == 'PublisherOnboardingSummary'].OutputValue" --output text > $(CURRENT_DIR)/tests/publisher.env
+	@aws cloudformation describe-stacks --stack-name mediaexchange-agreement-$(ENV) --query "Stacks[0].Outputs[?OutputKey == 'PublisherOnboardingSummary'].OutputValue" --output text > $(CURRENT_DIR)/tests/publisher.env
 
 	@echo saving subscriber onboarding info at tests/subscriber.env
-	@aws cloudformation describe-stacks --stack-name mediaexchange-agreement-stack-$(ENV) --query "Stacks[0].Outputs[?OutputKey == 'SubscriberOnboardingSummary'].OutputValue" --output text > $(CURRENT_DIR)/tests/subscriber.env
+	@aws cloudformation describe-stacks --stack-name mediaexchange-agreement-$(ENV) --query "Stacks[0].Outputs[?OutputKey == 'SubscriberOnboardingSummary'].OutputValue" --output text > $(CURRENT_DIR)/tests/subscriber.env
 
 	#TODO: containers?
-	@cd $(CURRENT_DIR)/tests; python -m pytest -s python/
+	@cd $(CURRENT_DIR)/tests; VAR=value python -m pytest -s python/
 
-localinstall: GUIDED=''
+localinstall: GUIDED=
 localinstall: testrole-stack quickstart test
 
 ################
@@ -72,5 +72,9 @@ install:
 	done
 
 	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/media-exchange-on-aws.template $(GUIDED) --stack-name mediaexchange-servicecatalog-stack-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) --config-env servicecatalog-stack
+
+	#provision product/
+
+
 
 .PHONY: install quickstart test localinstall
