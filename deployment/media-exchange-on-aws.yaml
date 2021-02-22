@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  (__SOLUTION_ID__) - __SOLUTION_NAME__ __VERSION__ - core and service catalog setup
+  (SO0133) - __SOLUTION_NAME__ __VERSION__ - core and service catalog setup
 
 Metadata:
 

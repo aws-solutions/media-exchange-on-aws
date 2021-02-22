@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  (__SOLUTION_ID__) - __SOLUTION_NAME__ __VERSION__ - publisher and subscriber shared resources for asset exchange.
+  (SO0133) - __SOLUTION_NAME__ __VERSION__ - publisher and subscriber shared resources for asset exchange.
 
 Outputs:
 
