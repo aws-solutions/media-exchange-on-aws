@@ -103,7 +103,7 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: W35
-            reason: "(W35) S3 Bucket should have access logging configured"
+            reason: "(W35) S3 Bucket should have access logging configured: This is the logging bucket."
     DeletionPolicy: Retain
     Properties:
       AccessControl: LogDeliveryWrite

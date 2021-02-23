@@ -82,7 +82,8 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: W11
-            reason: "(W11) IAM role should not allow * resource on its permissions policy"
+            reason: "(W11) IAM role should not allow * resource on its permissions policy: Many of the resources creted/updated/deleted by this role is created on the fly, as part of the normal usage ot the solution. So, the names are not known at the deployment time."
+
     Properties:
       Description: User role for Service Catalog access
       Path: /
@@ -298,16 +299,16 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: F3
-            reason: "(F3) IAM role should not allow * action on its permissions policy"
+            reason: "(F3) IAM role should not allow * action on its permissions policy: Many of the resources creted/updated/deleted by this role is created on the fly, as part of the normal usage ot the solution. So, the names are not known at the deployment time."
           - id: F38
-            reason: "(F38) IAM role should not allow * resource with PassRole action on its permissions policy"
+            reason: "(F38) IAM role should not allow * resource with PassRole action on its permissions policy: See #F3"
           - id: W11
-            reason: "(W11) IAM role should not allow * resource on its permissions policy"
-          - id: W28
-            reason: "(W28) Resource found with an explicit name, this disallows updates that require replacement of this resource"
+            reason: "(W11) IAM role should not allow * resource on its permissions policy: See #F3"
+          # - id: W28
+          #   reason: "(W28) Resource found with an explicit name, this disallows updates that require replacement of this resource "
     Properties:
-      RoleName:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-cloudformation-service-role
+      # RoleName:
+      #   Fn::Sub: mxc-${AWS::Region}-${Environment}-cloudformation-service-role
       Description: Role for ServiceCatalog/Cloudformation.
       AssumeRolePolicyDocument:
         Version: 2012-10-17
