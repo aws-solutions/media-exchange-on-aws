@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  (SO0133) - __SOLUTION_NAME__ __VERSION__ - publisher and subscriber shared resources for asset exchange.
+  (SO0133) - __SOLUTION_NAME__ __VERSION__ - setup publisher and subscriber shared resources for asset exchange.
 
 Outputs:
 
@@ -120,7 +120,7 @@ Parameters:
 
   Notifications:
     Type: String
-    Description: Select yes to forward all S3 notifications.
+    Description: Select yes to forward all S3 notifications to subscriber's email via EventBridge and SNS
     Default: "no"
     AllowedValues:
       - "yes"

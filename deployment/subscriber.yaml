@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  (SO0133) - __SOLUTION_NAME__ __VERSION__ - subscriber setup
+  (SO0133) - __SOLUTION_NAME__ __VERSION__ - setup a subscriber
 
 Outputs:
   SubscriberCanonicalUserID:
@@ -107,7 +107,7 @@ Parameters:
     MinLength: 3
 
   SubscriberRole:
-    Description: Subscriber's Role. Defaults to arn:${AWS::Partition}:iam::$SubscriberAccountId:root.
+    Description: Subscriber's Role. Defaults to arn:aws:iam::$SubscriberAccountId:root.
     Type: String
     Default: ''
     AllowedPattern: "[A-Za-z0-9:/-]*"

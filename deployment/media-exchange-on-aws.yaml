@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
-  (SO0133) - __SOLUTION_NAME__ __VERSION__ - core and service catalog setup
+  (SO0133) - __SOLUTION_NAME__ __VERSION__ - mediaexchange service catalog setup
 
 Metadata:
 
@@ -73,6 +73,24 @@ Outputs:
     Description: ServiceCatalog portfolio manager url.
     Value:
       Fn::Sub: https://signin.aws.amazon.com/switchrole?roleName=${ServiceCatalogUserRole}&account=${AWS::AccountId}&region=${AWS::Region}&redirect_uri=https://console.aws.amazon.com/servicecatalog/home?region=${AWS::Region}&isSceuc=true#/products
+  # PublisherProduct:
+  #   Description: ProductId of the Publisher Product
+  #   Value: !Ref Publisher
+  # PublisherProductArtifactId:
+  #   Description: ArtifcatId of the Publisher Product
+  #   Value: !GetAtt Publisher.ProvisioningArtifactIds
+  # SubscriberProductId:
+  #   Description: ProductId of the Subscriber Product
+  #   Value: !Ref Subscriber
+  # SubscriberProductArtifactId:
+  #   Description: ArtifcatId of the Subscriber Product
+  #   Value: !GetAtt Subscriber.ProvisioningArtifactIds
+  # AgreementProductId:
+  #   Description: ProductId of the Agreement Product
+  #   Value: !Ref Agreement
+  # AgreementProductArtifactId:
+  #   Description: ArtifcatId of the Agreement Product
+  #   Value: !GetAtt Agreement.ProvisioningArtifactIds
 
 Resources:
 
@@ -82,7 +100,7 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: W11
-            reason: "(W11) IAM role should not allow * resource on its permissions policy: Many of the resources creted/updated/deleted by this role is created on the fly, as part of the normal usage ot the solution. So, the names are not known at the deployment time."
+            reason: "(W11) IAM role should not allow * resource on its permissions policy: Many of the resources created/updated/deleted by this role is created on the fly, as part of the normal usage ot the solution. So, the names are not known at the deployment time."
 
     Properties:
       Description: User role for Service Catalog access
@@ -299,7 +317,7 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: F3
-            reason: "(F3) IAM role should not allow * action on its permissions policy: Many of the resources creted/updated/deleted by this role is created on the fly, as part of the normal usage ot the solution. So, the names are not known at the deployment time."
+            reason: "(F3) IAM role should not allow * action on its permissions policy: Many of the resources created/updated/deleted by this role is created on the fly, as part of the normal usage ot the solution. So, the names are not known at the deployment time."
           - id: F38
             reason: "(F38) IAM role should not allow * resource with PassRole action on its permissions policy: See #F3"
           - id: W11

@@ -22,9 +22,9 @@ In a typical content owner workflow, the content owner or studio is onboarded as
 The subscriber pushes the assets and publishers pull the assets from MediaExchange. This push/pull model also enables simple setup and enforcement of both lifecycle policies and alignment with delivery SLAs.
 
 ## Requirements
-You will need three AWS accounts to deploy this effectively (a) publisher, (b) subscriber and (c) MediaExchange. The CloudFormation templates are deployed in (c) MediaExchange account.
+You will need three AWS accounts to deploy this effectively (a) publisher, (b) subscriber and (c) MediaExchange. The CloudFormation templates are deployed in (c) MediaExchange account. It is also possible to install in a single account for testing. See the developer guide for instructions.
 
-## Getting Started with MediaExchange On AWS
+## Getting Started
 
 1. [Install](#)
 1. [Add a publisher](#)
@@ -35,26 +35,16 @@ You will need three AWS accounts to deploy this effectively (a) publisher, (b) s
 
 ### Install
 
-#### (Option 1) Install with AWS SAM CLI
-
-The easiest install path is to use the included Makefile. This method utilizes [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html) to package and install the included CloudFormation templates. If you do not have AWS SAM CLI installed, you can follow the alternative UI based install process described in the next section.
-
-* Initialize a shell with the necessary credentials to deploy to MediaExchange account. You can do this by adding AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN as environment variables or by selecting the appropriate profile by adding AWS_PROFILE environment variable.
-* At the command prompt type `make install`
-* Once complete, it will print out a ConsoleUrl to launch ServiceCatalog portfolio manager. Please note that URL as you will be using that URL to add publishers and subscribers in the next step.
-
-#### (Option 2) UI based Install with AWS console
-
 * Login into MediaExchange account and navigate to S3.
 * You will need to use a S3 Bucket for storing the packaged CloudFormation templates. Please create a bucket if needed. Make sure to select a region where you are planning to deploy MediaExchange.
 * Create a folder structure for media-exchange-on-aws/v1.0.0/.
-* Copy the template files (.yaml) under media-exchange-base/deployment/ to this folder.
+* Copy all the template files (.yaml) under deployment into this folder.
 * Navigate to services > CloudFormation. Note the region on the top right corner.
   1. Click on Create Stack.
   1. Select "Template is Ready" (default option) in prepare template section and select "Upload a template file" in the specify template section.
-  1. Click "choose file" to select servicecatalog.yaml from media-exchange-base/deployment/ folder.
+  1. Click "choose file" to select media-exchange-on-aws.yaml from media-exchange-base/deployment/ folder.
   1. Click next
-  1. Enter a name of the stack eg. mediaexchange-core-prod.
+  1. Enter a name of the stack eg. mediaexchange-poc.
   1. Enter the name of the bucket where CloudFormation templates were copied.
   1. Click next
   1. Accept the capabilities and transforms by checking the boxes and click on create stack.
@@ -63,22 +53,22 @@ The easiest install path is to use the included Makefile. This method utilizes [
 
 ### Add a publisher
 
-1. Login into MediaExchange account using the ConsoleUrl to launch ServiceCatalog portfolio manager. This URL is available in the stack outputs section of the MediaExchange CloudFormation stack.
+1. Login into MediaExchange account using the ConsoleUrl to launch ServiceCatalog portfolio manager. This URL is available in the stack outputs section of the MediaExchange-On-AWS CloudFormation stack.
 1. The page should list out three products from AWS Solutions Library. Use _publisher_ to onboard an account that can share assets through MediaExchange
 1. Click on _publisher_ and then click launch product button.
-1. Enter a product name eg. mediaexchange-publisher-studio.
+1. Enter a product name eg. mediaexchange-poc-publisher.
 1. Enter a name for publisher. This is used for identifying the publisher in the MediaExchange and will be used to link up to a subscriber.
 1. Enter the AWS Account Id of the publisher account. See [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/console_account-alias.html#FindingYourAWSId) to find account id.
 1. (Optional) add tags to resources by specifying them as key-value pairs.
 1. Clink launch product.
-1. Wait for service catalog to finish deploying the product.  
+1. Wait for service catalog to finish deploying the product.
 
 ### Add a subscriber
 
 1. Login into MediaExchange account using the ConsoleUrl to launch ServiceCatalog portfolio manager. This URL is available in the stack outputs section of the MediaExchange CloudFormation stack.
 1. The page should list out three products from AWS Solutions Library. Use _subscriber_ to onboard an account that can receive assets through MediaExchange
 1. On the product list screen, click on _subscriber_ and then click launch product button.
-1. Enter a product name eg. mediaexchange-subscriber-ott.
+1. Enter a product name eg. mediaexchange-poc-subscriber.
 1. Enter a name for subscriber. This is used for identifying the publisher in the MediaExchange and will be used to link up to a publisher.
 1. Enter the AWS Account Id of the subscriber account. See [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/console_account-alias.html#FindingYourAWSId) to find account id.
 1. Enter the Canonical User ID of the subscriber. See [here](https://docs.aws.amazon.com/general/latest/gr/acct-identifiers.html#FindingCanonicalId) to find Canonical Id.
@@ -92,7 +82,7 @@ The easiest install path is to use the included Makefile. This method utilizes [
 1. Login into MediaExchange account using the ConsoleUrl to launch ServiceCatalog portfolio manager. This URL is available in the stack outputs section of the MediaExchange CloudFormation stack.
 1. The page should list out three products from AWS Solutions Library. Use _Transfer agreement_ to link a publisher and subscriber.
 1. On the product list screen, click on _transfer agreement_ and then click launch product button.
-1. Enter a stack name eg. mediaexchange-studio-ott-agreement.
+1. Enter a stack name eg. mediaexchange-poc-ta.
 1. Enter names for publisher and subscriber.
 1. (Optional) add tags to resources by specifying them as key-value pairs.
 1. Clink launch product.
@@ -104,13 +94,13 @@ The easiest install path is to use the included Makefile. This method utilizes [
 * Login into publisher account using the _ConsoleUrl_ from onboarding information.
 * Upload an asset by clicking the "upload" button.
   * Click Add Files, and select an asset from disk.
-  * Click Next
+  * Expand Additional upload options
   * Click Add Account button next to "Access for other AWS account".
+  * Select standard storage class.
+  * In the Access control list (ACL) section, next to "Access for other AWS accounts", click add grantee
   * In the textbox, enter the value of SUBSCRIBER_CANONICAL_USER_ID from _PublisherOnboardingSummary_
   * Check the "read" box. Click save. This will allow the subscriber account to have read access.
-  * Click next
-  * Select standard storage class and scroll down to encryption section.
-  * Click next and click upload.
+  * Click upload.
 
 ### Receive assets in subscriber's account
 
@@ -129,9 +119,16 @@ _TODO_
 
 ## Developer Guide
 
+1. [prerequisites](#)
 1. [quick start](#)
 1. [single account deployment](#)
 1. [running tests](#)
+
+### Prerequisites
+
+* GNU make
+* Install and configure [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html)
+* Install [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
 
 ### Quick start
 
@@ -141,13 +138,13 @@ This method bypasses the service catalog setup to deploy a single publisher, sub
   1. Navigate to MediaExchnageOnAWS (root) directory.
   1. `make testrole-stack`
   1. Enter the mediaexchange ACCOUNT_ID for parameter TestAccountId.
-  1. Do not save arguments to configuration file
+  1. Enter 'n' for "Save arguments to configuration file" (Y/n)
 
 * Initialize a shell with the necessary credentials for subscriber account.
   1. Navigate to MediaExchnageOnAWS (root) directory.
   1. `make testrole-stack`
   1. Enter the mediaexchange ACCOUNT_ID for parameter TestAccountId.
-  1. Do not save arguments to configuration file
+  1. Enter 'n' for "Save arguments to configuration file" (Y/n)
 
 * Initialize a shell with the necessary credentials for MediaExchange account.
   1. Navigate to MediaExchnageOnAWS (root) directory.
@@ -174,9 +171,7 @@ It is possible to simulate a publisher, subscriber and mediaexchange in a single
 It will deploy a publisher, subscriber and mediaexchange in the current account and run the tests.
 
 ## License
-
 This project is licensed under the Apache-2.0 License.
-
 
 ## Security
 

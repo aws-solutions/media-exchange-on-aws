@@ -51,8 +51,8 @@ def config():
 
     yield onboarding_info
 
-
     os.remove(onboarding_info['FILE_NAME'])
+
 
 def test_push_pull(config):
 
@@ -126,5 +126,3 @@ def test_push_pull(config):
 
     s3_client = session.client('s3')
     s3_client.delete_object(Bucket=config['BUCKET_NAME'],Key=config['FILE_NAME'])
-
-    
