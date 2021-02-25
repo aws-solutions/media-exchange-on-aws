@@ -144,6 +144,7 @@ Resources:
                   - cloudformation:DescribeStackSet
                   - cloudformation:DescribeStackInstance
                   - cloudformation:DescribeStackSetOperation
+                  - cloudformation:ListStacks
                   - cloudformation:ListStackInstances
                   - cloudformation:ListStackResources
                   - cloudformation:ListStackSetOperations

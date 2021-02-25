@@ -185,6 +185,17 @@ Resources:
               - kms:Decrypt
             Resource: '*'
 
+          -
+            Sid: "Allow access for Key User (x-account permissions for subscriber)"
+            Effect: Allow
+            Principal:
+              AWS:
+                Ref: SubscriberAccountId
+            Action:
+              - kms:GenerateDataKey*
+              - kms:Decrypt
+            Resource: '*'
+
 
 
   EventTopicPolicy:
@@ -198,25 +209,19 @@ Resources:
             Effect: Allow
             Principal:
               Service: events.amazonaws.com
-            Action: 'sns:Publish'
+            Action:
+              - sns:Publish
             Resource:
               Ref: NotificationTopic
-      Topics:
-        -
-          Ref: NotificationTopic
 
-  XAccontTopicPolicy:
-    Type: 'AWS::SNS::TopicPolicy'
-    Properties:
-      PolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          - Sid: Allow_Subscribe_Events
+          -
+            Sid: Allow_X_Account_Subscribe
             Effect: Allow
             Principal:
               AWS:
                 Ref: SubscriberAccountId
-            Action: 'sns:Subscribe'
+            Action:
+              - sns:Subscribe
             Resource:
               Ref: NotificationTopic
       Topics:

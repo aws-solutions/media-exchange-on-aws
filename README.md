@@ -16,12 +16,14 @@ This is a seamless addition to the current workflow for your customers who use S
 
 ![](assets/Architecture.png)
 
-## Supported Workflows
-In a typical content owner workflow, the content owner or studio is onboarded as a publisher, and the MediaExchange is hosted by the distributor. The Distributor's MAM/DAM/Ingest service is onboarded as a subscriber to MediaExchange. In a content distributor workflow, the distributor is onboarded as a publisher to deliver assets to a partner (e.g. OTT service) and the subscriber is the downstream OTT service.
+## Included Tools & Utilities
 
-The subscriber pushes the assets and publishers pull the assets from MediaExchange. This push/pull model also enables simple setup and enforcement of both lifecycle policies and alignment with delivery SLAs.
+### Autoingest
+### Autoacl
+### Fixity
+### MediaSync
 
-## Requirements
+## Setup Requirements
 You will need three AWS accounts to deploy this effectively (a) publisher, (b) subscriber and (c) MediaExchange. The CloudFormation templates are deployed in (c) MediaExchange account. It is also possible to install in a single account for testing. See the developer guide for instructions.
 
 ## Getting Started
@@ -110,11 +112,7 @@ You will need three AWS accounts to deploy this effectively (a) publisher, (b) s
 
 ## Notifications  
 
-_TODO_
-* The subscriber email should have received and email from AWS SNS requiring them to confirm subscriptions to email messages from MediaExchange.
-* Everytime an asset is shared, an email notification is sent out to this address.
-* Publishers can send custom event notifications through EventBridge. Please see the tools/push-content.sh for an example.
-* Automatic notifications can be disabled by a global configuration parameter in mediaexchange stack if you only want to send custom notifications.
+The subscribers can receive event notifications via email from MediaExchange every time an asset is shared. The email address is configured as part of the subscriber onboarding process. Email notifications can be enabled or disabled for every transfer agreement, configured at the deployment time.  
 
 
 ## Developer Guide
@@ -150,6 +148,20 @@ This method bypasses the service catalog setup to deploy a single publisher, sub
   1. Navigate to MediaExchnageOnAWS (root) directory.
   1. `make quickstart`
   1. Follow the instructions to provide publisher and subscriber information. The default values are printed out for the mediaexchange account id.  
+
+### Share assets via aws cli
+
+```
+$ aws s3 cp <filename> s3://<bucket name>/ --grants read=id=<subscriber canonical user id>
+
+```
+
+### Receive assets via aws cli
+
+```
+$ aws s3 cp s3://<bucket name>/<object> <filename>
+
+```
 
 ### Running tests
 
