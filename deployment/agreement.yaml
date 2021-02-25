@@ -425,6 +425,11 @@ Resources:
 
   S3EventForwarderFunctionRole:
     Type: 'AWS::IAM::Role'
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "The lambda function’s log group name is not known ahead of time."
     Properties:
       Description: Role for EventForwarer Lambda.
       AssumeRolePolicyDocument:
