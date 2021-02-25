@@ -1,0 +1,14 @@
+^integrations/
+deployment/integration_test.py:64
+integrations/s3batch/README.md:16
+media-exchange-base/README.md:34
+^deployment/open-source/
+CODE_OF_CONDUCT.md:4
+CONTRIBUTING.md:52
+deployment/media-exchange-on-aws.yaml:60
+deployment/integration_test.py:64
+README.md:42
+tests/python/integration_test.py:64
+CONTRIBUTING.md:50
+deployment/media-exchange-on-aws.yaml:68
+deployment/media-exchange-on-aws.yaml:150
