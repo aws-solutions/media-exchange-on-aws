@@ -1,5 +1,6 @@
-build/*
+build/
 README.md:132
+README.md:135
 tests/python/quickstart_test.py:65
 tools/fixity/README.md:22
 tools/mediasync/README.md:21
