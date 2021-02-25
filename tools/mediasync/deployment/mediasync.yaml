@@ -1,0 +1,649 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+
+Description: >
+  Cloudformation template for MediaSync.
+
+Metadata:
+
+  License:
+    Description: |
+        Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+        Licensed under the Apache License, Version 2.0 (the "License").
+        You may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+
+  AWS::CloudFormation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: "Deployment Configuration"
+        Parameters:
+          - Environment
+          - ImageName
+      -
+        Label:
+          default: "Copy Configuration"
+          Parameters:
+            - Mode
+            - DestinationBucketName
+            - SubscriberCannoicalUserID
+
+Parameters:
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter Environment must only contain uppercase and lowercase letters and numbers
+    MaxLength: 10
+    MinLength: 2
+
+  ImageName:
+    Type: String
+    Description: Image Name
+    Default: amazon/aws-cli
+
+  Mode:
+    Type: String
+    AllowedValues: ["Push", "Pull"]
+    Description: Select "Push" to copy assets into MediaExchange and "Pull" to copy from mediaexchange
+    Default: "Pull"
+
+  DestinationBucketName:
+    Type: String
+    Description: Destination S3 Bucket Name
+
+  SubscriberCannoicalUserID:
+    Type: String
+    Description: (optional) Cannoical User Id for the subscriber (required for Push mode)
+
+Conditions:
+  IsPush:
+    Fn::Equals:
+      - "Push"
+      - Ref: Mode
+  IsPull:
+    Fn::Equals:
+      - "Pull"
+      - Ref: Mode
+Resources:
+
+  VPC:
+    Type: AWS::EC2::VPC
+    Properties:
+      CidrBlock: 10.0.0.0/16
+      EnableDnsSupport: true
+
+  # ECSAgentEndpoint:
+  #   Type: AWS::EC2::VPCEndpoint
+  #   Properties:
+  #     SecurityGroupIds:
+  #       - Ref: SecurityGroup
+  #     ServiceName:
+  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecs-agent
+  #     SubnetIds:
+  #       - Ref: SubnetOne
+  #       - Ref: SubnetTwo
+  #       - Ref: SubnetThree
+  #     VpcEndpointType: Interface
+  #     VpcId:
+  #       Ref: VPC
+  #
+  # ECSTelemetryEndpoint:
+  #   Type: AWS::EC2::VPCEndpoint
+  #   Properties:
+  #     SecurityGroupIds:
+  #       - Ref: SecurityGroup
+  #     ServiceName:
+  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecs-telemetry
+  #     SubnetIds:
+  #       - Ref: SubnetOne
+  #       - Ref: SubnetTwo
+  #       - Ref: SubnetThree
+  #     VpcEndpointType: Interface
+  #     VpcId:
+  #       Ref: VPC
+  #
+  # ECSEndpoint:
+  #   Type: AWS::EC2::VPCEndpoint
+  #   Properties:
+  #     SecurityGroupIds:
+  #       - Ref: SecurityGroup
+  #     ServiceName:
+  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecs
+  #     SubnetIds:
+  #       - Ref: SubnetOne
+  #       - Ref: SubnetTwo
+  #       - Ref: SubnetThree
+  #     VpcEndpointType: Interface
+  #     VpcId:
+  #       Ref: VPC
+  #
+  # ECREndpoint:
+  #   Type: AWS::EC2::VPCEndpoint
+  #   Properties:
+  #     SecurityGroupIds:
+  #       - Ref: SecurityGroup
+  #     ServiceName:
+  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecr.api
+  #     SubnetIds:
+  #       - Ref: SubnetOne
+  #       - Ref: SubnetTwo
+  #       - Ref: SubnetThree
+  #     VpcEndpointType: Interface
+  #     VpcId:
+  #       Ref: VPC
+  #
+  # ECREndpoint:
+  #   Type: AWS::EC2::VPCEndpoint
+  #   Properties:
+  #     SecurityGroupIds:
+  #       - Ref: SecurityGroup
+  #     ServiceName:
+  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecr.dkr
+  #     SubnetIds:
+  #       - Ref: SubnetOne
+  #       - Ref: SubnetTwo
+  #       - Ref: SubnetThree
+  #     VpcEndpointType: Interface
+  #     VpcId:
+  #       Ref: VPC
+
+  S3Endpoint:
+    Type: AWS::EC2::VPCEndpoint
+    Properties:
+      RouteTableIds:
+        - Ref: RouteTable
+      ServiceName:
+        Fn::Sub: com.amazonaws.${AWS::Region}.s3
+      VpcEndpointType: Gateway
+      VpcId:
+        Ref: VPC
+
+  InternetGateway:
+    Type: AWS::EC2::InternetGateway
+
+  VPCGatewayAttachment:
+    Type: AWS::EC2::VPCGatewayAttachment
+    Properties:
+      VpcId:
+        Ref: VPC
+      InternetGatewayId:
+        Ref: InternetGateway
+
+  Route:
+    Type: AWS::EC2::Route
+    Properties:
+      RouteTableId:
+        Ref: RouteTable
+      DestinationCidrBlock: 0.0.0.0/0
+      GatewayId:
+        Ref: InternetGateway
+
+  SecurityGroup:
+    Type: AWS::EC2::SecurityGroup
+    Properties:
+      GroupDescription: Security Group for the EC2 instances launched into the VPC by Batch
+      VpcId:
+        Ref: VPC
+
+  SubnetOne:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.1.0/24
+      VpcId:
+        Ref: VPC
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select:
+          - 0
+          - Fn::GetAZs: ""
+
+  SubnetTwo:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.2.0/24
+      VpcId:
+        Ref: VPC
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select:
+          - 1
+          - Fn::GetAZs: ""
+
+  SubnetThree:
+    Type: AWS::EC2::Subnet
+    Properties:
+      CidrBlock: 10.0.3.0/24
+      VpcId:
+        Ref: VPC
+      MapPublicIpOnLaunch: true
+      AvailabilityZone:
+        Fn::Select:
+          - 2
+          - Fn::GetAZs: ""
+
+  RouteTable:
+    Type: AWS::EC2::RouteTable
+    Properties:
+      VpcId:
+        Ref: VPC
+
+  SubnetRouteTableAssociationOne:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: RouteTable
+      SubnetId:
+        Ref: SubnetOne
+
+  SubnetRouteTableAssociationTwo:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: RouteTable
+      SubnetId:
+        Ref: SubnetTwo
+
+  SubnetRouteTableAssociationThree:
+    Type: AWS::EC2::SubnetRouteTableAssociation
+    Properties:
+      RouteTableId:
+        Ref: RouteTable
+      SubnetId:
+        Ref: SubnetThree
+
+  FlowLogBucket:
+    Type: AWS::S3::Bucket
+    DeletionPolicy: Retain
+    Properties:
+      PublicAccessBlockConfiguration:
+        BlockPublicAcls: true
+        BlockPublicPolicy: true
+        IgnorePublicAcls: true
+        RestrictPublicBuckets: true
+      BucketEncryption:
+        ServerSideEncryptionConfiguration:
+          -
+            BucketKeyEnabled: true
+            ServerSideEncryptionByDefault:
+              SSEAlgorithm: AES256
+      LifecycleConfiguration:
+        Rules:
+          -
+            Id: Expire
+            Status: Enabled
+            Transitions:
+              -
+                StorageClass: GLACIER
+                TransitionInDays: 90
+
+  FlowLogBucketPolicy:
+    Type: AWS::S3::BucketPolicy
+    Properties:
+      Bucket:
+        Ref: FlowLogBucket
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+
+          # TLS only
+          -
+            Sid: "RequireTLS"
+            Action:
+              - "s3:*"
+            Effect: "Deny"
+            Resource:
+              - Fn::Sub: arn:aws:s3:::${FlowLogBucket}/*
+            Principal: "*"
+            Condition:
+              Bool:
+                aws:SecureTransport: false
+
+          -
+            Sid: "AWSLogDeliveryWrite"
+            Effect: Allow
+            Action:
+              - s3:PutObject
+            Resource:
+              Fn::Sub: arn:aws:s3:::${FlowLogBucket}/flow-logs/AWSLogs/*
+            Principal:
+              Service: delivery.logs.amazonaws.com
+            Condition:
+              StringEquals:
+                's3:x-amz-acl' : bucket-owner-full-control
+
+          -
+            Sid: "AWSLogDeliveryAclCheck"
+            Effect: Allow
+            Action:
+              - s3:GetBucketAcl
+            Resource:
+              Fn::Sub: arn:aws:s3:::${FlowLogBucket}
+            Principal:
+              Service: delivery.logs.amazonaws.com
+
+  VPCLogDeliveringToS3:
+    Type: AWS::EC2::FlowLog
+    Properties:
+      ResourceId:
+        Ref: VPC
+      ResourceType: VPC
+      TrafficType: ALL
+      LogDestination:
+        Fn::GetAtt: FlowLogBucket.Arn
+      LogDestinationType: s3
+      MaxAggregationInterval: 60
+
+  JobQueue:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      Priority: 1
+      JobQueueName:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-mediasync
+      ComputeEnvironmentOrder:
+        -
+          Order: 1
+          ComputeEnvironment:
+            Ref: SPOTComputeEnvironment
+
+
+  SPOTComputeEnvironment:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties:
+      Type: MANAGED
+      ServiceRole:
+        Fn::GetAtt: BatchServiceRole.Arn
+
+      ComputeResources:
+        Type: FARGATE_SPOT
+        MaxvCpus: 96
+        Subnets:
+          - Ref: SubnetOne
+          - Ref: SubnetTwo
+          - Ref: SubnetThree
+
+        SecurityGroupIds:
+          - Ref: SecurityGroup
+
+  BatchServiceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: batch.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
+
+
+  DriverFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Lambda function to be invoked by s3 batch
+      FunctionName:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-mediasync-copier
+      CodeUri: lambda/driver/
+      Handler: app.lambda_handler
+      Runtime: python3.8
+      MemorySize: 128
+
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - AWSXRayDaemonWriteAccess
+        - Statement:
+          - Sid: xray
+            Effect: Allow
+            Action:
+            - lambda:GetAccountSettings
+            Resource: '*'
+        - Statement:
+          - Sid: batch
+            Effect: Allow
+            Action:
+              - batch:SubmitJob
+              - batch:DescribeJobs
+              - batch:TerminateJob
+            Resource:
+            - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/*
+            - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-queue/*
+
+        # control read/write access at the bucket level
+        - S3ReadPolicy:
+            BucketName: '*'
+        - S3WritePolicy:
+            BucketName: '*'
+        - Statement:
+          - Sid: kms
+            Effect: Allow
+            Action:
+              - kms:Encrypt
+              - kms:Decrypt
+              - kms:ReEncrypt*
+              - kms:GenerateDataKey*
+              - kms:DescribeKey
+            Resource: '*'
+
+      Timeout: 300
+      ReservedConcurrentExecutions: 256
+
+      Environment:
+        Variables:
+          JobDefinition:
+            Fn::If:
+              - IsPush
+              - Ref: PushJobDefinition
+              - Ref: PullJobDefinition
+          JobQueue:
+            Ref: JobQueue
+          DestinationBucketName:
+            Ref: DestinationBucketName
+          MinSizeForBatchinBytes: 524288000 #500MB
+
+  PullJobDefinition:
+    Type: AWS::Batch::JobDefinition
+    Condition: IsPull
+    Properties:
+      Type: container
+      PlatformCapabilities:
+        - FARGATE
+      ContainerProperties:
+        Image:
+          Fn::Sub: ${ImageName}
+
+        ExecutionRoleArn:
+          Fn::GetAtt: ExecutionRole.Arn
+
+        FargatePlatformConfiguration:
+          PlatformVersion: LATEST
+        NetworkConfiguration:
+          AssignPublicIp: ENABLED
+
+        ResourceRequirements:
+          -
+            Type: VCPU
+            Value: 1
+          -
+            Type: MEMORY
+            Value: 2048
+
+        Command:
+          # - aws
+          - s3
+          - cp
+          - Ref::SourceS3Uri
+          - Ref::DestinationS3Uri
+          - --copy-props
+          - metadata-directive
+          - --acl
+          - bucket-owner-full-control
+          - --expected-size
+          - Ref::Size
+
+        JobRoleArn:
+          Fn::GetAtt: JobRole.Arn
+
+      RetryStrategy:
+        Attempts: 3
+        # TODO inspect exit codes for throttles
+        #  only retry for 1, and 255
+
+
+  PushJobDefinition:
+    Type: AWS::Batch::JobDefinition
+    Condition: IsPush
+    Properties:
+      Type: container
+      PlatformCapabilities:
+        - FARGATE
+      ContainerProperties:
+        Image:
+          Fn::Sub: ${ImageName}
+
+        ExecutionRoleArn:
+          Fn::GetAtt: ExecutionRole.Arn
+
+        FargatePlatformConfiguration:
+          PlatformVersion: LATEST
+        NetworkConfiguration:
+          AssignPublicIp: ENABLED
+
+        ResourceRequirements:
+          -
+            Type: VCPU
+            Value: 1
+          -
+            Type: MEMORY
+            Value: 2048
+
+        Command:
+          # - aws
+          - s3
+          - cp
+          - Ref::SourceS3Uri
+          - Ref::DestinationS3Uri
+          - --expected-size
+          - Ref::Size
+          - --copy-props
+          - metadata-directive
+          - --grants
+          - Fn::Sub: read=id=${SubscriberCannoicalUserID}
+
+        JobRoleArn:
+          Fn::GetAtt: JobRole.Arn
+
+      RetryStrategy:
+        Attempts: 3
+        # TODO inspect exit codes for throttles
+        #  only retry for 1, and 255
+
+
+  ExecutionRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: ecs-tasks.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonECSTaskExecutionRolePolicy
+
+  JobRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: ecs-tasks.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      Policies:
+        -
+          PolicyName: KMSAndS3
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Effect: Allow
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetObjectAcl
+                  - s3:GetObjectVersionAcl
+                  - s3:GetObjectTagging
+                  - s3:GetObjectVersionTagging
+                  - s3:ListBucket
+                Resource: '*'
+              -
+                Effect: Allow
+                Action:
+                  - s3:PutObject
+                  - s3:PutObjectAcl
+                  - s3:PutObjectVersionAcl
+                  - s3:AbortMultipartUpload
+                  - s3:ListMultipartUploadParts
+                Resource:
+                  Fn::Sub: arn:aws:s3:::${DestinationBucketName}/*
+
+              -
+                Effect: Allow
+                Action:
+                  - kms:Encrypt
+                  - kms:Decrypt
+                  - kms:ReEncrypt*
+                  - kms:GenerateDataKey*
+                  - kms:DescribeKey
+                Resource: '*'
+
+  S3BatchRole:
+    Type: AWS::IAM::Role
+    Properties:
+      RoleName:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-mediasync-copier-role
+      AssumeRolePolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Action: sts:AssumeRole
+            Principal:
+              Service: batchoperations.s3.amazonaws.com
+        Version: "2012-10-17"
+      Path: /
+      Policies:
+        -
+          PolicyName: S3BatchRolePolicy
+          PolicyDocument:
+            Version: 2012-10-17
+            Statement:
+              -
+                Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetObjectAcl
+                  - s3:GetObjectVersionAcl
+                  - s3:GetObjectTagging
+                  - s3:GetObjectVersionTagging
+                  - s3:PutObject
+                  - lambda:InvokeFunction
+                Effect: Allow
+                Resource: '*'
