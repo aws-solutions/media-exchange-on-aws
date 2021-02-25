@@ -429,7 +429,7 @@ Resources:
       cfn_nag:
         rules_to_suppress:
           - id: W11
-            reason: "The lambda function’s log group name is not known ahead of time."
+            reason: "The lambda function’s log group name is not known at deployment time"
     Properties:
       Description: Role for EventForwarer Lambda.
       AssumeRolePolicyDocument:
