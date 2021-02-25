@@ -1,7 +1,7 @@
 all: help
 
 help:
-	@echo 'deploys MediaSync transfer utility'
+	@echo 'deploys fixity utility'
 
 GUIDED ?= --guided
 IMAGEVERSION ?= latest
@@ -9,7 +9,7 @@ ENV ?= dev
 
 STACKPREFIX = mediaexchange-tools
 CURRENT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-IMAGENAME = mediasync/aws-cli
+IMAGENAME = fixity/aws-cli
 ACCOUNT_ID = $(shell aws sts get-caller-identity --query Account --output text)
 
 PARAMETER_OVERRIDES := Environment=$(ENV)
@@ -20,7 +20,7 @@ configure:
 
 build:
 	@echo "Building docker image..."
-	docker build -t $(IMAGENAME):$(IMAGEVERSION) copier/
+	docker build -t $(IMAGENAME):$(IMAGEVERSION) hasher/
 
 %-build: deployment/%.yaml configure
 	@echo "Building lambda..."
@@ -37,14 +37,14 @@ push: configure build
 	docker tag ${IMAGENAME}:latest $(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/${IMAGENAME}:${IMAGEVERSION}
 	docker push $(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/${IMAGENAME}:${IMAGEVERSION}
 
-publish: mediasync-repository-stack push
-mediasync-repository-stack:	PARAMETER_OVERRIDES += 'RepositoryName=${IMAGENAME}'
+publish: fixity-repository-stack push
+fixity-repository-stack:	PARAMETER_OVERRIDES += 'RepositoryName=${IMAGENAME}'
 
-# mediasync-stack: PARAMETER_OVERRIDES += 'ImageName=$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(IMAGENAME) DestinationBucketName=$(DestinationBucketName)'
-mediasync-stack: mediasync-build
-	sam deploy -t $(CURRENT_DIR)/build/template.yaml --stack-name $(STACKPREFIX)-mediasync-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env mediasync $(GUIDED) --region $(AWS_REGION) --config-file $(CURRENT_DIR)/deployment/samconfig.toml
+fixity-stack: PARAMETER_OVERRIDES += 'ImageName=$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(IMAGENAME)'
+fixity-stack: fixity-build
+	sam deploy -t $(CURRENT_DIR)/build/template.yaml --stack-name $(STACKPREFIX)-fixity-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env fixity $(GUIDED) --region $(AWS_REGION) --config-file $(CURRENT_DIR)/deployment/samconfig.toml
 
-install: mediasync-stack
+install: fixity-stack
 
 clean: ## clears the build directory
 	@rm -rf build/*

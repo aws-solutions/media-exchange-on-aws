@@ -2,7 +2,7 @@ AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
 Description: >
-  Cloudformation template for MediaSync.
+  Cloudformation template for in-place checksum of objects in S3.
 
 Metadata:
 
@@ -30,13 +30,6 @@ Metadata:
         Parameters:
           - Environment
           - ImageName
-      -
-        Label:
-          default: "Copy Configuration"
-          Parameters:
-            - Mode
-            - DestinationBucketName
-            - SubscriberCannoicalUserID
 
 Parameters:
   Environment:
@@ -51,31 +44,7 @@ Parameters:
   ImageName:
     Type: String
     Description: Image Name
-    Default: amazon/aws-cli
 
-  Mode:
-    Type: String
-    AllowedValues: ["Push", "Pull"]
-    Description: Select "Push" to copy assets into MediaExchange and "Pull" to copy from mediaexchange
-    Default: "Pull"
-
-  DestinationBucketName:
-    Type: String
-    Description: Destination S3 Bucket Name
-
-  SubscriberCannoicalUserID:
-    Type: String
-    Description: (optional) Cannoical User Id for the subscriber (required for Push mode)
-
-Conditions:
-  IsPush:
-    Fn::Equals:
-      - "Push"
-      - Ref: Mode
-  IsPull:
-    Fn::Equals:
-      - "Pull"
-      - Ref: Mode
 Resources:
 
   VPC:
@@ -83,81 +52,9 @@ Resources:
     Properties:
       CidrBlock: 10.0.0.0/16
       EnableDnsSupport: true
-
-  # ECSAgentEndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     SecurityGroupIds:
-  #       - Ref: SecurityGroup
-  #     ServiceName:
-  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecs-agent
-  #     SubnetIds:
-  #       - Ref: SubnetOne
-  #       - Ref: SubnetTwo
-  #       - Ref: SubnetThree
-  #     VpcEndpointType: Interface
-  #     VpcId:
-  #       Ref: VPC
-  #
-  # ECSTelemetryEndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     SecurityGroupIds:
-  #       - Ref: SecurityGroup
-  #     ServiceName:
-  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecs-telemetry
-  #     SubnetIds:
-  #       - Ref: SubnetOne
-  #       - Ref: SubnetTwo
-  #       - Ref: SubnetThree
-  #     VpcEndpointType: Interface
-  #     VpcId:
-  #       Ref: VPC
-  #
-  # ECSEndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     SecurityGroupIds:
-  #       - Ref: SecurityGroup
-  #     ServiceName:
-  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecs
-  #     SubnetIds:
-  #       - Ref: SubnetOne
-  #       - Ref: SubnetTwo
-  #       - Ref: SubnetThree
-  #     VpcEndpointType: Interface
-  #     VpcId:
-  #       Ref: VPC
-  #
-  # ECREndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     SecurityGroupIds:
-  #       - Ref: SecurityGroup
-  #     ServiceName:
-  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecr.api
-  #     SubnetIds:
-  #       - Ref: SubnetOne
-  #       - Ref: SubnetTwo
-  #       - Ref: SubnetThree
-  #     VpcEndpointType: Interface
-  #     VpcId:
-  #       Ref: VPC
-  #
-  # ECREndpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     SecurityGroupIds:
-  #       - Ref: SecurityGroup
-  #     ServiceName:
-  #       Fn::Sub: com.amazonaws.${AWS::Region}.ecr.dkr
-  #     SubnetIds:
-  #       - Ref: SubnetOne
-  #       - Ref: SubnetTwo
-  #       - Ref: SubnetThree
-  #     VpcEndpointType: Interface
-  #     VpcId:
-  #       Ref: VPC
+      Tags:
+        - Key: Name
+          Value: MediaExchange Hash
 
   S3Endpoint:
     Type: AWS::EC2::VPCEndpoint
@@ -350,7 +247,7 @@ Resources:
     Properties:
       Priority: 1
       JobQueueName:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-mediasync
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity
       ComputeEnvironmentOrder:
         -
           Order: 1
@@ -396,7 +293,7 @@ Resources:
     Properties:
       Description: Lambda function to be invoked by s3 batch
       FunctionName:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-mediasync-copier
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity
       CodeUri: lambda/driver/
       Handler: app.lambda_handler
       Runtime: python3.8
@@ -422,20 +319,15 @@ Resources:
             - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/*
             - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-queue/*
 
-        # control read/write access at the bucket level
+        # control read access at the bucket level
         - S3ReadPolicy:
-            BucketName: '*'
-        - S3WritePolicy:
             BucketName: '*'
         - Statement:
           - Sid: kms
             Effect: Allow
             Action:
-              - kms:Encrypt
               - kms:Decrypt
-              - kms:ReEncrypt*
               - kms:GenerateDataKey*
-              - kms:DescribeKey
             Resource: '*'
 
       Timeout: 300
@@ -444,19 +336,12 @@ Resources:
       Environment:
         Variables:
           JobDefinition:
-            Fn::If:
-              - IsPush
-              - Ref: PushJobDefinition
-              - Ref: PullJobDefinition
+            Ref: HashJobDefinition
           JobQueue:
             Ref: JobQueue
-          DestinationBucketName:
-            Ref: DestinationBucketName
-          MinSizeForBatchinBytes: 524288000 #500MB
 
-  PullJobDefinition:
+  HashJobDefinition:
     Type: AWS::Batch::JobDefinition
-    Condition: IsPull
     Properties:
       Type: container
       PlatformCapabilities:
@@ -476,72 +361,13 @@ Resources:
         ResourceRequirements:
           -
             Type: VCPU
-            Value: 1
+            Value: 2
           -
             Type: MEMORY
-            Value: 2048
+            Value: 4096
 
         Command:
-          # - aws
-          - s3
-          - cp
           - Ref::SourceS3Uri
-          - Ref::DestinationS3Uri
-          - --copy-props
-          - metadata-directive
-          - --acl
-          - bucket-owner-full-control
-          - --expected-size
-          - Ref::Size
-
-        JobRoleArn:
-          Fn::GetAtt: JobRole.Arn
-
-      RetryStrategy:
-        Attempts: 3
-        # TODO inspect exit codes for throttles
-        #  only retry for 1, and 255
-
-
-  PushJobDefinition:
-    Type: AWS::Batch::JobDefinition
-    Condition: IsPush
-    Properties:
-      Type: container
-      PlatformCapabilities:
-        - FARGATE
-      ContainerProperties:
-        Image:
-          Fn::Sub: ${ImageName}
-
-        ExecutionRoleArn:
-          Fn::GetAtt: ExecutionRole.Arn
-
-        FargatePlatformConfiguration:
-          PlatformVersion: LATEST
-        NetworkConfiguration:
-          AssignPublicIp: ENABLED
-
-        ResourceRequirements:
-          -
-            Type: VCPU
-            Value: 1
-          -
-            Type: MEMORY
-            Value: 2048
-
-        Command:
-          # - aws
-          - s3
-          - cp
-          - Ref::SourceS3Uri
-          - Ref::DestinationS3Uri
-          - --expected-size
-          - Ref::Size
-          - --copy-props
-          - metadata-directive
-          - --grants
-          - Fn::Sub: read=id=${SubscriberCannoicalUserID}
 
         JobRoleArn:
           Fn::GetAtt: JobRole.Arn
@@ -588,38 +414,27 @@ Resources:
                 Action:
                   - s3:GetObject
                   - s3:GetObjectVersion
-                  - s3:GetObjectAcl
-                  - s3:GetObjectVersionAcl
-                  - s3:GetObjectTagging
-                  - s3:GetObjectVersionTagging
-                  - s3:ListBucket
                 Resource: '*'
               -
                 Effect: Allow
                 Action:
-                  - s3:PutObject
-                  - s3:PutObjectAcl
-                  - s3:PutObjectVersionAcl
+                  - s3:PutObjectTagging
                   - s3:AbortMultipartUpload
                   - s3:ListMultipartUploadParts
-                Resource:
-                  Fn::Sub: arn:aws:s3:::${DestinationBucketName}/*
+                Resource: '*'
 
               -
                 Effect: Allow
                 Action:
-                  - kms:Encrypt
                   - kms:Decrypt
-                  - kms:ReEncrypt*
                   - kms:GenerateDataKey*
-                  - kms:DescribeKey
                 Resource: '*'
 
   S3BatchRole:
     Type: AWS::IAM::Role
     Properties:
       RoleName:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-mediasync-copier-role
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity-role
       AssumeRolePolicyDocument:
         Statement:
           -

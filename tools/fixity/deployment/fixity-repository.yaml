@@ -26,7 +26,7 @@ Parameters:
     Description: Repository Name
 
 Resources:
-  MediaSyncRepo:
+  Repo:
     Type: AWS::ECR::Repository
     Properties:
       RepositoryName:
