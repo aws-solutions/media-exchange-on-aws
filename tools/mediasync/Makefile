@@ -14,6 +14,7 @@ ACCOUNT_ID = $(shell aws sts get-caller-identity --query Account --output text)
 
 PARAMETER_OVERRIDES := Environment=$(ENV)
 AWS_REGION ?= $(shell aws configure get region --output text)
+SAM_CONFIG_FILE ?= $(CURRENT_DIR)deployment/samconfig-$(ACCOUNT_ID).toml
 
 configure:
 	@mkdir -p build
@@ -28,7 +29,7 @@ build:
 
 %-stack: deployment/%.yaml
 	@echo "deploying cloudformation template"
-	sam deploy -t $(CURRENT_DIR)/$< --stack-name $(STACKPREFIX)-$*-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION)
+	sam deploy -t $(CURRENT_DIR)/$< --stack-name $(STACKPREFIX)-$*-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE)
 
 push: configure build
 	@echo "Publishing Docker image to registry..."
@@ -42,8 +43,7 @@ mediasync-repository-stack:	PARAMETER_OVERRIDES += 'RepositoryName=${IMAGENAME}'
 
 # mediasync-stack: PARAMETER_OVERRIDES += 'ImageName=$(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/$(IMAGENAME) DestinationBucketName=$(DestinationBucketName)'
 mediasync-stack: mediasync-build
-	sam deploy -t $(CURRENT_DIR)/build/template.yaml --stack-name $(STACKPREFIX)-mediasync-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env mediasync $(GUIDED) --region $(AWS_REGION) --config-file $(CURRENT_DIR)/deployment/samconfig.toml
-
+	sam deploy -t $(CURRENT_DIR)/build/template.yaml --stack-name $(STACKPREFIX)-mediasync-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env mediasync $(GUIDED) --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE)
 install: mediasync-stack
 
 clean: ## clears the build directory
