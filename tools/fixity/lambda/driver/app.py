@@ -23,6 +23,9 @@ patch_all()
 batchclient = boto3.client('batch')
 s3client = boto3.client('s3')
 
+
+
+
 def lambda_handler(event, context):
 
     logger.debug('## EVENT\r' + jsonpickle.encode(dict(**event)))
@@ -82,12 +85,18 @@ def lambda_handler(event, context):
             raise Exception('Object ' + sourceKey + ' is not in Normalized Form C' )
 
         logger.debug("job submission start")
+        jobDefinition = os.environ['JobSizeS'] if pre_flight_response['ContentLength'] < 10737418240 else os.environ['JobSizeL']
+        logger.debug("job definition is " + jobDefinition)
+
+        jobQ = os.environ['JobQueueS'] if pre_flight_response['ContentLength'] < 10737418240 else os.environ['JobQueueL']
+        logger.debug("job Q is " + jobQ)
 
         #submit job
         response = batchclient.submit_job(
-            jobName="HashStartedByS3Batch",
-            jobQueue=os.environ['JobQueue'],
-            jobDefinition=os.environ['JobDefinition'],
+            jobName="FixityJob",
+            jobQueue=jobQ,
+            # use bigger containers for 5GB+
+            jobDefinition=jobDefinition,
             parameters={
                 'SourceS3Uri': 's3://' + sourceBucket + '/' + sourceKey
             }
@@ -95,11 +104,10 @@ def lambda_handler(event, context):
 
         logger.debug('## BATCH_RESPONSE\r' + jsonpickle.encode(dict(**pre_flight_response)))
         logger.debug("job submission complete")
-        resultString = 'Invoked batch hash Job'
-
-        # Mark as succeeded
         resultCode = 'Succeeded'
 
+        detail = 'https://console.aws.amazon.com/batch/v2/home?region=' + os.environ['AWS_REGION'] + '#jobs/detail/'+ response['jobId']
+        resultString = detail
 
     except ClientError as e:
         # If request timed out, mark as a temp failure

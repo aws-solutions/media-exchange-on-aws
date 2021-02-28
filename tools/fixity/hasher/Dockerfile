@@ -6,9 +6,9 @@ RUN amazon-linux-extras install epel -y \
   xxhash \
   && yum clean all
 
-RUN aws configure set default.s3.max_concurrent_requests 50 && set default.s3.multipart_chunksize 64MB && aws configure set default.s3.max_bandwidth 512MB/s
+ADD s3pcat_0.1.0_linux-amd64.tar.gz /usr/local/bin/
 
-COPY ./hash.sh /bin/
+COPY ./hash.sh /usr/local/bin/
 
-ENTRYPOINT ["/bin/hash.sh"]
+ENTRYPOINT ["/usr/local/bin/hash.sh"]
 CMD []

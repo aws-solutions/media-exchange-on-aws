@@ -20,9 +20,6 @@ It can be deployed on any AWS account. There is no direct dependency on MediaExc
 
 ### Install
 * Initialize a shell with the necessary credentials to deploy to target account. You can do this by adding AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN as environment variables or by selecting the appropriate profile by adding AWS_PROFILE environment variable.
-* Build and publish custom container
-  * At the command prompt type `make publish`. This publishes the custom container to a private ECR repository.
-  * follow the on-screen instructions for configuration parameters.
 * Deploy Fixity
   * At the command prompt type `make install`.
   * follow the on-screen instructions for configuration parameters.
