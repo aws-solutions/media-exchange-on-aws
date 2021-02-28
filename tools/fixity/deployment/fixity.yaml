@@ -56,6 +56,10 @@ Resources:
         - Key: Name
           Value: MediaExchange Hash
 
+<<<<<<< HEAD
+=======
+  #TODO: move to ineterface endpoint
+>>>>>>> tools
   S3Endpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
@@ -118,6 +122,7 @@ Resources:
           - 1
           - Fn::GetAZs: ""
 
+<<<<<<< HEAD
   SubnetThree:
     Type: AWS::EC2::Subnet
     Properties:
@@ -129,6 +134,19 @@ Resources:
         Fn::Select:
           - 2
           - Fn::GetAZs: ""
+=======
+  # SubnetThree:
+  #   Type: AWS::EC2::Subnet
+  #   Properties:
+  #     CidrBlock: 10.0.3.0/24
+  #     VpcId:
+  #       Ref: VPC
+  #     MapPublicIpOnLaunch: true
+  #     AvailabilityZone:
+  #       Fn::Select:
+  #         - 2
+  #         - Fn::GetAZs: ""
+>>>>>>> tools
 
   RouteTable:
     Type: AWS::EC2::RouteTable
@@ -152,6 +170,7 @@ Resources:
       SubnetId:
         Ref: SubnetTwo
 
+<<<<<<< HEAD
   SubnetRouteTableAssociationThree:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -159,6 +178,15 @@ Resources:
         Ref: RouteTable
       SubnetId:
         Ref: SubnetThree
+=======
+  # SubnetRouteTableAssociationThree:
+  #   Type: AWS::EC2::SubnetRouteTableAssociation
+  #   Properties:
+  #     RouteTableId:
+  #       Ref: RouteTable
+  #     SubnetId:
+  #       Ref: SubnetThree
+>>>>>>> tools
 
   FlowLogBucket:
     Type: AWS::S3::Bucket
@@ -242,22 +270,35 @@ Resources:
       LogDestinationType: s3
       MaxAggregationInterval: 60
 
-  JobQueue:
+  JobQueueS:
     Type: AWS::Batch::JobQueue
     Properties:
       Priority: 1
       JobQueueName:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity-fargatespot
       ComputeEnvironmentOrder:
         -
           Order: 1
           ComputeEnvironment:
-            Ref: SPOTComputeEnvironment
+            Ref: FargateComputeEnvironment
 
+  JobQueueL:
+    Type: AWS::Batch::JobQueue
+    Properties:
+      Priority: 1
+      JobQueueName:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity-ec2spot
+      ComputeEnvironmentOrder:
+        -
+          Order: 1
+          ComputeEnvironment:
+            Ref: EC2SPOTComputeEnvironment
 
-  SPOTComputeEnvironment:
+  FargateComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
+      ComputeEnvironmentName:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity-fargatespot
       Type: MANAGED
       ServiceRole:
         Fn::GetAtt: BatchServiceRole.Arn
@@ -268,10 +309,81 @@ Resources:
         Subnets:
           - Ref: SubnetOne
           - Ref: SubnetTwo
-          - Ref: SubnetThree
 
         SecurityGroupIds:
           - Ref: SecurityGroup
+
+  EC2SPOTComputeEnvironment:
+    Type: AWS::Batch::ComputeEnvironment
+    Properties:
+      ComputeEnvironmentName:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity-ec2spot
+      Type: MANAGED
+      ServiceRole:
+        Fn::GetAtt: BatchServiceRole.Arn
+
+      ComputeResources:
+        MinvCpus: 0
+        DesiredvCpus: 0
+        MaxvCpus: 96
+        InstanceTypes:
+          - m5
+          - m5zn
+          - m5n
+          - c5
+          - c5n
+          - r5
+          - r5n
+        AllocationStrategy: BEST_FIT_PROGRESSIVE
+
+        Type: SPOT
+        BidPercentage: 60
+        SpotIamFleetRole:
+          Ref: SPOTFleetRole
+
+        Subnets:
+          - Ref: SubnetOne
+          - Ref: SubnetTwo
+
+        InstanceRole:
+          Ref: IAMInstanceProfile
+        SecurityGroupIds:
+          - Ref: SecurityGroup
+
+  IAMInstanceProfile:
+    Type: AWS::IAM::InstanceProfile
+    Properties:
+      Roles:
+        - Ref: ECSInstanceRole
+
+  ECSInstanceRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: ec2.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      ManagedPolicyArns:
+      - arn:aws:iam::aws:policy/service-role/AmazonEC2ContainerServiceforEC2Role
+
+  SPOTFleetRole:
+    Type: AWS::IAM::Role
+    Properties:
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          Effect: Allow
+          Principal:
+            Service: spotfleet.amazonaws.com
+          Action:
+            - sts:AssumeRole
+      ManagedPolicyArns:
+        - arn:aws:iam::aws:policy/service-role/AmazonEC2SpotFleetTaggingRole
+
 
   BatchServiceRole:
     Type: AWS::IAM::Role
@@ -335,12 +447,16 @@ Resources:
 
       Environment:
         Variables:
-          JobDefinition:
-            Ref: HashJobDefinition
-          JobQueue:
-            Ref: JobQueue
+          JobSizeS:
+            Ref: HashJobDefinitionS
+          JobSizeL:
+            Ref: HashJobDefinitionL
+          JobQueueS:
+            Ref: JobQueueS
+          JobQueueL:
+            Ref: JobQueueL
 
-  HashJobDefinition:
+  HashJobDefinitionS:
     Type: AWS::Batch::JobDefinition
     Properties:
       Type: container
@@ -361,13 +477,14 @@ Resources:
         ResourceRequirements:
           -
             Type: VCPU
-            Value: 2
+            Value: 1
           -
             Type: MEMORY
-            Value: 4096
+            Value: 2048
 
         Command:
           - Ref::SourceS3Uri
+          - 2
 
         JobRoleArn:
           Fn::GetAtt: JobRole.Arn
@@ -377,6 +494,28 @@ Resources:
         # TODO inspect exit codes for throttles
         #  only retry for 1, and 255
 
+  HashJobDefinitionL:
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      Type: container
+      ContainerProperties:
+        Image:
+          Fn::Sub: ${ImageName}
+
+        Vcpus: 16
+        Memory: 16384
+
+        Command:
+          - Ref::SourceS3Uri
+          - 32
+
+        JobRoleArn:
+          Fn::GetAtt: JobRole.Arn
+
+      RetryStrategy:
+        Attempts: 3
+        # TODO inspect exit codes for throttles
+        #  only retry for 1, and 255
 
   ExecutionRole:
     Type: AWS::IAM::Role

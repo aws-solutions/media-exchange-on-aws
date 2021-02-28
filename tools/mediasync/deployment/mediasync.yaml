@@ -361,6 +361,8 @@ Resources:
   SPOTComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
+      ComputeEnvironmentName:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-mediasync
       Type: MANAGED
       ServiceRole:
         Fn::GetAtt: BatchServiceRole.Arn

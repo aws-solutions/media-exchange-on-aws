@@ -98,7 +98,7 @@ def lambda_handler(event, context):
 
             #submit job
             response = batchclient.submit_job(
-                jobName="CopyStartedByS3Batch",
+                jobName="MediaSyncJob",
                 jobQueue=os.environ['JobQueue'],
                 jobDefinition=os.environ['JobDefinition'],
                 parameters={
@@ -110,7 +110,11 @@ def lambda_handler(event, context):
 
             logger.debug('## BATCH_RESPONSE\r' + jsonpickle.encode(dict(**pre_flight_response)))
             logger.debug("job submission complete")
-            resultString = 'Invoked batch Copy Job'
+            resultCode = 'Succeeded'
+
+            detail = 'https://console.aws.amazon.com/batch/v2/home?region=' + os.environ['AWS_REGION'] + '#jobs/detail/'+ response['jobId']
+            resultString = detail
+
             # Mark as succeeded
         else:
             s3client.copy({'Bucket': sourceBucket,'Key': sourceKey}, destinationBucket, sourceKey)
