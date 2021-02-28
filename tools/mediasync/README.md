@@ -34,6 +34,21 @@ It is deployed on publisher or subscriber's account. It is configured slightly d
 
 MediaSync uses S3 batch operations as frontend. S3 Batch operations works with a CSV formatted inventory list file. You can use s3 [inventory reports](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html) if you already have one. Otherwise, you can generate an inventory list by utilizing the included scripts/generate_inventory.sh script. Please note that the script works for hundreds of files. If you have thousands of objects in the bucket, inventory reports are the way to go.
 
+S3 Batch Jobs invoke a lambda function that performs a few basic checks before handing off the actual copy operation to a script. This script runs in containers in AWS Batch and Fargate. The copy operation itself uses S3 server side copy, so the containers themselves do not handle the actual bytes. If the object is small (<500MB) the copy happens in lambda. This model takes advantage of the low cost SPOT pricing in FARGATE. And mitigates the potential duration limits in lambda. As an example, a 1TB object takes ~8 minutes to move, a 5TB object takes ~35 minutes.
+
+S3 Batch Jobs works like an orchestrator. The lambdas not only ensures the basic permission checks but also works as a protection mechanism for S3 throttles.
+
+#### Performance (S3->S3 same region)
+
+* 24 seconds for 1 GB
+* 32 seconds for 5 GB
+* 40 seconds for 10 GB
+* 2 minute for 100 GB
+* 7 minutes 30 seconds for 500 GB
+* 11 minutes for 1TB
+* 27 minutes for 5TB
+
+
 #### Start a Transfer
 
 1. Login into AWS account and navigate to S3.
@@ -55,6 +70,16 @@ MediaSync uses S3 batch operations as frontend. S3 Batch operations works with a
 
 #### Verify
 
-1. Check if the S3 Batch Job was complete. 
+1. Check if the S3 Batch Job was complete.
 1. Check if there are any pending jobs in the JobQueue and if all the Jobs were successful.
 1. Once you have verified that the job was successful, check the destination S3 buckets.
+
+
+### Pricing
+
+1. S3 API pricing for GET / PUT. See [here](https://aws.amazon.com/s3/pricing/).
+1. S3 Batch pricing See [here](https://aws.amazon.com/s3/pricing/)
+1. There is no cost for egress in the same region.
+1. There is no additional charge for AWS Batch.
+1. AWS Lambda pricing. See [here](https://aws.amazon.com/lambda/pricing/)
+1. AWS Fargate SPOT pricing. See [here](https://aws.amazon.com/fargate/pricing/)

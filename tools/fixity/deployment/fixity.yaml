@@ -56,10 +56,7 @@ Resources:
         - Key: Name
           Value: MediaExchange Hash
 
-<<<<<<< HEAD
-=======
   #TODO: move to ineterface endpoint
->>>>>>> tools
   S3Endpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
@@ -122,7 +119,6 @@ Resources:
           - 1
           - Fn::GetAZs: ""
 
-<<<<<<< HEAD
   SubnetThree:
     Type: AWS::EC2::Subnet
     Properties:
@@ -134,20 +130,7 @@ Resources:
         Fn::Select:
           - 2
           - Fn::GetAZs: ""
-=======
-  # SubnetThree:
-  #   Type: AWS::EC2::Subnet
-  #   Properties:
-  #     CidrBlock: 10.0.3.0/24
-  #     VpcId:
-  #       Ref: VPC
-  #     MapPublicIpOnLaunch: true
-  #     AvailabilityZone:
-  #       Fn::Select:
-  #         - 2
-  #         - Fn::GetAZs: ""
->>>>>>> tools
-
+          
   RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -170,7 +153,6 @@ Resources:
       SubnetId:
         Ref: SubnetTwo
 
-<<<<<<< HEAD
   SubnetRouteTableAssociationThree:
     Type: AWS::EC2::SubnetRouteTableAssociation
     Properties:
@@ -178,15 +160,6 @@ Resources:
         Ref: RouteTable
       SubnetId:
         Ref: SubnetThree
-=======
-  # SubnetRouteTableAssociationThree:
-  #   Type: AWS::EC2::SubnetRouteTableAssociation
-  #   Properties:
-  #     RouteTableId:
-  #       Ref: RouteTable
-  #     SubnetId:
-  #       Ref: SubnetThree
->>>>>>> tools
 
   FlowLogBucket:
     Type: AWS::S3::Bucket
