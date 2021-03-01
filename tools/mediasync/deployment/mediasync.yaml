@@ -369,7 +369,7 @@ Resources:
 
       ComputeResources:
         Type: FARGATE_SPOT
-        MaxvCpus: 96
+        MaxvCpus: 48 # 48x 64 == 3072 < 3500 (number of concurrent PUT requests per prefix.)
         Subnets:
           - Ref: SubnetOne
           - Ref: SubnetTwo
@@ -423,6 +423,11 @@ Resources:
             Resource:
             - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/*
             - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-queue/*
+          - Sid: batchList
+            Effect: Allow
+            Action:
+              - batch:ListJobs
+            Resource: '*'
 
         # control read/write access at the bucket level
         - S3ReadPolicy:
@@ -445,16 +450,17 @@ Resources:
 
       Environment:
         Variables:
-          JobDefinition:
+          JOB_DEFINITION:
             Fn::If:
               - IsPush
               - Ref: PushJobDefinition
               - Ref: PullJobDefinition
-          JobQueue:
+          JOB_QUEUE:
             Ref: JobQueue
-          DestinationBucketName:
+          DESTINATION_BUCKET_NAME:
             Ref: DestinationBucketName
-          MinSizeForBatchinBytes: 524288000 #500MB
+          MAX_NUMBER_OF_PENDING_JOBS: 96 #== 2x of MaxvCpus
+          MN_SIZE_FOR_BATCH_IN_BYTES: 524288000 #500MB - this optimizaed for cost. Set it to 5GB for optimal speed.
 
   PullJobDefinition:
     Type: AWS::Batch::JobDefinition
