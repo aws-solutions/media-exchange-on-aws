@@ -41,7 +41,7 @@ def lambda_handler(event, context):
     resultCode = None
     resultString = None
 
-    minsizeforbatch = int(os.environ['MinSizeForBatchinBytes'])
+    minsizeforbatch = int(os.environ['MN_SIZE_FOR_BATCH_IN_BYTES'])
 
     # Copy object to new bucket with new key name
     try:
@@ -60,7 +60,7 @@ def lambda_handler(event, context):
                 raise Exception('Object ' + sourceKey + ' is deleted')
 
         size = pre_flight_response['ContentLength']
-        destinationBucket=os.environ['DestinationBucketName']
+        destinationBucket=os.environ['DESTINATION_BUCKET_NAME']
 
         logger.debug("preflight check end")
 
@@ -88,39 +88,51 @@ def lambda_handler(event, context):
             if unicodedata.is_normalized('NFC', sourceKey) == False:
                 raise Exception('Object ' + sourceKey + ' is not in Normalized Form C' )
 
-            #preflight check _write_
-            s3client.put_object(
-                Bucket=destinationBucket,
-                Key=sourceKey
+            ##check how many jobs are pending
+            listjobs = batchclient.list_jobs(
+                jobQueue=os.environ['JOB_QUEUE'],
+                jobStatus='RUNNABLE',
+                maxResults=int(os.environ['MAX_NUMBER_OF_PENDING_JOBS'])
             )
 
-            logger.debug("job submission start")
+            if ('nextToken' in listjobs):
+                logger.info("too many jobs pending. returning slowdown")
+                resultCode = 'TemporaryFailure'
+                resultString = 'Retry request to batch due to too many pending jobs.'
 
-            #submit job
-            response = batchclient.submit_job(
-                jobName="MediaSyncJob",
-                jobQueue=os.environ['JobQueue'],
-                jobDefinition=os.environ['JobDefinition'],
-                parameters={
-                    'SourceS3Uri': 's3://' + sourceBucket + '/' + sourceKey,
-                    'DestinationS3Uri': 's3://' + destinationBucket + '/' + sourceKey,
-                    'Size': str(size)
-                }
-            )
+            else:
+                #preflight check _write_
+                # s3client.put_object(
+                #     Bucket=destinationBucket,
+                #     Key=sourceKey
+                # )
 
-            logger.debug('## BATCH_RESPONSE\r' + jsonpickle.encode(dict(**pre_flight_response)))
-            logger.debug("job submission complete")
-            resultCode = 'Succeeded'
+                logger.debug("job submission start")
 
-            detail = 'https://console.aws.amazon.com/batch/v2/home?region=' + os.environ['AWS_REGION'] + '#jobs/detail/'+ response['jobId']
-            resultString = detail
+                #submit job
+                response = batchclient.submit_job(
+                    jobName="MediaSyncJob",
+                    jobQueue=os.environ['JOB_QUEUE'],
+                    jobDefinition=os.environ['JOB_DEFINITION'],
+                    parameters={
+                        'SourceS3Uri': 's3://' + sourceBucket + '/' + sourceKey,
+                        'DestinationS3Uri': 's3://' + destinationBucket + '/' + sourceKey,
+                        'Size': str(size)
+                    }
+                )
 
-            # Mark as succeeded
+                logger.debug('## BATCH_RESPONSE\r' + jsonpickle.encode(dict(**pre_flight_response)))
+                logger.debug("job submission complete")
+                resultCode = 'Succeeded'
+
+                detail = 'https://console.aws.amazon.com/batch/v2/home?region=' + os.environ['AWS_REGION'] + '#jobs/detail/'+ response['jobId']
+                resultString = detail
+                resultCode = 'Succeeded'
+
         else:
             s3client.copy({'Bucket': sourceBucket,'Key': sourceKey}, destinationBucket, sourceKey)
             resultString = 'Lambda copy complete'
-
-        resultCode = 'Succeeded'
+            resultCode = 'Succeeded'
 
 
     except ClientError as e:

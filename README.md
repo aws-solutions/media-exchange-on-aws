@@ -18,22 +18,23 @@ This is a seamless addition to the current workflow for your customers who use S
 
 ## Included Tools & Utilities
 
-### Autoingest
-### Autoacl
 ### Fixity
+Compute Checksums at scale. See [here](tools/fixity)
+
 ### MediaSync
+Transfer assets between s3 buckets. See [here](tools/mediasync)
 
 ## Setup Requirements
 You will need three AWS accounts to deploy this effectively (a) publisher, (b) subscriber and (c) MediaExchange. The CloudFormation templates are deployed in (c) MediaExchange account. It is also possible to install in a single account for testing. See the developer guide for instructions.
 
 ## Getting Started
 
-1. [Install](#)
-1. [Add a publisher](#)
-1. [Add a subscriber](#)
-1. [Setup transfer agreement](#)
-1. [Share assets](#)
-1. [Receive assets](#)
+1. [Install](#Install)
+1. [Add a publisher](#Add-a-publisher)
+1. [Add a subscriber](#Add-a-subscriber)
+1. [Setup transfer agreement](#Setup-transfer-agreement)
+1. [Share assets](#Share-assets-from-publisher's-account)
+1. [Receive assets](#Receive-assets-in-subscriber's-account)
 
 ### Install
 
@@ -117,10 +118,10 @@ The subscribers can receive event notifications via email from MediaExchange eve
 
 ## Developer Guide
 
-1. [prerequisites](#)
-1. [quick start](#)
-1. [single account deployment](#)
-1. [running tests](#)
+1. [Prerequisites](#)
+1. [Quick start](#)
+1. [Single account deployment](#)
+1. [Running tests](#)
 
 ### Prerequisites
 
