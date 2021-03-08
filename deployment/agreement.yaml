@@ -13,6 +13,12 @@ Outputs:
           - Fn::Sub: SUBSCRIBER_NAME=${SubscriberName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
           - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
+          - Fn::Sub: KMS_KEY_ARN=${CMK.Arn}
+          - Fn::Join:
+            - '='
+            - - SNS_TOPIC_ARN
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
           - Fn::Sub: EVENT_BUS_ARN=arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
           - Fn::Join:
             - '='
@@ -34,6 +40,12 @@ Outputs:
           - Fn::Sub: SUBSCRIBER_NAME=${SubscriberName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
           - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
+          - Fn::Sub: KMS_KEY_ARN=${CMK.Arn}
+          - Fn::Join:
+            - '='
+            - - SNS_TOPIC_ARN
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-notificationtopic
           - Fn::Sub: EVENT_BUS_ARN=arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
           - Fn::Join:
             - ''
@@ -83,7 +95,8 @@ Metadata:
           - PublisherName
           - SubscriberName
           - ExpirationInDays
-          - Notifications
+          - EmailNotifications
+          - DisableS3Events
 
 
 Parameters:
@@ -118,19 +131,33 @@ Parameters:
     MinValue: 3
     Default: 10
 
-  Notifications:
+  EmailNotifications:
     Type: String
-    Description: Select yes to forward all S3 notifications to subscriber's email via EventBridge and SNS
+    Description: Select yes to forward all notifications to subscriber's email. If "no" (default) the notifciations are available via EventBridge and SNS.
+    Default: "no"
+    AllowedValues:
+      - "yes"
+      - "no"
+
+  DisableS3Events:
+    Type: String
+    Description: Select yes to disable S3 ObjectCreated* notifications. If "yes" (default is no) only the notifciations originated from publisher are processed. If the email notifciations are disabled, they are only available via EventBridge and SNS.
+
     Default: "no"
     AllowedValues:
       - "yes"
       - "no"
 
 Conditions:
-  EnableS3Notifications:
+  EnableEmailNotifications:
     Fn::Equals:
     - "yes"
-    - Ref: Notifications
+    - Ref: EmailNotifications
+  S3Events:
+    Fn::Equals:
+    - "no"
+    - Ref: DisableS3Events
+
 
 Resources:
 
@@ -293,8 +320,6 @@ Resources:
                 - Fn::ImportValue:
                     Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-role
 
-
-
   CMK:
     Type: AWS::KMS::Key
     Properties:
@@ -378,16 +403,16 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Description: "Notify Content Published"
+      State:
+        Fn::If:
+          - S3Events
+          - "ENABLED"
+          - "DISABLED"
       EventPattern:
         source:
           - mxc.s3
         detail-type:
           - Fn::Sub: bucket=${ExchangeBucket}
-      State:
-        Fn::If:
-          - EnableS3Notifications
-          - "ENABLED"
-          - "DISABLED"
       Targets:
         -
           Id: "SNSEvent"
@@ -399,6 +424,42 @@ Resources:
             Arn:
               Fn::ImportValue:
                 Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationdlq
+
+
+  NotificationsSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: EnableEmailNotifications
+    Properties:
+      Endpoint:
+        Fn::ImportValue:
+          Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-email
+      Protocol: email
+      TopicArn:
+        Fn::ImportValue:
+          Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
+
+
+  S3NotifyPublisherRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Notify Content Published"
+      EventPattern:
+        source:
+          - mxc.s3
+        detail-type:
+          - Fn::Sub: bucket=${ExchangeBucket}
+      Targets:
+        -
+          Id: "SNSEvent"
+          InputPath: $.detail
+          Arn:
+            Fn::ImportValue:
+              Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-notificationtopic
+          DeadLetterConfig:
+            Arn:
+              Fn::ImportValue:
+                Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-notificationdlq
+
 
   NotifySubscriberRule:
     Type: AWS::Events::Rule

@@ -54,7 +54,7 @@ endif
 	@aws cloudformation describe-stacks --stack-name mediaexchange-agreement-$(ENV) --query "Stacks[0].Outputs[?OutputKey == 'SubscriberOnboardingSummary'].OutputValue" --output text > $(CURRENT_DIR)/tests/subscriber.env
 
 	#TODO: containers?
-	@cd $(CURRENT_DIR)/tests; VAR=value python -m pytest -s python/
+	@cd $(CURRENT_DIR)/tests; VAR=value python3 -m pytest -s python/
 
 localinstall: GUIDED=
 localinstall: testrole-stack quickstart test

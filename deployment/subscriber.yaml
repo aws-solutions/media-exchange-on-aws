@@ -10,6 +10,15 @@ Outputs:
     Export:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-canonicalid
+
+  SubscriberNotificationsEmail:
+    Description: Subscriber's notifications Email Address
+    Value:
+      Ref: Email
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-email
+
   SubscriberNotificationsTopic:
     Description: Subscriber's notifications topic name
     Value:
@@ -17,6 +26,7 @@ Outputs:
     Export:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
+
   SubscriberNotificationsDLQ:
     Description: Subscriber's notifications dead letter queue Arn
     Value:
@@ -228,14 +238,6 @@ Resources:
         -
           Ref: NotificationTopic
 
-  NotificationsSubscription:
-    Type: AWS::SNS::Subscription
-    Properties:
-      Endpoint:
-        Ref: Email
-      Protocol: email
-      TopicArn:
-        Ref: NotificationTopic
 
   # also send the messages to a DLQ for retry
   DLQ:
