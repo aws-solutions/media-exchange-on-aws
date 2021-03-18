@@ -84,3 +84,21 @@ An even bigger instance type does not yield to better performance, mainly due to
 1. There is no additional charge for AWS Batch.
 1. AWS Lambda pricing. See [here](https://aws.amazon.com/lambda/pricing/)
 1. AWS Fargate SPOT pricing. See [here](https://aws.amazon.com/fargate/pricing/)
+
+
+### Cleanup
+
+* Initialize a shell with the necessary credentials to the account where you have deployed this. You can do this by adding AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN as environment variables or by selecting the appropriate profile by adding AWS_PROFILE environment variable.
+
+* Navigate to MediaExchnageOnAWS/tools/fixity directory.
+* At the command prompt type `make clean`.
+* This process leaves a VPC Flow Log Bucket. This bucket needs to be cleaned up manually.
+  * Find the bucket name(s) with the following command.
+  ```
+  $ aws s3 ls | grep -i mediaexchange-tools-fixity-
+  ```
+  * for each of these bucket names, run the following command.
+  ```
+  $ aws s3 rm s3://<bucket name> --recursive
+  $ aws s3 rb s3://<bucket name>
+  ```

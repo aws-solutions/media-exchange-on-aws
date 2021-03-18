@@ -24,17 +24,16 @@ Compute Checksums at scale. See [here](tools/fixity)
 ### MediaSync
 Transfer assets between s3 buckets. See [here](tools/mediasync)
 
+### AutoIngest
+Ingest assets automatically in subscriber's bucket. See [here](tools/autoingest)
+
+### AutoAcl
+Set permissions automatically. See [here](tools/autoacl)
+
 ## Setup Requirements
 You will need three AWS accounts to deploy this effectively (a) publisher, (b) subscriber and (c) MediaExchange. The CloudFormation templates are deployed in (c) MediaExchange account. It is also possible to install in a single account for testing. See the developer guide for instructions.
 
 ## Getting Started
-
-1. [Install](#Install)
-1. [Add a publisher](#Add-a-publisher)
-1. [Add a subscriber](#Add-a-subscriber)
-1. [Setup transfer agreement](#Setup-transfer-agreement)
-1. [Share assets](#Share-assets-from-publisher's-account)
-1. [Receive assets](#Receive-assets-in-subscriber's-account)
 
 ### Install
 
@@ -53,6 +52,26 @@ You will need three AWS accounts to deploy this effectively (a) publisher, (b) s
   1. Accept the capabilities and transforms by checking the boxes and click on create stack.
   1. Wait for the the status to change to create_complete.
   1. Navigate to the outputs tab of the stack and make a note of the ConsoleUrl parameter. You will be using that URL to add publishers and subscribers in the next step.
+
+### Uninstall
+
+* Login into MediaExchange account and navigate to S3.
+* You will need to use a S3 Bucket for storing the packaged CloudFormation templates. Please create a bucket if needed. Make sure to select a region where you are planning to deploy MediaExchange.
+  * Navigate to the outputs tab of the stack mediaexchange-servicecatalog. Navigate to the URL in the ConsoleUrl parameter.
+    * Using the service catalog interface, terminate the provisioned instances of the agreement products.
+    * Using the service catalog interface, terminate the provisioned instances of the subscriber products.
+    * Using the service catalog interface, terminate the provisioned instances of the publisher products.
+  * re-login as an administrator into the account.
+    * Navigate to s3.
+    * cleanup all s3 buckets with "mediaexchange" in their names by following instructions from [here](ttps://docs.aws.amazon.com/AmazonS3/latest/userguide/RemDelMarker.html)
+
+## User Guide
+
+1. [Add a publisher](#Add-a-publisher)
+1. [Add a subscriber](#Add-a-subscriber)
+1. [Setup transfer agreement](#Setup-transfer-agreement)
+1. [Share assets](#Share-assets-from-publisher's-account)
+1. [Receive assets](#Receive-assets-in-subscriber's-account)
 
 ### Add a publisher
 
@@ -118,10 +137,13 @@ The subscribers can receive event notifications via email from MediaExchange eve
 
 ## Developer Guide
 
-1. [Prerequisites](#)
-1. [Quick start](#)
-1. [Single account deployment](#)
-1. [Running tests](#)
+1. [Prerequisites](#Prerequisites)
+1. [Quick start](#Quick-start)
+1. [Share assets](#Share-assets)
+1. [Receive assets](#Receive-assets)
+1. [Running tests](#Running-tests)
+1. [Single account deployment](#Single-account-deployment)
+1. [cleanup](#)
 
 ### Prerequisites
 
@@ -150,14 +172,14 @@ This method bypasses the service catalog setup to deploy a single publisher, sub
   1. `make quickstart`
   1. Follow the instructions to provide publisher and subscriber information. The default values are printed out for the mediaexchange account id.  
 
-### Share assets via aws cli
+### Share assets
 
 ```
 $ aws s3 cp <filename> s3://<bucket name>/ --grants read=id=<subscriber canonical user id>
 
 ```
 
-### Receive assets via aws cli
+### Receive assets
 
 ```
 $ aws s3 cp s3://<bucket name>/<object> <filename>
@@ -182,6 +204,16 @@ It is possible to simulate a publisher, subscriber and mediaexchange in a single
   1. `make localinstall`
 
 It will deploy a publisher, subscriber and mediaexchange in the current account and run the tests.
+
+### Cleanup
+
+* Initialize a shell with the necessary credentials to the account where you have deployed this. You can do this by adding AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN as environment variables or by selecting the appropriate profile by adding AWS_PROFILE environment variable.
+
+1. Navigate to MediaExchnageOnAWS (root) directory.
+  * At the command prompt type `make clean`.
+  * This process leaves the mediaexchange and a s3 access logs Bucket. This bucket needs to be cleaned up manually.
+    * Find the bucket name(s) with mediaexchange and delete their contents.
+    * Verioned buckets that fail to delete from the command above, will require additional steps to cleanup. please see the instructions [here](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RemDelMarker.html)
 
 ## License
 This project is licensed under the Apache-2.0 License.

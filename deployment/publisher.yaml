@@ -23,6 +23,22 @@ Outputs:
       Name:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
 
+  PublisherNotificationsTopic:
+    Description: Publisher's notifications topic name
+    Value:
+      Ref: NotificationTopic
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-notificationtopic
+
+  PublisherNotificationsDLQ:
+    Description: Subscriber's notifications dead letter queue Arn
+    Value:
+      Fn::GetAtt: DLQ.Arn
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-notificationdlq
+
 Metadata:
 
   License:
@@ -194,3 +210,134 @@ Resources:
         Ref: PublisherAccountId
       StatementId:
         Fn::Sub: "Sid${PublisherName}${Environment}${AWS::Region}Events"
+
+
+  NotificationTopic:
+    Type: AWS::SNS::Topic
+    Properties:
+      DisplayName: SNS Topic for MediaExchange Publisher Notifications
+      KmsMasterKeyId:
+        Ref: CMK
+
+  CMK:
+    Type: AWS::KMS::Key
+    Properties:
+      Description: Symetric Key for Encrypting Messages in Media Exchange
+      Enabled: true
+      EnableKeyRotation: true
+      PendingWindowInDays: 7
+      KeyPolicy:
+        Version: 2012-10-17
+        Id: node-key-policy
+        Statement:
+          -
+            Sid: KeyManagement
+            Effect: Allow
+            Principal:
+              AWS:
+                Fn::Sub: arn:${AWS::Partition}:iam::${AWS::AccountId}:root
+            Action:
+              - kms:Create*
+              - kms:Describe*
+              - kms:Enable*
+              - kms:List*
+              - kms:Put*
+              - kms:Update*
+              - kms:Revoke*
+              - kms:Disable*
+              - kms:Get*
+              - kms:Delete*
+              - kms:TagResource
+              - kms:UntagResource
+              - kms:ScheduleKeyDeletion
+              - kms:CancelKeyDeletion
+              - kms:GenerateDataKey*
+              - kms:Decrypt
+            Resource: '*'
+
+          -
+            Sid: "Allow access for Key User (SNS Service Principal)"
+            Effect: Allow
+            Principal:
+              Service: sns.amazonaws.com
+            Action:
+              - kms:GenerateDataKey*
+              - kms:Decrypt
+            Resource: '*'
+
+          -
+            Sid: "Allow access for Key User (Events Service Principal)"
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - kms:GenerateDataKey*
+              - kms:Decrypt
+            Resource: '*'
+
+          -
+            Sid: "Allow access for Key User (x-account permissions for subscriber)"
+            Effect: Allow
+            Principal:
+              AWS:
+                Ref: PublisherAccountId
+            Action:
+              - kms:GenerateDataKey*
+              - kms:Decrypt
+            Resource: '*'
+
+
+  EventTopicPolicy:
+    Type: 'AWS::SNS::TopicPolicy'
+    Properties:
+      PolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Sid: Allow_Publish_Events
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - sns:Publish
+            Resource:
+              Ref: NotificationTopic
+
+          -
+            Sid: Allow_X_Account_Subscribe
+            Effect: Allow
+            Principal:
+              AWS:
+                Ref: PublisherAccountId
+            Action:
+              - sns:Subscribe
+            Resource:
+              Ref: NotificationTopic
+      Topics:
+        -
+          Ref: NotificationTopic
+
+  # also send the messages to a DLQ for retry
+  DLQ:
+    Type: 'AWS::SQS::Queue'
+    Properties:
+      KmsMasterKeyId:
+        Ref: CMK
+      KmsDataKeyReusePeriodSeconds:  86400
+      MessageRetentionPeriod: 1209600
+
+  DLQQPolicy:
+    Type: 'AWS::SQS::QueuePolicy'
+    Properties:
+      Queues:
+        - Ref: DLQ
+      PolicyDocument:
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service: events.amazonaws.com
+            Action:
+              - sqs:SendMessage
+            Resource:
+              Fn::GetAtt: DLQ.Arn

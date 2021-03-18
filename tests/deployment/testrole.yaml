@@ -72,8 +72,6 @@ Resources:
                 Fn::Sub: ${TestAccountId}
         Version: "2012-10-17"
       Path: /
-      # ManagedPolicyArns:
-      #   - arn:aws:iam::aws:policy/AdministratorAccess
       Policies:
         -
           PolicyName: KMSAndS3
@@ -124,8 +122,6 @@ Resources:
                 Fn::Sub: ${TestAccountId}
         Version: "2012-10-17"
       Path: /
-      # ManagedPolicyArns:
-      #   - arn:aws:iam::aws:policy/AdministratorAccess
       Policies:
         -
           PolicyName: KMSAndS3
@@ -138,7 +134,6 @@ Resources:
                   - s3:Get*
                   - s3:List*
                 Resource: '*'
-
               -
                 Effect: Allow
                 Action:

@@ -12,7 +12,13 @@ Outputs:
         - - Fn::Sub: PUBLISHER_NAME=${PublisherName}
           - Fn::Sub: SUBSCRIBER_NAME=${SubscriberName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
-          - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
+          - Fn::Sub: MEDIAEXCHANGE_BUCKET_NAME=${ExchangeBucket}
+          - Fn::Sub: KMS_KEY_ARN=${CMK.Arn}
+          - Fn::Join:
+            - '='
+            - - SNS_TOPIC_ARN
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
           - Fn::Sub: EVENT_BUS_ARN=arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
           - Fn::Join:
             - '='
@@ -33,7 +39,13 @@ Outputs:
         - - Fn::Sub: PUBLISHER_NAME=${PublisherName}
           - Fn::Sub: SUBSCRIBER_NAME=${SubscriberName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
-          - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
+          - Fn::Sub: MEDIAEXCHANGE_BUCKET_NAME=${ExchangeBucket}
+          - Fn::Sub: KMS_KEY_ARN=${CMK.Arn}
+          - Fn::Join:
+            - '='
+            - - SNS_TOPIC_ARN
+              - Fn::ImportValue:
+                  Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-notificationtopic
           - Fn::Sub: EVENT_BUS_ARN=arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
           - Fn::Join:
             - ''
@@ -83,7 +95,8 @@ Metadata:
           - PublisherName
           - SubscriberName
           - ExpirationInDays
-          - Notifications
+          - EmailNotifications
+          - DisableS3Events
 
 
 Parameters:
@@ -115,22 +128,36 @@ Parameters:
   ExpirationInDays:
     Type: Number
     Description: The assets get lifecycle deleted after these many days from the MediaExchange bucket.
-    MinValue: 3
-    Default: 10
+    MinValue: 2
+    Default: 5
 
-  Notifications:
+  EmailNotifications:
     Type: String
-    Description: Select yes to forward all S3 notifications to subscriber's email via EventBridge and SNS
+    Description: Select yes to forward all notifications to subscriber's email. If "no" (default) the notifciations are available via EventBridge and SNS.
+    Default: "no"
+    AllowedValues:
+      - "yes"
+      - "no"
+
+  DisableS3Events:
+    Type: String
+    Description: Select yes to disable S3 ObjectCreated* notifications. If "yes" (default is no) only the notifciations originating from publisher are processed. If the email notifciations are disabled, they are only available via EventBridge and SNS.
+
     Default: "no"
     AllowedValues:
       - "yes"
       - "no"
 
 Conditions:
-  EnableS3Notifications:
+  EnableEmailNotifications:
     Fn::Equals:
     - "yes"
-    - Ref: Notifications
+    - Ref: EmailNotifications
+  S3Events:
+    Fn::Equals:
+    - "no"
+    - Ref: DisableS3Events
+
 
 Resources:
 
@@ -209,36 +236,89 @@ Resources:
 
           # TLS only
           -
-            Sid: "RequireTLS"
+            Sid: "RequireTLSSigv4"
             Action:
               - "s3:*"
             Effect: "Deny"
             Resource:
+              - Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeBucket}
               - Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeBucket}/*
             Principal: "*"
             Condition:
               Bool:
                 aws:SecureTransport: false
-
-          -
-            Sid: "DenyBucketOwnerFullControl"
-            Action:
-              - "s3:PutObject"
-            Effect: "Deny"
-            Resource:
-              - Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeBucket}/*
-            Principal: "*"
-            Condition:
-              StringEquals:
-                s3:x-amz-acl: bucket-owner-full-control
+              StringNotEquals:
+                s3:signatureversion: AWS4-HMAC-SHA256
+              StringNotEquals:
+                s3:x-amz-content-sha256: UNSIGNED-PAYLOAD
 
           -
             Sid: "AllowCopyOpPublisher"
             Effect: Allow
             Action:
               - s3:PutObject
+              # - s3:PutObjectAcl
+              # - s3:PutObjectVersionAcl
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeBucket}/*
+            Principal:
+              AWS:
+                - Fn::ImportValue:
+                    Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
+
+            Condition:
+              'Null':
+                s3:x-amz-acl: true
+              'Null':
+                s3:x-amz-grant-full-control: true
+              'Null':
+                s3:x-amz-grant-read-acp: true
+              'Null':
+                s3:x-amz-grant-write: true
+              'Null':
+                s3:x-amz-grant-write-acp: true
+
+              StringEqualsIfExists:
+                s3:x-amz-storage-class: STANDARD
+              StringEqualsIfExists:
+                s3:x-amz-server-side-encryption: aws:kms
+              StringEqualsIfExists:
+                s3:x-amz-server-side-encryption-aws-kms-key-id:
+                  Fn::GetAtt: CMK.Arn
+
+          -
+            Sid: "AllowPutObjectACL"
+            Effect: Allow
+            Action:
               - s3:PutObjectAcl
               - s3:PutObjectVersionAcl
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeBucket}/*
+            Principal:
+              AWS:
+                - Fn::ImportValue:
+                    Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
+
+            Condition:
+              'Null':
+                s3:x-amz-acl: true
+              'Null':
+                s3:x-amz-grant-full-control: true
+              'Null':
+                s3:x-amz-grant-read-acp: true
+              'Null':
+                s3:x-amz-grant-write: true
+              'Null':
+                s3:x-amz-grant-write-acp: true
+
+              StringEqualsIfExists:
+                s3:x-amz-storage-class: STANDARD
+
+
+          -
+            Sid: "AllowPublisher"
+            Effect: Allow
+            Action:
               - s3:PutObjectTagging
               - s3:PutObjectVersionTagging
               - s3:GetObject
@@ -259,6 +339,7 @@ Resources:
               AWS:
                 - Fn::ImportValue:
                     Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
+
 
           #read permissions are granted by the ACLs.
           -
@@ -292,8 +373,6 @@ Resources:
                     Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
                 - Fn::ImportValue:
                     Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-role
-
-
 
   CMK:
     Type: AWS::KMS::Key
@@ -378,16 +457,16 @@ Resources:
     Type: AWS::Events::Rule
     Properties:
       Description: "Notify Content Published"
+      State:
+        Fn::If:
+          - S3Events
+          - "ENABLED"
+          - "DISABLED"
       EventPattern:
         source:
           - mxc.s3
         detail-type:
           - Fn::Sub: bucket=${ExchangeBucket}
-      State:
-        Fn::If:
-          - EnableS3Notifications
-          - "ENABLED"
-          - "DISABLED"
       Targets:
         -
           Id: "SNSEvent"
@@ -399,6 +478,42 @@ Resources:
             Arn:
               Fn::ImportValue:
                 Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationdlq
+
+
+  NotificationsSubscription:
+    Type: AWS::SNS::Subscription
+    Condition: EnableEmailNotifications
+    Properties:
+      Endpoint:
+        Fn::ImportValue:
+          Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-email
+      Protocol: email
+      TopicArn:
+        Fn::ImportValue:
+          Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationtopic
+
+
+  S3NotifyPublisherRule:
+    Type: AWS::Events::Rule
+    Properties:
+      Description: "Notify Content Published"
+      EventPattern:
+        source:
+          - mxc.s3
+        detail-type:
+          - Fn::Sub: bucket=${ExchangeBucket}
+      Targets:
+        -
+          Id: "SNSEvent"
+          InputPath: $.detail
+          Arn:
+            Fn::ImportValue:
+              Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-notificationtopic
+          DeadLetterConfig:
+            Arn:
+              Fn::ImportValue:
+                Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-notificationdlq
+
 
   NotifySubscriberRule:
     Type: AWS::Events::Rule
@@ -494,16 +609,17 @@ Resources:
               logger.info("forwarding Event to EventBridge")
 
               bucket = event["Records"][0]["s3"]["bucket"]["name"]
-              logger.debug(bucket)
-              detail = json.dumps(event)
-              logger.debug(detail)
+              key = event['Records'][0]['s3']['object']['key']
+              versionId = event['Records'][0]['s3']['object']['versionId']
 
-              response = client.put_events(
+              logger.info("bucket={}/key={}/version={}".format(bucket,key,versionId))
+
+              client.put_events(
                 Entries=[
                     {
                         'Source': "mxc.s3",
-                        'DetailType': "bucket="+bucket,
-                        'Detail': detail
+                        'DetailType': "bucket={}".format(bucket),
+                        'Detail': json.dumps(event)
                     },
                 ]
               )

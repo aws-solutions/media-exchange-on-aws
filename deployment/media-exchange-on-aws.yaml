@@ -385,6 +385,51 @@ Resources:
                   - s3:PutEncryptionConfiguration
                   - s3:PutLifecycleConfiguration
 
+                  - sns:Get*
+                  - sns:Describe*
+                  - sns:CreateTopic
+                  - sns:DeleteTopic
+                  - sns:List*
+                  - sns:SetTopicAttributes
+                  - sns:TagResource
+                  - sns:UntagResource
+                  - sns:ListTagsForResource
+                  - sns:Subscribe
+                  - sns:Unsubscribe
+                  - sns:AddPermission
+                  - sns:RemovePermission
+                  - sns:ListSubscriptions
+                  - sns:ListSubscriptionsByTopic
+
+                  - kms:Create*
+                  - kms:Describe*
+                  - kms:Enable*
+                  - kms:List*
+                  - kms:Put*
+                  - kms:Update*
+                  - kms:Revoke*
+                  - kms:Disable*
+                  - kms:Get*
+                  - kms:Delete*
+                  - kms:TagResource
+                  - kms:UntagResource
+                  - kms:ScheduleKeyDeletion
+                  - kms:CancelKeyDeletion
+
+                  - sqs:RemovePermission
+                  - sqs:AddPermission
+                  - sqs:CreateQueue
+                  - sqs:DeleteQueue
+                  - sqs:GetQueueAttributes
+                  - sqs:SetQueueAttributes
+                  - sqs:GetQueueUrl
+                  - sqs:ListDeadLetterSourceQueues
+                  - sqs:ListQueues
+
+                  - sqs:ListQueueTags
+                  - sqs:TagQueue
+                  - sqs:UntagQueue
+
                 Resource: '*'
         -
           PolicyName: mxc-subscriber-deploy
@@ -438,6 +483,9 @@ Resources:
                   - sqs:ListQueueTags
                   - sqs:TagQueue
                   - sqs:UntagQueue
+
+                  - events:PutPermission
+                  - events:RemovePermission
 
                 Resource: '*'
         -

@@ -68,7 +68,7 @@ def test_push_pull(config):
     with open(config['FILE_NAME'], 'rb') as f:
         s3_client.put_object(
             Body=f,
-            Bucket=config['BUCKET_NAME'],
+            Bucket=config['MEDIAEXCHANGE_BUCKET_NAME'],
             GrantRead="id="+config['SUBSCRIBER_CANONICAL_USER_ID'],
             Key=config['FILE_NAME']
         )
@@ -77,7 +77,7 @@ def test_push_pull(config):
     owner_cannonical_id = resp['Owner']['ID']
 
     resp = s3_client.get_object_acl(
-        Bucket=config['BUCKET_NAME'],
+        Bucket=config['MEDIAEXCHANGE_BUCKET_NAME'],
         Key=config['FILE_NAME']
     )
 
@@ -97,7 +97,7 @@ def test_push_pull(config):
 
     s3_client = session.client('s3')
     resp = s3_client.list_objects_v2(
-        Bucket=config['BUCKET_NAME'],
+        Bucket=config['MEDIAEXCHANGE_BUCKET_NAME'],
         FetchOwner=True
     )
     ff = False
@@ -107,7 +107,7 @@ def test_push_pull(config):
     assert ff == True
 
     s3 = session.resource('s3')
-    object = s3.Object(config['BUCKET_NAME'],config['FILE_NAME'])
+    object = s3.Object(config['MEDIAEXCHANGE_BUCKET_NAME'],config['FILE_NAME'])
     object.download_file(config['FILE_NAME']+'.1')
 
     hasher = hashlib.sha256()
@@ -125,4 +125,4 @@ def test_push_pull(config):
     session = boto3.session.Session(aws_access_key_id=resp['Credentials']['AccessKeyId'], aws_secret_access_key=resp['Credentials']['SecretAccessKey'], aws_session_token=resp['Credentials']['SessionToken'], region_name=config['AWS_REGION'])
 
     s3_client = session.client('s3')
-    s3_client.delete_object(Bucket=config['BUCKET_NAME'],Key=config['FILE_NAME'])
+    s3_client.delete_object(Bucket=config['MEDIAEXCHANGE_BUCKET_NAME'],Key=config['FILE_NAME'])
