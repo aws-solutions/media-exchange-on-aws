@@ -99,7 +99,7 @@ Parameters:
 
   CanonicalID:
     Type: String
-    Description: The Canonical Account ID of the subscriber.
+    Description: The Canonical User ID of the subscriber.
     AllowedPattern: '^[0-9a-fA-F]{64}$'
     ConstraintDescription: Malformed input-Parameter CanonicalID must be a 64 digit hexadecimal number.
 

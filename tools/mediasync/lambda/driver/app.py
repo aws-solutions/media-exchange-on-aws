@@ -10,18 +10,12 @@ import jsonpickle
 from botocore.exceptions import ClientError
 import unicodedata
 
-from aws_xray_sdk.core import xray_recorder
-from aws_xray_sdk.core import patch_all
-
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-lambdaclient = boto3.client('lambda')
-lambdaclient.get_account_settings()
-patch_all()
+logger.setLevel(os.environ['LogLevel'])
 
 batchclient = boto3.client('batch')
 s3client = boto3.client('s3')
+
 
 def lambda_handler(event, context):
 
@@ -88,24 +82,14 @@ def lambda_handler(event, context):
             if unicodedata.is_normalized('NFC', sourceKey) == False:
                 raise Exception('Object ' + sourceKey + ' is not in Normalized Form C' )
 
-            ##check how many jobs are pending
-            listjobs = batchclient.list_jobs(
-                jobQueue=os.environ['JOB_QUEUE'],
-                jobStatus='RUNNABLE',
-                maxResults=int(os.environ['MAX_NUMBER_OF_PENDING_JOBS'])
-            )
 
-            if ('nextToken' in listjobs):
+            if (is_can_submit_jobs() == False):
+
                 logger.info("too many jobs pending. returning slowdown")
                 resultCode = 'TemporaryFailure'
                 resultString = 'Retry request to batch due to too many pending jobs.'
 
             else:
-                #preflight check _write_
-                # s3client.put_object(
-                #     Bucket=destinationBucket,
-                #     Key=sourceKey
-                # )
 
                 logger.debug("job submission start")
 
@@ -117,6 +101,13 @@ def lambda_handler(event, context):
                     parameters={
                         'SourceS3Uri': 's3://' + sourceBucket + '/' + sourceKey,
                         'DestinationS3Uri': 's3://' + destinationBucket + '/' + sourceKey,
+                        'Size': str(size)
+                    },
+                    tags={
+                        'S3BatchJobId': jobId,
+                        'SourceBucket': sourceBucket,
+                        'DestinationBucket': destinationBucket,
+                        'Key': sourceKey,
                         'Size': str(size)
                     }
                 )
@@ -130,7 +121,25 @@ def lambda_handler(event, context):
                 resultCode = 'Succeeded'
 
         else:
-            s3client.copy({'Bucket': sourceBucket,'Key': sourceKey}, destinationBucket, sourceKey)
+            # <5GB
+            copy_response= {}
+
+            if (os.environ['IS_READ_ONLY'] == 'TRUE'):
+                copy_response = s3client.copy_object(
+                    Bucket=destinationBucket,
+                    CopySource={'Bucket': sourceBucket,'Key': sourceKey},
+                    GrantRead='id="'+ os.environ['CANNONICAL_USER_ID'] + '"',
+                    Key=sourceKey
+                )
+            else:
+                copy_response = s3client.copy_object(
+                    Bucket=destinationBucket,
+                    CopySource={'Bucket': sourceBucket,'Key': sourceKey},
+                    ACL='bucket-owner-full-control',
+                    Key=sourceKey
+                )
+
+            logger.debug('## COPY_RESPONSE\r' + jsonpickle.encode(dict(**copy_response)))
             resultString = 'Lambda copy complete'
             resultCode = 'Succeeded'
 
@@ -179,3 +188,27 @@ def lambda_handler(event, context):
         'invocationId': invocationId,
         'results': results
     }
+
+
+def is_can_submit_jobs():
+
+    # we don't have a good way of checking how many pending jobs as yet
+    # without having to build an API
+
+    disable_pending_jobs_test = os.environ['DISABLE_PENDING_JOBS_CHECK']
+
+    if (disable_pending_jobs_test == False):
+
+        ##check how many jobs are pending
+        listjobs = batchclient.list_jobs(
+            jobQueue=os.environ['JOB_QUEUE'],
+            jobStatus='RUNNABLE',
+            maxResults=int(os.environ['MAX_NUMBER_OF_PENDING_JOBS'])
+        )
+
+        if ('nextToken' in listjobs):
+            return False
+    else:
+        logger.debug("Pending jobs check is disabled")
+
+    return True

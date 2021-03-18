@@ -10,20 +10,11 @@ import jsonpickle
 from botocore.exceptions import ClientError
 import unicodedata
 
-from aws_xray_sdk.core import xray_recorder
-from aws_xray_sdk.core import patch_all
-
 logger = logging.getLogger()
-logger.setLevel(logging.INFO)
-
-lambdaclient = boto3.client('lambda')
-lambdaclient.get_account_settings()
-patch_all()
+logger.setLevel(os.environ['LogLevel'])
 
 batchclient = boto3.client('batch')
 s3client = boto3.client('s3')
-
-
 
 
 def lambda_handler(event, context):
@@ -84,21 +75,28 @@ def lambda_handler(event, context):
         if unicodedata.is_normalized('NFC', sourceKey) == False:
             raise Exception('Object ' + sourceKey + ' is not in Normalized Form C' )
 
+        # use bigger containers for 10GB+
         logger.debug("job submission start")
-        jobDefinition = os.environ['JobSizeS'] if pre_flight_response['ContentLength'] < 10737418240 else os.environ['JobSizeL']
+        jobDefinition = os.environ['JOB_SIZE_SMALL'] if pre_flight_response['ContentLength'] < 10737418240 else os.environ['JOB_SIZE_LARGE']
         logger.debug("job definition is " + jobDefinition)
 
-        jobQ = os.environ['JobQueueS'] if pre_flight_response['ContentLength'] < 10737418240 else os.environ['JobQueueL']
-        logger.debug("job Q is " + jobQ)
+        logger.debug("job submission start")
 
         #submit job
         response = batchclient.submit_job(
-            jobName="FixityJob",
-            jobQueue=jobQ,
-            # use bigger containers for 5GB+
+            jobName="Fixity",
+            jobQueue=os.environ['JOB_QUEUE'],
             jobDefinition=jobDefinition,
             parameters={
-                'SourceS3Uri': 's3://' + sourceBucket + '/' + sourceKey
+                'Bucket': sourceBucket,
+                'Key': sourceKey
+            },
+            propagateTags=True,
+            tags={
+                'S3BatchJobId': jobId,
+                'Bucket': sourceBucket,
+                'Key': sourceKey,
+                'Size': str(pre_flight_response['ContentLength'])
             }
         )
 

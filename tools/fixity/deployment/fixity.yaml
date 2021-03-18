@@ -54,9 +54,8 @@ Resources:
       EnableDnsSupport: true
       Tags:
         - Key: Name
-          Value: MediaExchange Hash
+          Value: MediaExchange Fixity
 
-  #TODO: move to ineterface endpoint
   S3Endpoint:
     Type: AWS::EC2::VPCEndpoint
     Properties:
@@ -95,6 +94,13 @@ Resources:
       VpcId:
         Ref: VPC
 
+  SecurityGroupIngress:
+   Type: AWS::EC2::SecurityGroupIngress
+   Properties:
+    GroupId: !Ref SecurityGroup
+    IpProtocol: -1
+    SourceSecurityGroupId: !GetAtt SecurityGroup.GroupId
+
   SubnetOne:
     Type: AWS::EC2::Subnet
     Properties:
@@ -130,7 +136,7 @@ Resources:
         Fn::Select:
           - 2
           - Fn::GetAZs: ""
-          
+
   RouteTable:
     Type: AWS::EC2::RouteTable
     Properties:
@@ -243,17 +249,17 @@ Resources:
       LogDestinationType: s3
       MaxAggregationInterval: 60
 
-  JobQueueS:
-    Type: AWS::Batch::JobQueue
-    Properties:
-      Priority: 1
-      JobQueueName:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity-fargatespot
-      ComputeEnvironmentOrder:
-        -
-          Order: 1
-          ComputeEnvironment:
-            Ref: FargateComputeEnvironment
+  # JobQueueS:
+  #   Type: AWS::Batch::JobQueue
+  #   Properties:
+  #     Priority: 1
+  #     JobQueueName:
+  #       Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity-fargatespot
+  #     ComputeEnvironmentOrder:
+  #       -
+  #         Order: 1
+  #         ComputeEnvironment:
+  #           Ref: FargateComputeEnvironment
 
   JobQueueL:
     Type: AWS::Batch::JobQueue
@@ -267,24 +273,25 @@ Resources:
           ComputeEnvironment:
             Ref: EC2SPOTComputeEnvironment
 
-  FargateComputeEnvironment:
-    Type: AWS::Batch::ComputeEnvironment
-    Properties:
-      ComputeEnvironmentName:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity-fargatespot
-      Type: MANAGED
-      ServiceRole:
-        Fn::GetAtt: BatchServiceRole.Arn
-
-      ComputeResources:
-        Type: FARGATE_SPOT
-        MaxvCpus: 96
-        Subnets:
-          - Ref: SubnetOne
-          - Ref: SubnetTwo
-
-        SecurityGroupIds:
-          - Ref: SecurityGroup
+  # FargateComputeEnvironment:
+  #   Type: AWS::Batch::ComputeEnvironment
+  #   Properties:
+  #     ComputeEnvironmentName:
+  #       Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity-fargatespot
+  #     Type: MANAGED
+  #     ServiceRole:
+  #       Fn::GetAtt: BatchServiceRole.Arn
+  #
+  #     ComputeResources:
+  #       Type: FARGATE_SPOT
+  #       MaxvCpus: 96
+  #       Subnets:
+  #         - Ref: SubnetOne
+  #         - Ref: SubnetTwo
+  #         - Ref: SubnetThree
+  #
+  #       SecurityGroupIds:
+  #         - Ref: SecurityGroup
 
   EC2SPOTComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
@@ -317,6 +324,7 @@ Resources:
         Subnets:
           - Ref: SubnetOne
           - Ref: SubnetTwo
+          - Ref: SubnetThree
 
         InstanceRole:
           Ref: IAMInstanceProfile
@@ -386,14 +394,13 @@ Resources:
 
       Policies:
         - AWSLambdaBasicExecutionRole
-        - AWSXRayDaemonWriteAccess
         - Statement:
-          - Sid: xray
+          - Sid: batchList
             Effect: Allow
             Action:
-            - lambda:GetAccountSettings
+              - batch:ListJobs
+              - batch:TagResource
             Resource: '*'
-        - Statement:
           - Sid: batch
             Effect: Allow
             Action:
@@ -420,43 +427,28 @@ Resources:
 
       Environment:
         Variables:
-          JobSizeS:
+          JOB_SIZE_SMALL:
             Ref: HashJobDefinitionS
-          JobSizeL:
+          JOB_SIZE_LARGE:
             Ref: HashJobDefinitionL
-          JobQueueS:
-            Ref: JobQueueS
-          JobQueueL:
+          JOB_QUEUE:
             Ref: JobQueueL
+          LogLevel: INFO
 
   HashJobDefinitionS:
     Type: AWS::Batch::JobDefinition
     Properties:
       Type: container
-      PlatformCapabilities:
-        - FARGATE
       ContainerProperties:
         Image:
           Fn::Sub: ${ImageName}
 
-        ExecutionRoleArn:
-          Fn::GetAtt: ExecutionRole.Arn
-
-        FargatePlatformConfiguration:
-          PlatformVersion: LATEST
-        NetworkConfiguration:
-          AssignPublicIp: ENABLED
-
-        ResourceRequirements:
-          -
-            Type: VCPU
-            Value: 1
-          -
-            Type: MEMORY
-            Value: 2048
+        Vcpus: 1
+        Memory: 2048
 
         Command:
-          - Ref::SourceS3Uri
+          - Ref::Bucket
+          - Ref::Key
           - 2
 
         JobRoleArn:
@@ -466,6 +458,7 @@ Resources:
         Attempts: 3
         # TODO inspect exit codes for throttles
         #  only retry for 1, and 255
+
 
   HashJobDefinitionL:
     Type: AWS::Batch::JobDefinition
@@ -479,7 +472,8 @@ Resources:
         Memory: 16384
 
         Command:
-          - Ref::SourceS3Uri
+          - Ref::Bucket
+          - Ref::Key
           - 32
 
         JobRoleArn:
@@ -573,4 +567,13 @@ Resources:
                   - s3:PutObject
                   - lambda:InvokeFunction
                 Effect: Allow
+                Resource: '*'
+              -
+                Effect: Allow
+                Action:
+                  - kms:Encrypt
+                  - kms:Decrypt
+                  - kms:ReEncrypt*
+                  - kms:GenerateDataKey*
+                  - kms:DescribeKey
                 Resource: '*'

@@ -12,7 +12,7 @@ Outputs:
         - - Fn::Sub: PUBLISHER_NAME=${PublisherName}
           - Fn::Sub: SUBSCRIBER_NAME=${SubscriberName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
-          - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
+          - Fn::Sub: MEDIAEXCHANGE_BUCKET_NAME=${ExchangeBucket}
           - Fn::Sub: KMS_KEY_ARN=${CMK.Arn}
           - Fn::Join:
             - '='
@@ -39,7 +39,7 @@ Outputs:
         - - Fn::Sub: PUBLISHER_NAME=${PublisherName}
           - Fn::Sub: SUBSCRIBER_NAME=${SubscriberName}
           - Fn::Sub: AWS_REGION=${AWS::Region}
-          - Fn::Sub: BUCKET_NAME=${ExchangeBucket}
+          - Fn::Sub: MEDIAEXCHANGE_BUCKET_NAME=${ExchangeBucket}
           - Fn::Sub: KMS_KEY_ARN=${CMK.Arn}
           - Fn::Join:
             - '='
@@ -128,8 +128,8 @@ Parameters:
   ExpirationInDays:
     Type: Number
     Description: The assets get lifecycle deleted after these many days from the MediaExchange bucket.
-    MinValue: 3
-    Default: 10
+    MinValue: 2
+    Default: 5
 
   EmailNotifications:
     Type: String
@@ -141,7 +141,7 @@ Parameters:
 
   DisableS3Events:
     Type: String
-    Description: Select yes to disable S3 ObjectCreated* notifications. If "yes" (default is no) only the notifciations originated from publisher are processed. If the email notifciations are disabled, they are only available via EventBridge and SNS.
+    Description: Select yes to disable S3 ObjectCreated* notifications. If "yes" (default is no) only the notifciations originating from publisher are processed. If the email notifciations are disabled, they are only available via EventBridge and SNS.
 
     Default: "no"
     AllowedValues:
@@ -236,36 +236,89 @@ Resources:
 
           # TLS only
           -
-            Sid: "RequireTLS"
+            Sid: "RequireTLSSigv4"
             Action:
               - "s3:*"
             Effect: "Deny"
             Resource:
+              - Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeBucket}
               - Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeBucket}/*
             Principal: "*"
             Condition:
               Bool:
                 aws:SecureTransport: false
-
-          -
-            Sid: "DenyBucketOwnerFullControl"
-            Action:
-              - "s3:PutObject"
-            Effect: "Deny"
-            Resource:
-              - Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeBucket}/*
-            Principal: "*"
-            Condition:
-              StringEquals:
-                s3:x-amz-acl: bucket-owner-full-control
+              StringNotEquals:
+                s3:signatureversion: AWS4-HMAC-SHA256
+              StringNotEquals:
+                s3:x-amz-content-sha256: UNSIGNED-PAYLOAD
 
           -
             Sid: "AllowCopyOpPublisher"
             Effect: Allow
             Action:
               - s3:PutObject
+              # - s3:PutObjectAcl
+              # - s3:PutObjectVersionAcl
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeBucket}/*
+            Principal:
+              AWS:
+                - Fn::ImportValue:
+                    Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
+
+            Condition:
+              'Null':
+                s3:x-amz-acl: true
+              'Null':
+                s3:x-amz-grant-full-control: true
+              'Null':
+                s3:x-amz-grant-read-acp: true
+              'Null':
+                s3:x-amz-grant-write: true
+              'Null':
+                s3:x-amz-grant-write-acp: true
+
+              StringEqualsIfExists:
+                s3:x-amz-storage-class: STANDARD
+              StringEqualsIfExists:
+                s3:x-amz-server-side-encryption: aws:kms
+              StringEqualsIfExists:
+                s3:x-amz-server-side-encryption-aws-kms-key-id:
+                  Fn::GetAtt: CMK.Arn
+
+          -
+            Sid: "AllowPutObjectACL"
+            Effect: Allow
+            Action:
               - s3:PutObjectAcl
               - s3:PutObjectVersionAcl
+            Resource:
+              Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeBucket}/*
+            Principal:
+              AWS:
+                - Fn::ImportValue:
+                    Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
+
+            Condition:
+              'Null':
+                s3:x-amz-acl: true
+              'Null':
+                s3:x-amz-grant-full-control: true
+              'Null':
+                s3:x-amz-grant-read-acp: true
+              'Null':
+                s3:x-amz-grant-write: true
+              'Null':
+                s3:x-amz-grant-write-acp: true
+
+              StringEqualsIfExists:
+                s3:x-amz-storage-class: STANDARD
+
+
+          -
+            Sid: "AllowPublisher"
+            Effect: Allow
+            Action:
               - s3:PutObjectTagging
               - s3:PutObjectVersionTagging
               - s3:GetObject
@@ -286,6 +339,7 @@ Resources:
               AWS:
                 - Fn::ImportValue:
                     Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
+
 
           #read permissions are granted by the ACLs.
           -
@@ -555,16 +609,17 @@ Resources:
               logger.info("forwarding Event to EventBridge")
 
               bucket = event["Records"][0]["s3"]["bucket"]["name"]
-              logger.debug(bucket)
-              detail = json.dumps(event)
-              logger.debug(detail)
+              key = event['Records'][0]['s3']['object']['key']
+              versionId = event['Records'][0]['s3']['object']['versionId']
 
-              response = client.put_events(
+              logger.info("bucket={}/key={}/version={}".format(bucket,key,versionId))
+
+              client.put_events(
                 Entries=[
                     {
                         'Source': "mxc.s3",
-                        'DetailType': "bucket="+bucket,
-                        'Detail': detail
+                        'DetailType': "bucket={}".format(bucket),
+                        'Detail': json.dumps(event)
                     },
                 ]
               )

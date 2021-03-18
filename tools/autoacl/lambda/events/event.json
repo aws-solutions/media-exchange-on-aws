@@ -1,0 +1,35 @@
+{
+    "awsRegion": "us-west-2",
+    "eventName": "ObjectCreated:Put",
+    "eventSource": "aws:s3",
+    "eventTime": "2021-03-14T08:38:02.334Z",
+    "eventVersion": "2.1",
+    "requestParameters": {
+        "sourceIPAddress": "205.251.233.54"
+    },
+    "responseElements": {
+        "x-amz-id-2": "vQz9VOqIhxK+pDtm+x+KhLyJ7g31yyj8mMfKK1XtHhhM9Bhg4yuxHKFa7iwx3fiKkdgSkRtfpfJQ2fW4Zt6OnsfKz8gu01qC",
+        "x-amz-request-id": "YMBXCREM8CHD5ZTT"
+    },
+    "s3": {
+        "bucket": {
+            "arn": "arn:aws:s3:::mediaexchange-agreement-dev-exchangebucket-10wa54fqke74y",
+            "name": "mediaexchange-agreement-dev-exchangebucket-10wa54fqke74y",
+            "ownerIdentity": {
+                "principalId": "A4SCDUJ8U4383"
+            }
+        },
+        "configurationId": "f3b766f2-a076-47ee-a4c0-428ac4659e43",
+        "object": {
+            "eTag": "a5ee15800139aabb8a440d25424de1b9",
+            "key": "hello.txt",
+            "sequencer": "00604DCB6CB8199A19",
+            "size": 6,
+            "versionId": "sGQIk1q3J.deVF0IAuaNV_71yUJtHTmL"
+        },
+        "s3SchemaVersion": "1.0"
+    },
+    "userIdentity": {
+        "principalId": "AWS:AROAZSFEL5DFESNDLISKY:prodey-Isengard"
+    }
+}

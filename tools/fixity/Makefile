@@ -31,12 +31,24 @@ build:
 	@echo "deploying cloudformation template"
 	sam deploy -t $(CURRENT_DIR)$< --stack-name $(STACKPREFIX)-$*-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE)
 
+%-delete-stack:
+	@echo "deleting cloudformation stack"
+	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-$*-$(ENV)
+	aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-$*-$(ENV)
+
+
 push: configure build
 	@echo "Publishing Docker image to registry..."
 	@aws ecr get-login-password | docker login --username AWS --password-stdin $(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com
 
 	docker tag ${IMAGENAME}:latest $(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/${IMAGENAME}:${IMAGEVERSION}
 	docker push $(ACCOUNT_ID).dkr.ecr.$(AWS_REGION).amazonaws.com/${IMAGENAME}:${IMAGEVERSION}
+
+clean-repository:
+	@echo "Cleaning docker images from registry..."
+	for tag in $(shell aws ecr list-images --repository-name ${IMAGENAME} --query "imageIds[].imageDigest" --output text); do \
+		aws ecr batch-delete-image --repository-name ${IMAGENAME} --image-ids imageDigest=$$tag; \
+	done
 
 publish: fixity-repository-stack push
 fixity-repository-stack:	PARAMETER_OVERRIDES += 'RepositoryName=${IMAGENAME}'
@@ -47,7 +59,7 @@ fixity-stack: fixity-build
 
 install: publish fixity-stack
 
-clean: ## clears the build directory
+clean: fixity-delete-stack clean-repository fixity-repository-delete-stack
 	@rm -rf build/*
 
 .PHONY: install package publish clean build
