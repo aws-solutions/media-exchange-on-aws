@@ -10,7 +10,7 @@ SOLUTIONS_BUCKET_NAME?=media-solutions-bucket
 SAM_CONFIG_FILE ?= $(CURRENT_DIR)deployment/samconfig-$(ACCOUNT_ID).toml
 STACKPREFIX=mediaexchange
 
-ACCOUNT_ID = $(shell aws sts get-caller-identity --query Account --output text)
+ACCOUNT_ID := $(shell aws sts get-caller-identity --query Account --output text)
 TEST_ACCOUNT_ID ?= $(ACCOUNT_ID)
 PUBLISHER_ACCOUNT_ID ?= $(ACCOUNT_ID)
 SUBSCRIBER_ACCOUNT_ID ?= $(ACCOUNT_ID)
@@ -67,7 +67,7 @@ localinstall: testrole-stack quickstart test
 
 ################
 
-EXT_VERSION = $(VERSION)-$(shell date +"%s")
+EXT_VERSION := $(VERSION)-$(shell date +"%s")
 
 install:
 
@@ -77,9 +77,10 @@ install:
 		aws s3 cp $(CURRENT_DIR)/deployment/global-s3-assets/$$product.template s3://$(DIST_OUTPUT_BUCKET)/$(SOLUTION_NAME)/$(EXT_VERSION)/$$product.template --no-progress --only-show-errors; \
 	done
 
-	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/media-exchange-on-aws.template $(GUIDED) --stack-name mediaexchange-servicecatalog-stack-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) --config-env servicecatalog-stack --config-file $(SAM_CONFIG_FILE)
+	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/media-exchange-on-aws.template $(GUIDED) --stack-name $(STACKPREFIX)-servicecatalog-stack-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) --config-env servicecatalog-stack --config-file $(SAM_CONFIG_FILE)
 
-	#provision product/
+	# @sam deploy -t $(CURRENT_DIR)/tests/deployment/testinstall.yaml $(GUIDED) --stack-name $(STACKPREFIX)-sc-provisioning-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) --config-env sc-provisioning-stack --config-file $(SAM_CONFIG_FILE)
+	# # --role-arn $(shell aws cloudformation describe-stacks --stack-name $(STACKPREFIX)-servicecatalog-stack-$(ENV) --query "Stacks[0].Outputs[?OutputKey == 'ServiceCatalogDeployerRole'].OutputValue" --output text)
 
 quickclean:
 	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-agreement-$(ENV)
@@ -87,6 +88,9 @@ quickclean:
 	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-publisher-$(ENV)
 	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-subscriber-$(ENV)
 
-clean: quickclean
+clean:
+	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-servicecatalog-stack-$(ENV)
+	aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-servicecatalog-stack-$(ENV)
+
 
 .PHONY: install quickstart test localinstall clean

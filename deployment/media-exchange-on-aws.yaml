@@ -35,11 +35,6 @@ Metadata:
           - OwnerEmail
 
 Mappings:
-  SourceCode:
-    General:
-      Bucket: __BUCKET_NAME__
-      Path: __SOLUTION_NAME__
-      Version: __VERSION__
   AnonymousData:
     SendAnonymousData:
       Data: Yes
@@ -69,28 +64,34 @@ Parameters:
     AllowedPattern: '[\w-\.]+@([\w-]+\.)+[\w-]+'
 
 Outputs:
+
+  ServiceCatalogDeployerRole:
+    Description: Deployment Role
+    Value:
+      Fn::GetAtt: ServiceCatalogUserRole.Arn
+
+  PublisherProductId:
+    Description: ProductId of the publisher product
+    Value:
+      Ref: Publisher
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-sc-publisher-productid
+
+  PublisherProductArtifactNames:
+    Description: Versions of Publisher Product
+    Value:
+      Fn::GetAtt: Publisher.ProvisioningArtifactNames
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-sc-publisher-artifactnames
+
+
+
   ConsoleUrl:
     Description: ServiceCatalog portfolio manager url.
     Value:
       Fn::Sub: https://signin.aws.amazon.com/switchrole?roleName=${ServiceCatalogUserRole}&account=${AWS::AccountId}&region=${AWS::Region}&redirect_uri=https://console.aws.amazon.com/servicecatalog/home?region=${AWS::Region}&isSceuc=true#/products
-  # PublisherProduct:
-  #   Description: ProductId of the Publisher Product
-  #   Value: !Ref Publisher
-  # PublisherProductArtifactId:
-  #   Description: ArtifcatId of the Publisher Product
-  #   Value: !GetAtt Publisher.ProvisioningArtifactIds
-  # SubscriberProductId:
-  #   Description: ProductId of the Subscriber Product
-  #   Value: !Ref Subscriber
-  # SubscriberProductArtifactId:
-  #   Description: ArtifcatId of the Subscriber Product
-  #   Value: !GetAtt Subscriber.ProvisioningArtifactIds
-  # AgreementProductId:
-  #   Description: ProductId of the Agreement Product
-  #   Value: !Ref Agreement
-  # AgreementProductArtifactId:
-  #   Description: ArtifcatId of the Agreement Product
-  #   Value: !GetAtt Agreement.ProvisioningArtifactIds
 
 Resources:
 
@@ -217,20 +218,15 @@ Resources:
       SupportEmail:
         Ref: OwnerEmail
       SupportUrl: https://mediaops.yourcompany.com
-      Distributor: AWS Solutions Library / Media Exchange
+      Distributor: AWS Solutions Library / Media Exchange On AWS
       ProvisioningArtifactParameters:
         - Info:
-            LoadTemplateFromURL:
-              Fn::Join:
-                - /
-                -
-                  - 'https://s3.amazonaws.com'
-                  - Fn::FindInMap: [ SourceCode, General, Bucket ]
-                  - Fn::FindInMap: [ SourceCode, General, Path ]
-                  - Fn::FindInMap: [ SourceCode, General, Version ]
-                  - publisher.template
-          Name:
-            Fn::FindInMap: [ SourceCode, General, Version ]
+            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/publisher.template
+          Name: latest
+        - Info:
+            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/subscriber.template
+          Name: __VERSION__
+      ReplaceProvisioningArtifacts: False
 
 
   AddPublisherToPortfolio:
@@ -252,20 +248,15 @@ Resources:
       SupportEmail:
         Ref: OwnerEmail
       SupportUrl: https://mediaops.yourcompany.com
-      Distributor: AWS Solutions Library / Media Exchange
+      Distributor: AWS Solutions Library / Media Exchange On AWS
       ProvisioningArtifactParameters:
         - Info:
-            LoadTemplateFromURL:
-              Fn::Join:
-                - /
-                -
-                  - 'https://s3.amazonaws.com'
-                  - Fn::FindInMap: [ SourceCode, General, Bucket ]
-                  - Fn::FindInMap: [ SourceCode, General, Path ]
-                  - Fn::FindInMap: [ SourceCode, General, Version ]
-                  - subscriber.template
-          Name:
-            Fn::FindInMap: [ SourceCode, General, Version ]
+            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/subscriber.template
+          Name: latest
+        - Info:
+            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/subscriber.template
+          Name: __VERSION__
+      ReplaceProvisioningArtifacts: False
 
 
   AddSubscriberToPortfolio:
@@ -287,20 +278,15 @@ Resources:
       SupportEmail:
         Ref: OwnerEmail
       SupportUrl: https://mediaops.yourcompany.com
-      Distributor: AWS Solutions Library / Media Exchange
+      Distributor: AWS Solutions Library / Media Exchange On AWS
       ProvisioningArtifactParameters:
         - Info:
-            LoadTemplateFromURL:
-              Fn::Join:
-                - /
-                -
-                  - 'https://s3.amazonaws.com'
-                  - Fn::FindInMap: [ SourceCode, General, Bucket ]
-                  - Fn::FindInMap: [ SourceCode, General, Path ]
-                  - Fn::FindInMap: [ SourceCode, General, Version ]
-                  - agreement.template
-          Name:
-            Fn::FindInMap: [ SourceCode, General, Version ]
+            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/agreement.template
+          Name: latest
+        - Info:
+            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/agreement.template
+          Name: __VERSION__
+      ReplaceProvisioningArtifacts: False
 
 
   AddAgreementToPortfolio:
@@ -483,7 +469,7 @@ Resources:
                   - sqs:ListQueueTags
                   - sqs:TagQueue
                   - sqs:UntagQueue
-                  
+
                   - events:PutPermission
                   - events:RemovePermission
 
@@ -600,3 +586,70 @@ Resources:
         Ref: Portfolio
       ProductId:
         Ref: Agreement
+
+
+  # LaunchRoleConstraintPublisherTemplate:
+  #   Type: AWS::ServiceCatalog::LaunchTemplateConstraint
+  #   Properties:
+  #     Description: Lock Environment Name to parent
+  #     PortfolioId:
+  #       Ref: Portfolio
+  #     ProductId:
+  #       Ref: Publisher
+  #     Rules:
+  #       Fn::Sub: >
+  #         {
+  #           "TestEnvironmentName" : {
+  #             "Assertions" : [
+  #               {
+  #                 "Assert" :  {"Fn::Equals":[{"Ref":"Environment"}, "${Environment}"]},
+  #                 "AssertDescription" : "Provisioned product's Environment name must match with the portfolio's Environment name [${Environment}]"
+  #               }
+  #             ]
+  #           }
+  #         }
+  #
+  #
+  #
+  # LaunchRoleConstraintSubscriberTemplate:
+  #   Type: AWS::ServiceCatalog::LaunchTemplateConstraint
+  #   Properties:
+  #     Description: Lock Environment Name to parent
+  #     PortfolioId:
+  #       Ref: Portfolio
+  #     ProductId:
+  #       Ref: Subscriber
+  #     Rules:
+  #       Fn::Sub: >
+  #         {
+  #           "TestEnvironmentName" : {
+  #             "Assertions" : [
+  #               {
+  #                 "Assert" :  {"Fn::Equals":[{"Ref":"Environment"}, "${Environment}"]},
+  #                 "AssertDescription" : "Provisioned product's Environment name must match with the portfolio's Environment name [${Environment}]"
+  #               }
+  #             ]
+  #           }
+  #         }
+  #
+  #
+  # LaunchRoleConstraintAgreementTemplate:
+  #   Type: AWS::ServiceCatalog::LaunchTemplateConstraint
+  #   Properties:
+  #     Description: Lock Environment Name to parent
+  #     PortfolioId:
+  #       Ref: Portfolio
+  #     ProductId:
+  #       Ref: Agreement
+  #     Rules:
+  #       Fn::Sub: >
+  #         {
+  #           "TestEnvironmentName" : {
+  #             "Assertions" : [
+  #               {
+  #                 "Assert" :  {"Fn::Equals":[{"Ref":"Environment"}, "${Environment}"]},
+  #                 "AssertDescription" : "Provisioned product's Environment name must match with the portfolio's Environment name [${Environment}]"
+  #               }
+  #             ]
+  #           }
+  #         }
