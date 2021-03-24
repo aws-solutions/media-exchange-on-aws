@@ -40,11 +40,11 @@ MediaExchangeOnAWS uses Amazon S3 as the underlying storage and transport. You d
 
 ### How does MediaExchangeOnAWS ensure that my assets are secure?
 
-_Encryption_ all the assets are encrypted at rest with AES256 and on transit with TLS.
-_Key Management_ all the encryption keys are secured by AWS Key Management Service
-_Authentication_ users are authenticated at the account level with AWS Identity and Access Management system. MediaExchangeOnAWS grants access at the account level, so publishers are subscribers use their current authentication mechanism. There is no additional credentials to manage.
-_Access Control_ It allocates a bucket per transfer agreement. Publishers have write permissions to the bucket and the subscribers have read permissions. Moreover, all the assets shared with MediaExchangeOnAWS has singular access control that enables read permissions for the subscribers and write permissions for the publishers. On top of that the encryption keys used to protect the assets have similar levels of access control; encrypt permissions for publishers and decrypt for subscribers.
-_Audit_ all actions on the assets are tracked in access logs. It is deployed in an AWS account different from publisher and subscriber's account. All of the security & compliance tools/processes that you use today can be applied on this account.
+- _Encryption_ all the assets are encrypted at rest with AES256 and on transit with TLS.
+- _Key Management_ all the encryption keys are secured by AWS Key Management Service
+- _Authentication_ users are authenticated at the account level with AWS Identity and Access Management system. MediaExchangeOnAWS grants access at the account level, so publishers are subscribers use their current authentication mechanism. There is no additional credentials to manage.
+- _Access Control_ It allocates a bucket per transfer agreement. Publishers have write permissions to the bucket and the subscribers have read permissions. Moreover, all the assets shared with MediaExchangeOnAWS has singular access control that enables read permissions for the subscribers and write permissions for the publishers. On top of that the encryption keys used to protect the assets have similar levels of access control; encrypt permissions for publishers and decrypt for subscribers.
+- _Audit_ all actions on the assets are tracked in access logs. It is deployed in an AWS account different from publisher and subscriber's account. All of the security & compliance tools/processes that you use today can be applied on this account.
 
 
 ### How do I remain compliant with applicable standards and laws when sharing assets with MediaExchangeOnAWS?
