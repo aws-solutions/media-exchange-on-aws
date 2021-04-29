@@ -1,0 +1,162 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Description: >
+  (SO0133) - __SOLUTION_NAME__ __VERSION__ - media exchange publisher/subscriber/agreement provisioning.
+
+Metadata:
+
+  License:
+    Description: |
+        Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+
+        Licensed under the Apache License, Version 2.0 (the "License").
+        You may not use this file except in compliance with the License.
+        You may obtain a copy of the License at
+
+            http://www.apache.org/licenses/LICENSE-2.0
+
+        Unless required by applicable law or agreed to in writing, software
+        distributed under the License is distributed on an "AS IS" BASIS,
+        WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+        See the License for the specific language governing permissions and
+        limitations under the License.
+
+  AWS::cloudformation::Interface:
+    ParameterGroups:
+      -
+        Label:
+          default: Deployment Configuration
+        Parameters:
+          - Environment
+      -
+        Label:
+          default: Configuration
+        Parameters:
+          - PublisherName
+          - PublisherAccountId
+          - SubscriberName
+          - SubscriberAccountId
+          - CanonicalID
+
+Parameters:
+
+  Environment:
+    Type: String
+    Description: Deployment Environment Name
+    Default: dev
+    AllowedPattern: "[A-Za-z0-9]+"
+    ConstraintDescription: Malformed input-Parameter Environment must only contain uppercase and lowercase letters and numbers
+    MaxLength: 10
+    MinLength: 2
+
+  PublisherName:
+    Type: String
+    Description: Name of the publisher
+    AllowedPattern: "[A-Za-z0-9-]+"
+    ConstraintDescription: Malformed input-Parameter PublisherName must only contain uppercase and lowercase letters and numbers
+    MaxLength: 64
+    MinLength: 3
+
+  PublisherAccountId:
+    Type: String
+    Description: The AWS accountId of the publisher. This parameter is ignored if you specify PublisherRole.
+    AllowedPattern: '^\d{12}$'
+    ConstraintDescription: Malformed input-Parameter PublisherAccountId must be a 12 digit number
+
+  SubscriberName:
+    Type: String
+    Description: A name for subscriber account.
+    AllowedPattern: "[A-Za-z0-9-]+"
+    ConstraintDescription: Malformed input-Parameter SubscriberName must only contain uppercase and lowercase letters and numbers
+    MaxLength: 64
+    MinLength: 3
+
+  SubscriberAccountId:
+    Type: String
+    Description: The accountId of the Subscriber. This parameter is ignored if you specify SubscriberRole.
+    AllowedPattern: '^\d{12}$'
+    ConstraintDescription: Malformed input-Parameter SubscriberAccountId must be a 12 digit number.
+
+  CanonicalID:
+    Type: String
+    Description: The Canonical User ID of the subscriber.
+    AllowedPattern: '^[0-9a-fA-F]{64}$'
+    ConstraintDescription: Malformed input-Parameter CanonicalID must be a 64 digit hexadecimal number.
+
+Outputs:
+
+  AgreementStackArn:
+    Description: Agreement Stack Arn
+    Value:
+      Fn::GetAtt: Agreement.CloudformationStackArn
+
+
+Resources:
+
+  Publisher:
+    Type: AWS::ServiceCatalog::CloudFormationProvisionedProduct
+    Properties:
+      ProvisionedProductName:
+        Fn::Sub: mediaexchange-${PublisherName}-publisher
+      ProductId:
+        Fn::ImportValue:
+          Fn::Sub: mxc-${AWS::Region}-${Environment}-sc-publisher-productid
+      ProvisioningArtifactName: latest
+      ProvisioningParameters:
+        -
+          Key: PublisherName
+          Value:
+            Ref: PublisherName
+        -
+          Key: PublisherAccountId
+          Value:
+            Ref: PublisherAccountId
+
+
+  Subscriber:
+    Type: AWS::ServiceCatalog::CloudFormationProvisionedProduct
+    Properties:
+      ProvisionedProductName:
+        Fn::Sub: mediaexchange-${SubscriberName}-subscriber
+      ProductId:
+        Fn::ImportValue:
+          Fn::Sub: mxc-${AWS::Region}-${Environment}-sc-subscriber-productid
+      ProvisioningArtifactName: latest
+      ProvisioningParameters:
+        -
+          Key: SubscriberName
+          Value:
+            Ref: SubscriberName
+        -
+          Key: SubscriberAccountId
+          Value:
+            Ref: SubscriberAccountId
+        -
+          Key: CanonicalID
+          Value:
+            Ref: CanonicalID
+        -
+          Key: Email
+          Value: nomail@nomail.com
+
+  Agreement:
+    Type: AWS::ServiceCatalog::CloudFormationProvisionedProduct
+    DependsOn:
+      - Publisher
+      - Subscriber
+    Properties:
+      ProvisionedProductName:
+        Fn::Sub: mediaexchange-${PublisherName}-${SubscriberName}-transfer-agreement
+      ProductId:
+        Fn::ImportValue:
+          Fn::Sub: mxc-${AWS::Region}-${Environment}-sc-agreement-productid
+      ProvisioningArtifactName: latest
+      ProvisioningParameters:
+        -
+          Key: SubscriberName
+          Value:
+            Ref: SubscriberName
+
+        -
+          Key: PublisherName
+          Value:
+            Ref: PublisherName

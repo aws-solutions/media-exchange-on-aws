@@ -17,7 +17,50 @@ batchclient = boto3.client('batch')
 s3client = boto3.client('s3')
 
 
-def lambda_handler(event, context):
+def api_handler(event, context):
+
+    body = ''
+    status = 400
+    sourceBucket = ''
+    sourceKey = ''
+
+    try:
+        logger.debug('## EVENT\r' + jsonpickle.encode(dict(**event)))
+
+        if event['queryStringParameters'] and 'bucket' in event['queryStringParameters'] and 'key' in event['queryStringParameters']:
+
+            sourceBucket = event['queryStringParameters']['bucket']
+            sourceKey=  event['queryStringParameters']['key']
+
+            batch_job_id = _submit_job(sourceBucket, sourceKey)
+            body = {"JobId" : batch_job_id }
+
+        else:
+            status = 400
+            body = {"Error": {"Code": 400, "Message": ' \'bucket\' and \'key\' are required query parameters'}}
+
+
+    except ClientError as e:
+        errorCode = e.response['Error']['Code']
+        errorMessage = e.response['Error']['Message']
+
+        logger.debug(errorMessage)
+        body = {"Error": {"Code": errorCode, "Message": errorMessage}}
+        status = 500
+
+    except Exception as e:
+        logger.error(e)
+
+        body =  {"Error": {"Code": 500, "Message": "internal server error"} }
+        status = 500
+
+    return {
+        "statusCode": status,
+        "body": json.dumps(body)
+    }
+
+
+def s3_batch_handler(event, context):
 
     logger.debug('## EVENT\r' + jsonpickle.encode(dict(**event)))
 
@@ -36,76 +79,10 @@ def lambda_handler(event, context):
     resultString = None
 
     try:
-        logger.debug("preflight check start")
+        batch_job_id = _submit_job(sourceBucket, sourceKey)
 
-        #preflight checks _read_
-        pre_flight_response = s3client.head_object(
-            Bucket=sourceBucket,
-            Key=sourceKey
-        )
-
-        logger.debug('## PREFLIGHT_RESPONSE\r' + jsonpickle.encode(dict(**pre_flight_response)))
-
-        if 'DeleteMarker' in pre_flight_response:
-            if  pre_flight_response['pre_flight_response'] == True:
-                raise Exception('Object ' + sourceKey + ' is deleted')
-
-        size = pre_flight_response['ContentLength']
-        logger.debug("preflight check end")
-
-        unsupportedStorageClass = False
-
-        #Storage class check
-        if 'StorageClass' in pre_flight_response:
-            if pre_flight_response['StorageClass'] in ['GLACIER', 'DEEP_ARCHIVE']:
-                #check restore status:
-                if 'Restore' in pre_flight_response:
-                    restore = pre_flight_response['Restore']
-                    logger.debug(restore)
-                    if 'ongoing-request="false"' not in restore:
-                        logger.info('restore is in progress')
-                        raise Exception('Object ' + sourceKey + ' is restoring from '  + pre_flight_response['StorageClass'])
-                else:
-                    unsupportedStorageClass = True
-
-        if (unsupportedStorageClass):
-            raise Exception('Object ' + sourceKey + ' is in unsupported StorageClass '  + pre_flight_response['StorageClass'])
-
-        #NFC for unicodedata
-        if unicodedata.is_normalized('NFC', sourceKey) == False:
-            raise Exception('Object ' + sourceKey + ' is not in Normalized Form C' )
-
-        # use bigger containers for 10GB+
-        logger.debug("job submission start")
-        jobDefinition = os.environ['JOB_SIZE_SMALL'] if pre_flight_response['ContentLength'] < 10737418240 else os.environ['JOB_SIZE_LARGE']
-        logger.debug("job definition is " + jobDefinition)
-
-        logger.debug("job submission start")
-
-        #submit job
-        response = batchclient.submit_job(
-            jobName="Fixity",
-            jobQueue=os.environ['JOB_QUEUE'],
-            jobDefinition=jobDefinition,
-            parameters={
-                'Bucket': sourceBucket,
-                'Key': sourceKey
-            },
-            propagateTags=True,
-            tags={
-                'S3BatchJobId': jobId,
-                'Bucket': sourceBucket,
-                'Key': sourceKey,
-                'Size': str(pre_flight_response['ContentLength'])
-            }
-        )
-
-        logger.debug('## BATCH_RESPONSE\r' + jsonpickle.encode(dict(**pre_flight_response)))
-        logger.debug("job submission complete")
         resultCode = 'Succeeded'
-
-        detail = 'https://console.aws.amazon.com/batch/v2/home?region=' + os.environ['AWS_REGION'] + '#jobs/detail/'+ response['jobId']
-        resultString = detail
+        resultString =  'https://console.aws.amazon.com/batch/v2/home?region=' + os.environ['AWS_REGION'] + '#jobs/detail/'+ batch_job_id
 
     except ClientError as e:
         # If request timed out, mark as a temp failure
@@ -151,3 +128,74 @@ def lambda_handler(event, context):
         'invocationId': invocationId,
         'results': results
     }
+
+
+def _submit_job(sourceBucket, sourceKey):
+
+    logger.debug("preflight check start")
+
+    #preflight checks _read_
+    pre_flight_response = s3client.head_object(
+        Bucket=sourceBucket,
+        Key=sourceKey
+    )
+
+    logger.debug('## PREFLIGHT_RESPONSE\r' + jsonpickle.encode(dict(**pre_flight_response)))
+
+    if 'DeleteMarker' in pre_flight_response:
+        if  pre_flight_response['pre_flight_response'] == True:
+            raise Exception('Object ' + sourceKey + ' is deleted')
+
+    size = pre_flight_response['ContentLength']
+    logger.debug("preflight check end")
+
+    unsupportedStorageClass = False
+
+    #Storage class check
+    if 'StorageClass' in pre_flight_response:
+        if pre_flight_response['StorageClass'] in ['GLACIER', 'DEEP_ARCHIVE']:
+            #check restore status:
+            if 'Restore' in pre_flight_response:
+                restore = pre_flight_response['Restore']
+                logger.debug(restore)
+                if 'ongoing-request="false"' not in restore:
+                    logger.info('restore is in progress')
+                    raise Exception('Object ' + sourceKey + ' is restoring from '  + pre_flight_response['StorageClass'])
+            else:
+                unsupportedStorageClass = True
+
+    if (unsupportedStorageClass):
+        raise Exception('Object ' + sourceKey + ' is in unsupported StorageClass '  + pre_flight_response['StorageClass'])
+
+    #NFC for unicodedata
+    if unicodedata.is_normalized('NFC', sourceKey) == False:
+        raise Exception('Object ' + sourceKey + ' is not in Normalized Form C' )
+
+    # use bigger containers for 10GB+
+    logger.debug("job submission start")
+    jobDefinition = os.environ['JOB_SIZE_SMALL'] if pre_flight_response['ContentLength'] < int(os.environ['JOB_SIZE_THRESHOLD']) else os.environ['JOB_SIZE_LARGE']
+    logger.debug("job definition is " + jobDefinition)
+
+    logger.debug("job submission start")
+
+    #submit job
+    response = batchclient.submit_job(
+        jobName="Fixity",
+        jobQueue=os.environ['JOB_QUEUE'],
+        jobDefinition=jobDefinition,
+        parameters={
+            'Bucket': sourceBucket,
+            'Key': sourceKey
+        },
+        propagateTags=True,
+        tags={
+            'Bucket': sourceBucket,
+            'Key': sourceKey,
+            'Size': str(pre_flight_response['ContentLength'])
+        }
+    )
+
+    logger.debug('## BATCH_RESPONSE\r' + jsonpickle.encode(dict(**response)))
+    logger.debug("job submission complete")
+
+    return response['jobId']

@@ -128,7 +128,8 @@ Parameters:
   ExpirationInDays:
     Type: Number
     Description: The assets get lifecycle deleted after these many days from the MediaExchange bucket.
-    MinValue: 2
+    MinValue: 1
+    MaxValue: 30
     Default: 5
 
   EmailNotifications:

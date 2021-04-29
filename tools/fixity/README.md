@@ -1,16 +1,15 @@
 # Fixity
 
-AWS customers often need to compute checksums for the objects in S3. This is often required by contractual agreements i.e the customers deliver checksums alongside the file deliverables. The media and entertainment industry has been using MD5, SHA1 and more recently XXHASH. A common problem with the commonly used algorithms (MD* and SHA*) is that they can not be parallelized effectively in a distributed compute environment. Thereby they have to be computed serially by sequentially reading the file/object from S3.
+AWS customers often need to compute checksums for the objects in S3. This is often required by contractual agreements i.e the customers deliver checksums alongside the file deliverables. The media industry have been using MD5, SHA1 and more recently XXHASH for checksums. A common problem with these algorithms (MD* and SHA*) is that they can not be parallelized effectively in a distributed compute environment. They have to be computed serially by sequentially reading the file.
 
-If you have a need to calculate checksums on a large number of objects, AWS infrastructure can be used to compute them in parallel. This utility helps you run checksums at scale by running them in parallel. It uses AWS Batch / AWS FARGATE to orchestrate the container infrastructure. There are no servers to manage.  
+If you have a need to calculate checksums at scale, this utility helps you run checksums at scale by running them in parallel. It uses AWS Batch and EC2 SPOT instances to orchestrate the infrastructure. There are no servers to manage. Moreover, it calculates checksums by streaming the objects directly from S3, so that there is no dependency on local storage.  
 
-By default, this utility is optimized for cost /GB. You can configure it to go faster by upsizing resources allocated to each container.
+It is fast! In case of larger files, it can achieve 85% of the theoretical maximum speed which is roughly 550MB/s for md5 on Intel Skylake/Cascade Lake CPU. sha1 is slower, and xxhash can go three times as fast.
 
 ## Architecture
-This utility reads the objects directly from S3 and computes md5, sha1, xxhash and xx64hash. The resultant checksums are stored as tags on the source S3 objects. This process is executed in containers managed by AWS Batch on Fargate. The fargate cluster is configured to use SPOT instances. The parallelization
+This utility reads the objects from S3 and computes md5, sha1, xxhash and xx64hash. The resultant checksums are stored as Tags on the source S3 objects. This process is executed in containers managed by AWS Batch.
 
 ## Getting Started
-It can be deployed on any AWS account. There is no direct dependency on MediaExchange.
 
 ## Prerequisites
 * GNU make
@@ -26,29 +25,29 @@ It can be deployed on any AWS account. There is no direct dependency on MediaExc
 
 ### Calculate checksums of Media Assets in S3 buckets.
 
-It uses S3 batch operations as frontend. S3 Batch operations works with a CSV formatted inventory list file. You can use s3 [inventory reports](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html) if you already have one. Otherwise, you can generate an inventory list by utilizing the included scripts/generate_inventory.sh script. Please note that the script works for hundreds of files. If you have thousands of objects in the bucket, inventory reports are the way to go.
+It offers two ways to initiate the checksums.
 
-S3 Batch Jobs invoke a lambda function that performs a few basic checks before handing off the actual fixity operation to a script. This script runs in containers in AWS Batch and Fargate for files smaller than 10GB. If the files are larger than 10GB it runs on Ec2 SPOT which opens up use of high performance and larger instance types. It produces the following checksums, as store them as custom tags with the s3 objects.
+In the first method, it uses S3 batch operations as frontend. S3 Batch operations works with a CSV formatted inventory list file. You can use s3 [inventory reports](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html) if you already have one. Otherwise, you can generate an inventory list by utilizing the included scripts/generate_inventory.sh script. Please note that the script works for hundreds of files. If you have thousands of objects in the bucket, inventory reports are the way to go. S3 Batch Jobs invoke a lambda function that performs a few basic checks before handing off the actual fixity operation to a script. This script runs in containers in AWS Batch and Fargate for files smaller than 10GB. If the files are larger than 10GB it runs on Ec2 SPOT which opens up use of high performance and larger instance types. It produces the following checksums, as store them as custom tags with the s3 objects.
 
 * md5sum
 * sha1sum
 * xxhsum
 
-(as per [MHL](https://mediahashlist.org/) recommendations)
+This process works well if you have lots of objects that needs checksumming.
 
-S3 Batch Jobs works like an orchestrator. The lambdas not only ensures the basic permission checks but also works as a protection mechanism for S3 throttles.
+There is also an API that can be used to invoke the checksumming process one object at a time. The API takes a bucketname and key as parameters. It uses the same underlying AWS Batch infrastructure to compute the checksums.
 
 #### Performance
 
-* 40 seconds for 1 GB (on smallest FARGATE compute resource)
-* 2 minutes for 5 GB (^)
-* 3 minutes 40 seconds for 10 GB (^)
-* 2 minutes for 50 GB (on 16 vCPU on EC2 SPOT)  
-* 19 minutes for 500 GB (^)
-* 38 minutes for 1TB (^)
-* 2 hours and 50 minutes for 5TB (^)
+* 16 seconds for 1 GB
+* 23 seconds for 5 GB
+* 43 seconds for 10 GB
+* 2 minutes for 50 GB
+* 4 minutes for 100 GB
+* 20 minutes for 500 GB
+* 39 minutes for 1 TB
 
-An even bigger instance type does not yield to better performance, mainly due to the limitations of the hashing algorithms. These numbers are ~80% of the theoretical maximum on the respective CPU types.
+An even bigger instance type does not yield to better performance, mainly due to the limitations of the hashing algorithms. These numbers are ~85% of the theoretical maximum on the respective CPU types.
 
 #### Start
 
@@ -75,7 +74,6 @@ An even bigger instance type does not yield to better performance, mainly due to
 1. Check if there are any pending jobs in the JobQueue and if all the Jobs were successful.
 1. Once you have verified that the job was successful, look for the checksum tags for the objects in S3 bucket.
 
-
 ### Pricing
 
 1. S3 API pricing for GET / PUT. See [here](https://aws.amazon.com/s3/pricing/).
@@ -84,7 +82,6 @@ An even bigger instance type does not yield to better performance, mainly due to
 1. There is no additional charge for AWS Batch.
 1. AWS Lambda pricing. See [here](https://aws.amazon.com/lambda/pricing/)
 1. AWS Fargate SPOT pricing. See [here](https://aws.amazon.com/fargate/pricing/)
-
 
 ### Cleanup
 

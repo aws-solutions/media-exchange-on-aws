@@ -1,11 +1,10 @@
 # MediaSync
 
-There are a number of tools that one can use to move files between S3 buckets. This includes S3 API, SDK, CLI and higher level services like S3 batch. However, it is non-trivial to move large (100s of GBs) files, thousands of files or (worse) thousands of large files using these tools. MediaSync helps mitigate that challenge. It scales to thousands of files. It can handle file sizes upto 5TB. It is resilient and cost effective. It runs multiple transfers in parallel and can be configured to achieve very high per file throughput.
+There are a number of tools that one can use to move files between S3 buckets. This includes S3 API, SDK, CLI and higher level services like S3 Batch Jobs. However, it is non-trivial to move large (100s of GBs) files, thousands of files or (worse) thousands of large files using these tools. MediaSync helps mitigate that challenge by scaling the copy process to thousands of files. It can handle file sizes upto 5TB, is resilient and cost effective and runs multiple transfers in parallel. And it can be configured to achieve very high per file throughput.
 
 This can also be used for cross region transfers.  
 
-If MediaSync is being used in conjunction with MediaExchange (not an absolute requirement), it can encapsulate publisher and subscriber configuration(s) at the deployment time.
-
+If MediaSync is used in conjunction with MediaExchange (not an absolute requirement), it can encapsulate publisher and subscriber configuration(s) at the deployment time.
 
 ## Getting Started
 It is deployed on publisher or subscriber's account. It is configured slightly differently for publishers and subscriber workflows.

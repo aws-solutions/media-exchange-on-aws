@@ -35,11 +35,6 @@ Metadata:
           - OwnerEmail
 
 Mappings:
-  SourceCode:
-    General:
-      Bucket: __BUCKET_NAME__
-      Path: __SOLUTION_NAME__
-      Version: __VERSION__
   AnonymousData:
     SendAnonymousData:
       Data: Yes
@@ -65,34 +60,117 @@ Parameters:
   OwnerEmail:
     Type: String
     Description: Mainatner Group Email
-    Default: mediaops@yourcompany.com
+    Default: mediaops@mycompany.com
     AllowedPattern: '[\w-\.]+@([\w-]+\.)+[\w-]+'
 
 Outputs:
+
+  CFNDeployerRole:
+    Description: Deployment Role
+    Value:
+      Fn::GetAtt: CFNRole.Arn
+
+  PublisherProductId:
+    Description: ProductId of the publisher product
+    Value:
+      Ref: Publisher
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-sc-publisher-productid
+
+  SubscriberProductId:
+    Description: ProductId of the subscriber product
+    Value:
+      Ref: Subscriber
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-sc-subscriber-productid
+
+  AgreementProductId:
+    Description: ProductId of the agreement product
+    Value:
+      Ref: Agreement
+    Export:
+      Name:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-sc-agreement-productid
+
   ConsoleUrl:
     Description: ServiceCatalog portfolio manager url.
     Value:
       Fn::Sub: https://signin.aws.amazon.com/switchrole?roleName=${ServiceCatalogUserRole}&account=${AWS::AccountId}&region=${AWS::Region}&redirect_uri=https://console.aws.amazon.com/servicecatalog/home?region=${AWS::Region}&isSceuc=true#/products
-  # PublisherProduct:
-  #   Description: ProductId of the Publisher Product
-  #   Value: !Ref Publisher
-  # PublisherProductArtifactId:
-  #   Description: ArtifcatId of the Publisher Product
-  #   Value: !GetAtt Publisher.ProvisioningArtifactIds
-  # SubscriberProductId:
-  #   Description: ProductId of the Subscriber Product
-  #   Value: !Ref Subscriber
-  # SubscriberProductArtifactId:
-  #   Description: ArtifcatId of the Subscriber Product
-  #   Value: !GetAtt Subscriber.ProvisioningArtifactIds
-  # AgreementProductId:
-  #   Description: ProductId of the Agreement Product
-  #   Value: !Ref Agreement
-  # AgreementProductArtifactId:
-  #   Description: ArtifcatId of the Agreement Product
-  #   Value: !GetAtt Agreement.ProvisioningArtifactIds
 
 Resources:
+
+  CFNRole:
+    Type: 'AWS::IAM::Role'
+    Properties:
+      RoleName:
+        Fn::Sub: mediaexchange-${AWS::Region}-${Environment}-cfn-deploy
+      Description: Service role for Service Catalog portfolio deploy
+      Path: /
+      AssumeRolePolicyDocument:
+        Version: 2012-10-17
+        Statement:
+          -
+            Effect: Allow
+            Principal:
+              Service: cloudformation.amazonaws.com
+            Action: 'sts:AssumeRole'
+      Policies:
+        -
+          PolicyName: mxc-servicecatalog-cfn
+          PolicyDocument:
+            Version: '2012-10-17'
+            Statement:
+              - Effect: Allow
+                Action:
+                  - cloudformation:CreateStack
+                  - cloudformation:DeleteStack
+                  - cloudformation:DescribeStackEvents
+                  - cloudformation:DescribeStacks
+                  - cloudformation:SetStackPolicy
+                  - cloudformation:ValidateTemplate
+                  - cloudformation:UpdateStack
+                  - cloudformation:CreateChangeSet
+                  - cloudformation:DescribeChangeSet
+                  - cloudformation:ExecuteChangeSet
+                  - cloudformation:ListChangeSets
+                  - cloudformation:DeleteChangeSet
+                  - cloudformation:TagResource
+                  - cloudformation:ListStacks
+                Resource:
+                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:stack/*
+                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:changeSet/*
+              - Effect: Allow
+                Action:
+                  - cloudformation:GetTemplateSummary
+                  - servicecatalog:DescribeProduct
+                  - servicecatalog:DescribeProvisioningParameters
+                  - servicecatalog:ListLaunchPaths
+                  - servicecatalog:ProvisionProduct
+                  - ssm:DescribeDocument
+                  - ssm:GetAutomationExecution
+                  - config:DescribeConfigurationRecorders
+                  - config:DescribeConfigurationRecorderStatus
+                Resource: "*"
+              - Effect: Allow
+                Action:
+                  - servicecatalog:DescribeProvisionedProduct
+                  - servicecatalog:DescribeRecord
+                  - servicecatalog:ListRecordHistory
+                  - servicecatalog:ListStackInstancesForProvisionedProduct
+                  - servicecatalog:TerminateProvisionedProduct
+                  - servicecatalog:UpdateProvisionedProduct
+                  - servicecatalog:CreateProvisionedProductPlan
+                  - servicecatalog:DescribeProvisionedProductPlan
+                  - servicecatalog:ExecuteProvisionedProductPlan
+                  - servicecatalog:DeleteProvisionedProductPlan
+                  - servicecatalog:ListProvisionedProductPlans
+                Resource: "*"
+                Condition:
+                  StringEquals:
+                    servicecatalog:accountLevel: self
+
 
   ServiceCatalogUserRole:
     Type: 'AWS::IAM::Role'
@@ -103,6 +181,8 @@ Resources:
             reason: "(W11) IAM role should not allow * resource on its permissions policy: Many of the resources created/updated/deleted by this role is created on the fly, as part of the normal usage ot the solution. So, the names are not known at the deployment time."
 
     Properties:
+      RoleName:
+        Fn::Sub: mediaexchange-${AWS::Region}-${Environment}-admin
       Description: User role for Service Catalog access
       Path: /
       AssumeRolePolicyDocument:
@@ -150,10 +230,9 @@ Resources:
                   - cloudformation:ListStackSetOperations
                   - cloudformation:ListStackSetOperationResults
                 Resource:
-                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:stack/SC-*
-                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:stack/StackSet-SC-*
-                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:changeSet/SC-*
-                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:stackset/SC-*
+                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:stack/*
+                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:changeSet/*
+                  - Fn::Sub: arn:${AWS::Partition}:cloudformation:*:*:stackset/*
               - Effect: Allow
                 Action:
                   - cloudformation:GetTemplateSummary
@@ -199,11 +278,18 @@ Resources:
       ProviderName: AWS Solutions Library
       Description: Group of products related to Media Exchange On AWS solution.
 
-  PortfolioAccess:
+  PortfolioAccessUIRole:
     Type: AWS::ServiceCatalog::PortfolioPrincipalAssociation
     Properties:
       PortfolioId: !Ref Portfolio
       PrincipalARN: !GetAtt ServiceCatalogUserRole.Arn
+      PrincipalType: IAM
+
+  PortfolioAccessCliRole:
+    Type: AWS::ServiceCatalog::PortfolioPrincipalAssociation
+    Properties:
+      PortfolioId: !Ref Portfolio
+      PrincipalARN: !GetAtt CFNRole.Arn
       PrincipalType: IAM
 
   Publisher:
@@ -216,21 +302,16 @@ Resources:
       SupportDescription: Please contact mediaops
       SupportEmail:
         Ref: OwnerEmail
-      SupportUrl: https://mediaops.yourcompany.com
-      Distributor: AWS Solutions Library / Media Exchange
+      SupportUrl: https://mediaops.mycompany.com
+      Distributor: AWS Solutions Library / Media Exchange On AWS
       ProvisioningArtifactParameters:
         - Info:
-            LoadTemplateFromURL:
-              Fn::Join:
-                - /
-                -
-                  - 'https://s3.amazonaws.com'
-                  - Fn::FindInMap: [ SourceCode, General, Bucket ]
-                  - Fn::FindInMap: [ SourceCode, General, Path ]
-                  - Fn::FindInMap: [ SourceCode, General, Version ]
-                  - publisher.template
-          Name:
-            Fn::FindInMap: [ SourceCode, General, Version ]
+            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/publisher.template
+          Name: latest
+        - Info:
+            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/subscriber.template
+          Name: __VERSION__
+      ReplaceProvisioningArtifacts: True
 
 
   AddPublisherToPortfolio:
@@ -251,21 +332,16 @@ Resources:
       SupportDescription: Please contact mediaops
       SupportEmail:
         Ref: OwnerEmail
-      SupportUrl: https://mediaops.yourcompany.com
-      Distributor: AWS Solutions Library / Media Exchange
+      SupportUrl: https://mediaops.mycompany.com
+      Distributor: AWS Solutions Library / Media Exchange On AWS
       ProvisioningArtifactParameters:
         - Info:
-            LoadTemplateFromURL:
-              Fn::Join:
-                - /
-                -
-                  - 'https://s3.amazonaws.com'
-                  - Fn::FindInMap: [ SourceCode, General, Bucket ]
-                  - Fn::FindInMap: [ SourceCode, General, Path ]
-                  - Fn::FindInMap: [ SourceCode, General, Version ]
-                  - subscriber.template
-          Name:
-            Fn::FindInMap: [ SourceCode, General, Version ]
+            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/subscriber.template
+          Name: latest
+        - Info:
+            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/subscriber.template
+          Name: __VERSION__
+      ReplaceProvisioningArtifacts: True
 
 
   AddSubscriberToPortfolio:
@@ -286,21 +362,16 @@ Resources:
       SupportDescription: Please contact mediaops
       SupportEmail:
         Ref: OwnerEmail
-      SupportUrl: https://mediaops.yourcompany.com
-      Distributor: AWS Solutions Library / Media Exchange
+      SupportUrl: https://mediaops.mycompany.com
+      Distributor: AWS Solutions Library / Media Exchange On AWS
       ProvisioningArtifactParameters:
         - Info:
-            LoadTemplateFromURL:
-              Fn::Join:
-                - /
-                -
-                  - 'https://s3.amazonaws.com'
-                  - Fn::FindInMap: [ SourceCode, General, Bucket ]
-                  - Fn::FindInMap: [ SourceCode, General, Path ]
-                  - Fn::FindInMap: [ SourceCode, General, Version ]
-                  - agreement.template
-          Name:
-            Fn::FindInMap: [ SourceCode, General, Version ]
+            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/agreement.template
+          Name: latest
+        - Info:
+            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/agreement.template
+          Name: __VERSION__
+      ReplaceProvisioningArtifacts: True
 
 
   AddAgreementToPortfolio:
@@ -326,8 +397,6 @@ Resources:
           # - id: W28
           #   reason: "(W28) Resource found with an explicit name, this disallows updates that require replacement of this resource "
     Properties:
-      # RoleName:
-      #   Fn::Sub: mxc-${AWS::Region}-${Environment}-cloudformation-service-role
       Description: Role for ServiceCatalog/Cloudformation.
       AssumeRolePolicyDocument:
         Version: 2012-10-17
@@ -600,3 +669,70 @@ Resources:
         Ref: Portfolio
       ProductId:
         Ref: Agreement
+
+
+  # LaunchRoleConstraintPublisherTemplate:
+  #   Type: AWS::ServiceCatalog::LaunchTemplateConstraint
+  #   Properties:
+  #     Description: Lock Environment Name to parent
+  #     PortfolioId:
+  #       Ref: Portfolio
+  #     ProductId:
+  #       Ref: Publisher
+  #     Rules:
+  #       Fn::Sub: >
+  #         {
+  #           "TestEnvironmentName" : {
+  #             "Assertions" : [
+  #               {
+  #                 "Assert" :  {"Fn::Equals":[{"Ref":"Environment"}, "${Environment}"]},
+  #                 "AssertDescription" : "Provisioned product's Environment name must match with the portfolio's Environment name [${Environment}]"
+  #               }
+  #             ]
+  #           }
+  #         }
+  #
+  #
+  #
+  # LaunchRoleConstraintSubscriberTemplate:
+  #   Type: AWS::ServiceCatalog::LaunchTemplateConstraint
+  #   Properties:
+  #     Description: Lock Environment Name to parent
+  #     PortfolioId:
+  #       Ref: Portfolio
+  #     ProductId:
+  #       Ref: Subscriber
+  #     Rules:
+  #       Fn::Sub: >
+  #         {
+  #           "TestEnvironmentName" : {
+  #             "Assertions" : [
+  #               {
+  #                 "Assert" :  {"Fn::Equals":[{"Ref":"Environment"}, "${Environment}"]},
+  #                 "AssertDescription" : "Provisioned product's Environment name must match with the portfolio's Environment name [${Environment}]"
+  #               }
+  #             ]
+  #           }
+  #         }
+  #
+  #
+  # LaunchRoleConstraintAgreementTemplate:
+  #   Type: AWS::ServiceCatalog::LaunchTemplateConstraint
+  #   Properties:
+  #     Description: Lock Environment Name to parent
+  #     PortfolioId:
+  #       Ref: Portfolio
+  #     ProductId:
+  #       Ref: Agreement
+  #     Rules:
+  #       Fn::Sub: >
+  #         {
+  #           "TestEnvironmentName" : {
+  #             "Assertions" : [
+  #               {
+  #                 "Assert" :  {"Fn::Equals":[{"Ref":"Environment"}, "${Environment}"]},
+  #                 "AssertDescription" : "Provisioned product's Environment name must match with the portfolio's Environment name [${Environment}]"
+  #               }
+  #             ]
+  #           }
+  #         }

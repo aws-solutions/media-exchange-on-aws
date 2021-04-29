@@ -45,6 +45,33 @@ Parameters:
     Type: String
     Description: Image Name
 
+Outputs:
+  FixtyAPIURL:
+    Description: "Fixity endpoint URL"
+    Value: !Sub "https://${FixityApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/run"
+  FixtyDriverFunctionName:
+    Description: "Fixity Driver Function Arn"
+    Value: !GetAtt DriverFunction.Arn
+  FixtyS3BatchIAMRole:
+    Description: "Fixity IAM Role to use with S3 Batch"
+    Value: !GetAtt S3BatchRole.Arn
+
+Globals:
+  Function:
+    Runtime: python3.8
+    MemorySize: 128
+
+    Environment:
+      Variables:
+        JOB_SIZE_SMALL:
+          Ref: HashJobDefinitionSmall
+        JOB_SIZE_LARGE:
+          Ref: HashJobDefinitionLarge
+        JOB_SIZE_THRESHOLD: 10737418240 #10GB
+        JOB_QUEUE:
+          Ref: JobQueue
+        LogLevel: INFO
+
 Resources:
 
   VPC:
@@ -249,19 +276,7 @@ Resources:
       LogDestinationType: s3
       MaxAggregationInterval: 60
 
-  # JobQueueS:
-  #   Type: AWS::Batch::JobQueue
-  #   Properties:
-  #     Priority: 1
-  #     JobQueueName:
-  #       Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity-fargatespot
-  #     ComputeEnvironmentOrder:
-  #       -
-  #         Order: 1
-  #         ComputeEnvironment:
-  #           Ref: FargateComputeEnvironment
-
-  JobQueueL:
+  JobQueue:
     Type: AWS::Batch::JobQueue
     Properties:
       Priority: 1
@@ -273,31 +288,9 @@ Resources:
           ComputeEnvironment:
             Ref: EC2SPOTComputeEnvironment
 
-  # FargateComputeEnvironment:
-  #   Type: AWS::Batch::ComputeEnvironment
-  #   Properties:
-  #     ComputeEnvironmentName:
-  #       Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity-fargatespot
-  #     Type: MANAGED
-  #     ServiceRole:
-  #       Fn::GetAtt: BatchServiceRole.Arn
-  #
-  #     ComputeResources:
-  #       Type: FARGATE_SPOT
-  #       MaxvCpus: 96
-  #       Subnets:
-  #         - Ref: SubnetOne
-  #         - Ref: SubnetTwo
-  #         - Ref: SubnetThree
-  #
-  #       SecurityGroupIds:
-  #         - Ref: SecurityGroup
-
   EC2SPOTComputeEnvironment:
     Type: AWS::Batch::ComputeEnvironment
     Properties:
-      ComputeEnvironmentName:
-        Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity-ec2spot
       Type: MANAGED
       ServiceRole:
         Fn::GetAtt: BatchServiceRole.Arn
@@ -305,16 +298,15 @@ Resources:
       ComputeResources:
         MinvCpus: 0
         DesiredvCpus: 0
-        MaxvCpus: 96
+        MaxvCpus: 1024
         InstanceTypes:
-          - m5
+          - c5n
           - m5zn
           - m5n
-          - c5
-          - c5n
-          - r5
+          - m5dn
           - r5n
-        AllocationStrategy: BEST_FIT_PROGRESSIVE
+          - r5dn
+        AllocationStrategy: SPOT_CAPACITY_OPTIMIZED
 
         Type: SPOT
         BidPercentage: 60
@@ -380,6 +372,37 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
 
+  BatchAccessPolicy:
+    Type: AWS::IAM::ManagedPolicy
+    Properties:
+      ManagedPolicyName:
+        Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity-lambda-access-policy
+      PolicyDocument:
+        Version: "2012-10-17"
+        Statement:
+          - Effect: Allow
+            Action:
+              - batch:ListJobs
+              - batch:TagResource
+            Resource: '*'
+          - Effect: Allow
+            Action:
+              - batch:SubmitJob
+              - batch:DescribeJobs
+            Resource:
+              - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/*
+              - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-queue/*
+          - Sid: kms
+            Effect: Allow
+            Action:
+              - kms:Decrypt
+            Resource: '*'
+          - Sid: s3get
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+            Resource: '*'
 
   DriverFunction:
     Type: AWS::Serverless::Function
@@ -388,54 +411,53 @@ Resources:
       FunctionName:
         Fn::Sub: mxc-${AWS::Region}-${Environment}-fixity
       CodeUri: lambda/driver/
-      Handler: app.lambda_handler
-      Runtime: python3.8
-      MemorySize: 128
+      Handler: app.s3_batch_handler
 
       Policies:
         - AWSLambdaBasicExecutionRole
-        - Statement:
-          - Sid: batchList
-            Effect: Allow
-            Action:
-              - batch:ListJobs
-              - batch:TagResource
-            Resource: '*'
-          - Sid: batch
-            Effect: Allow
-            Action:
-              - batch:SubmitJob
-              - batch:DescribeJobs
-              - batch:TerminateJob
-            Resource:
-            - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-definition/*
-            - Fn::Sub: arn:aws:batch:${AWS::Region}:${AWS::AccountId}:job-queue/*
+        - Ref: BatchAccessPolicy
 
-        # control read access at the bucket level
-        - S3ReadPolicy:
-            BucketName: '*'
-        - Statement:
-          - Sid: kms
-            Effect: Allow
-            Action:
-              - kms:Decrypt
-              - kms:GenerateDataKey*
-            Resource: '*'
-
-      Timeout: 300
+      Timeout: 30
       ReservedConcurrentExecutions: 256
 
-      Environment:
-        Variables:
-          JOB_SIZE_SMALL:
-            Ref: HashJobDefinitionS
-          JOB_SIZE_LARGE:
-            Ref: HashJobDefinitionL
-          JOB_QUEUE:
-            Ref: JobQueueL
-          LogLevel: INFO
+  FixityApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName:
+        Ref: Environment
+      EndpointConfiguration:
+        Type: REGIONAL
+      MethodSettings:
+        -
+          DataTraceEnabled: True
+          HttpMethod: '*'
+          LoggingLevel: INFO
+          ResourcePath: '/*'
 
-  HashJobDefinitionS:
+  ApiFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      Description: Lambda function to be invoked by api
+      CodeUri: lambda/driver/
+      Handler: app.api_handler
+      Runtime: python3.8
+      Events:
+        ApiEvent:
+          Type: Api
+          Properties:
+            Path: /run
+            Method: POST
+            RestApiId:
+              Ref: FixityApi
+
+      Policies:
+        - AWSLambdaBasicExecutionRole
+        - Ref: BatchAccessPolicy
+
+      Timeout: 10
+      ReservedConcurrentExecutions: 1
+
+  HashJobDefinitionSmall:
     Type: AWS::Batch::JobDefinition
     Properties:
       Type: container
@@ -460,7 +482,7 @@ Resources:
         #  only retry for 1, and 255
 
 
-  HashJobDefinitionL:
+  HashJobDefinitionLarge:
     Type: AWS::Batch::JobDefinition
     Properties:
       Type: container
