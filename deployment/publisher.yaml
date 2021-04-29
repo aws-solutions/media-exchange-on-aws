@@ -209,7 +209,7 @@ Resources:
       Principal:
         Ref: PublisherAccountId
       StatementId:
-        Fn::Sub: "Sid${PublisherName}${Environment}${AWS::Region}Events"
+        Fn::Sub: "${AWS::StackName}Events"
 
 
   NotificationTopic:

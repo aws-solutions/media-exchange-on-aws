@@ -11,7 +11,7 @@
 
 ### What is Media Exchange on AWS?
 
-It is a simple, secure, reliable and scalable way of transferring assets over AWS. It uses Amazon S3 as the underlying transport layer with 11 9's of durability, industry standard security and compliance controls and virtually unlimited bandwidth for individual transfers. Moreover, there are no credentials to share and manage. On top of that, it is significantly cheaper to own and operate.  
+It is a simple, secure, reliable and scalable way of transferring assets over AWS. It uses Amazon S3 as the underlying transport layer, S3 offers 11 9's of durability, industry standard security and compliance controls and virtually unlimited bandwidth for transfers. There are no credentials to share and manage. On top of that, it is significantly cheaper to own and operate when compared to 3rd party transfer services.
 
 ### What are the benefits of MediaExchangeOnAWS?
 
@@ -46,10 +46,6 @@ MediaExchangeOnAWS uses Amazon S3 as the underlying storage and transport. You d
 - _Access Control_ It allocates a bucket per transfer agreement. Publishers have write permissions to the bucket and the subscribers have read permissions. Moreover, all the assets shared with MediaExchangeOnAWS has singular access control that enables read permissions for the subscribers and write permissions for the publishers. On top of that the encryption keys used to protect the assets have similar levels of access control; encrypt permissions for publishers and decrypt for subscribers.
 - _Audit_ all actions on the assets are tracked in access logs. It is deployed in an AWS account different from publisher and subscriber's account. All of the security & compliance tools/processes that you use today can be applied on this account.
 
-
-### How do I remain compliant with applicable standards and laws when sharing assets with MediaExchangeOnAWS?
-
-TODO
 
 ### How quickly can I remove access and/or cancel transfer?
 
