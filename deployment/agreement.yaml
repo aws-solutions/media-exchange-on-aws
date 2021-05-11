@@ -580,6 +580,13 @@ Resources:
   #lambda to send s3 events to EventBus
   S3EventForwarderFunction:
     Type: AWS::Lambda::Function
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W89
+            reason: "(W89) Lambda functions should be deployed inside a VPC"
+          - id: W92
+            reason: "(W92) Lambda functions should define ReservedConcurrentExecutions to reserve simultaneous executions"
     Properties:
       Description: Lambda function to forward the S3 event notifications to EventBridge
       MemorySize: 128
