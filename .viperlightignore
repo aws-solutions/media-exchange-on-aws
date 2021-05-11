@@ -21,3 +21,4 @@ deployment/media-exchange-on-aws.yaml:63
 deployment/provision.yaml:139
 deployment/media-exchange-on-aws.yaml:155
 deployment/open-source/aws-media-exchange.zip
+deployment/media-exchange-on-aws.yaml:163
