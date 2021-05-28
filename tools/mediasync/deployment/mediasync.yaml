@@ -14,7 +14,9 @@ Outputs:
     Description: IAM Role for to use with S3 batch
     Value:
       Fn::GetAtt: MediaSyncS3BatchRole.Arn
-
+  FlowLogBucketName:
+    Description: "Flow log Bucket Name"
+    Value: !Ref FlowLogBucket
 Metadata:
 
   License:

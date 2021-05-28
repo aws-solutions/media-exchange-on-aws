@@ -96,7 +96,7 @@ Metadata:
           - SubscriberName
           - ExpirationInDays
           - EmailNotifications
-          - DisableS3Events
+          - DeactivateS3Events
 
 
 Parameters:
@@ -134,15 +134,15 @@ Parameters:
 
   EmailNotifications:
     Type: String
-    Description: Select yes to forward all notifications to subscriber's email. If "no" (default) the notifciations are available via EventBridge and SNS.
+    Description: Select yes to forward all notifications to subscriber's email. If "no" (default) the notifications are available via EventBridge and SNS.
     Default: "no"
     AllowedValues:
       - "yes"
       - "no"
 
-  DisableS3Events:
+  DeactivateS3Events:
     Type: String
-    Description: Select yes to disable S3 ObjectCreated* notifications. If "yes" (default is no) only the notifciations originating from publisher are processed. If the email notifciations are disabled, they are only available via EventBridge and SNS.
+    Description: Select yes to turn off S3 ObjectCreated* notifications. If "yes" (default is no) only the notifications originating from publisher are processed. If the email notifications are disabled, they are only available via EventBridge and SNS.
 
     Default: "no"
     AllowedValues:
@@ -157,7 +157,7 @@ Conditions:
   S3Events:
     Fn::Equals:
     - "no"
-    - Ref: DisableS3Events
+    - Ref: DeactivateS3Events
 
 
 Resources:
@@ -219,6 +219,11 @@ Resources:
                 KMSMasterKeyID:
                   Fn::GetAtt: CMK.Arn
                 SSEAlgorithm: 'aws:kms'
+
+      Tags:
+        -
+          Key: createdby
+          Value: __SOLUTION_NAME__/__VERSION__
 
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain

@@ -34,7 +34,7 @@ Metadata:
           default: "Copy Configuration"
           Parameters:
             - NotificationTopicArn
-            - SouceBucket
+            - SourceBucket
             - DestinationBucket
             - DestinationPrefix
 
@@ -56,7 +56,7 @@ Parameters:
     Type: String
     Description: Destination S3 Bucket Name
 
-  SouceBucket:
+  SourceBucket:
     Type: String
     Description: Destination S3 Bucket Name
 
@@ -167,7 +167,7 @@ Resources:
         - AWSLambdaBasicExecutionRole
         - S3ReadPolicy:
             BucketName:
-              Ref: SouceBucket
+              Ref: SourceBucket
         - S3WritePolicy:
             BucketName:
               Ref: DestinationBucket
@@ -187,7 +187,7 @@ Resources:
       Environment:
         Variables:
           SOURCE_BUCKET_NAME:
-            Ref: SouceBucket
+            Ref: SourceBucket
           DESTINATION_BUCKET_NAME:
             Ref: DestinationBucket
           DESTINATION_PREFIX:

@@ -1,16 +1,15 @@
 # AutoACL
 
-This is a utility to automatically set permissions on the objects in the mediaexchange bucket. This allows the publishers to not have to set the explicit read permissions on the objects. This allows them do direct get and put to the bucket without having to be concerned about permissions or tooling.
+This optional utility is deployed in the publisher’s account so that existing Amazon S3 workflows can adopt to MediaExchange-based transfer workflows without making code changes. The existing workflows treat the MediaExchange S3 bucket like any other S3 bucket with write permissions. The Auto ACL utility automates permissions and asset sharing from the MediaExchange S3 bucket so that objects copied into the MediaExchange S3 bucket have their permissions set for the target subscriber.
+
+![Architecture](images/autoacl.jpeg)
 
 
-### Sharing assets
+### Simplified Asset sharing
 
 ```
 $ aws s3 cp <filename> s3://<bucket name>/
 ```
-
-## Getting Started
-It is deployed on publisher's account.
 
 ## Prerequisites
 * GNU make
