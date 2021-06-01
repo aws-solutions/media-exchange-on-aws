@@ -18,7 +18,7 @@ fi
 
 # Get reference for all important folders
 source_template_dir="$PWD"
-ls $source_template_dir
+ls $source_template_dir/..
 dist_dir="$source_template_dir/open-source"
 dist_template_dir="$dist_dir/deployment"
 source_dir="$source_template_dir/../source"
