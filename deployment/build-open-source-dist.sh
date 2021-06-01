@@ -24,11 +24,11 @@ source_dir="$source_template_dir/../source"
 github_dir="$source_template_dir/../.github"
 
 # specific folders for this soultion
-tools_dir="$source_template_dir/../tools"
-tests_dir="$source_template_dir/../tests"
-images_dir="$source_template_dir/../images"
-docs_dir="$source_template_dir/../docs"
-assets_dir="$source_template_dir/../assets"
+tools_dir="$CODEBUILD_SRC_DIR/tools"
+tests_dir="$CODEBUILD_SRC_DIR/tests"
+images_dir="$CODEBUILD_SRC_DIR/images"
+docs_dir="$CODEBUILD_SRC_DIR/docs"
+assets_dir="$CODEBUILD_SRC_DIR/assets"
 
 echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOO"
 echo "leah debugging"
