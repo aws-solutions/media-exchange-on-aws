@@ -23,6 +23,13 @@ dist_template_dir="$dist_dir/deployment"
 source_dir="$source_template_dir/../source"
 github_dir="$source_template_dir/../.github"
 
+# specific folders for this soultion
+tools_dir="$source_template_dir/../tools"
+tests_dir="$source_template_dir/../tests"
+images_dir="$source_template_dir/../images"
+docs_dir="$source_template_dir/../docs"
+assets_dir="$source_template_dir/../assets"
+
 echo "------------------------------------------------------------------------------"
 echo "[Init] Clean old open-source folder"
 echo "------------------------------------------------------------------------------"
@@ -51,8 +58,6 @@ echo "[Packing] Build Script"
 echo "------------------------------------------------------------------------------"
 echo "cp $source_template_dir/build-s3-dist.sh $dist_template_dir"
 cp $source_template_dir/build-s3-dist.sh $dist_template_dir
-echo "cp $source_template_dir/run-unit-tests.sh $dist_template_dir"
-cp $source_template_dir/run-unit-tests.sh $dist_template_dir
 
 echo "------------------------------------------------------------------------------"
 echo "[Packing] GitHub templates"
@@ -61,10 +66,34 @@ echo "cp -r $github_dir $dist_dir"
 cp -r $github_dir $dist_dir
 
 echo "------------------------------------------------------------------------------"
-echo "[Packing] Source Folder"
+echo "[Packing] tools_dir Folder"
 echo "------------------------------------------------------------------------------"
-echo "cp -r $source_dir $dist_dir"
-cp -r $source_dir $dist_dir
+echo "cp -r $tools_dir $dist_dir"
+cp -r $tools_dir $dist_dir
+
+echo "------------------------------------------------------------------------------"
+echo "[Packing] tests_dir Folder"
+echo "------------------------------------------------------------------------------"
+echo "cp -r $tests_dir $dist_dir"
+cp -r $tests_dir $dist_dir
+
+echo "------------------------------------------------------------------------------"
+echo "[Packing] images_dir Folder"
+echo "------------------------------------------------------------------------------"
+echo "cp -r $images_dir $dist_dir"
+cp -r $images_dir $dist_dir
+
+echo "------------------------------------------------------------------------------"
+echo "[Packing] docs_dir Folder"
+echo "------------------------------------------------------------------------------"
+echo "cp -r $docs_dir $dist_dir"
+cp -r $docs_dir $dist_dir
+
+echo "------------------------------------------------------------------------------"
+echo "[Packing] assets_dir Folder"
+echo "------------------------------------------------------------------------------"
+echo "cp -r $assets_dir $dist_dir"
+cp -r $assets_dir $dist_dir
 
 echo "------------------------------------------------------------------------------"
 echo "[Packing] Files from the root level of the project"
