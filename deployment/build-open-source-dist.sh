@@ -120,8 +120,8 @@ echo "[Packing] Clean dist, node_modules and bower_components folders"
 echo "------------------------------------------------------------------------------"
 echo "find $dist_dir -iname "node_modules" -type d -exec rm -r "{}" \; 2> /dev/null"
 find $dist_dir -iname "node_modules" -type d -exec rm -r "{}" \; 2> /dev/null
-echo "find $dist_dir -iname "tests" -type d -exec rm -r "{}" \; 2> /dev/null"
-find $dist_dir -iname "tests" -type d -exec rm -r "{}" \; 2> /dev/null
+# echo "find $dist_dir -iname "tests" -type d -exec rm -r "{}" \; 2> /dev/null"
+# find $dist_dir -iname "tests" -type d -exec rm -r "{}" \; 2> /dev/null
 echo "find $dist_dir -iname "dist" -type d -exec rm -r "{}" \; 2> /dev/null"
 find $dist_dir -iname "dist" -type d -exec rm -r "{}" \; 2> /dev/null
 echo "find $dist_dir -iname "bower_components" -type d -exec rm -r "{}" \; 2> /dev/null"
