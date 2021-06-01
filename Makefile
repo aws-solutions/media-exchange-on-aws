@@ -35,7 +35,7 @@ endif
 	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-$*-$(ENV)
 
 testrole-stack:
-	sam deploy -t $(CURRENT_DIR)/tests/deployment/testrole.yaml --stack-name $(STACKPREFIX)-testrole-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --guided --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE)
+	sam deploy -t $(CURRENT_DIR)/tests/deployment/testrole.yaml --stack-name $(STACKPREFIX)-testrole-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) $(GUIDED) --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE)
 
 testrole-stack:  PARAMETER_OVERRIDES += TestAccountId=$(TEST_ACCOUNT_ID)
 
