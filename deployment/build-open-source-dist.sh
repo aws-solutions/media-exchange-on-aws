@@ -18,7 +18,6 @@ fi
 
 # Get reference for all important folders
 source_template_dir="$PWD"
-ls $source_template_dir/..
 dist_dir="$source_template_dir/open-source"
 dist_template_dir="$dist_dir/deployment"
 source_dir="$source_template_dir/../source"
@@ -30,6 +29,34 @@ tests_dir="$source_template_dir/../tests"
 images_dir="$source_template_dir/../images"
 docs_dir="$source_template_dir/../docs"
 assets_dir="$source_template_dir/../assets"
+
+echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOO"
+echo "leah debugging"
+
+echo "source_template_dir"
+echo "$source_template_dir/.."
+ls $source_template_dir/..
+
+echo "dist_dir"
+echo "ls $dist_dir"
+ls $dist_dir
+
+echo "dist_template_dir"
+echo "ls $dist_template_dir"
+ls $dist_template_dir
+
+echo "github_dir"
+echo "ls $github_dir"
+ls $github_dir
+
+echo "tools_dir"
+echo "ls $tools_dir"
+ls $tools_dir
+
+
+echo "end leah debugging"
+echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOO"
+
 
 echo "------------------------------------------------------------------------------"
 echo "[Init] Clean old open-source folder"
