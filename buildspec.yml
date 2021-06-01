@@ -32,4 +32,8 @@ artifacts:
       - CHANGELOG.md
       - buildspec.yml
       - assets/**/*
+      - docs/**/*
+      - images/**/*
+      - tests/**/*
       - tools/**/*
+      - Makefile
