@@ -112,6 +112,8 @@ echo "cp $source_template_dir/../CHANGELOG.md $dist_dir"
 cp $source_template_dir/../CHANGELOG.md $dist_dir
 echo "cp $source_template_dir/../.gitignore $dist_dir"
 cp $source_template_dir/../.gitignore $dist_dir
+echo "cp $source_template_dir/../Makefile $dist_dir"
+cp $source_template_dir/../Makefile $dist_dir
 
 echo "------------------------------------------------------------------------------"
 echo "[Packing] Clean dist, node_modules and bower_components folders"
