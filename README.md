@@ -10,7 +10,7 @@ In the standard deployment model, assets are stored in Media Exchange only for t
 
 This is a seamless addition to the current workflow for your customers who use S3 as part of their Media Supply Chain. It uses standard S3 interface which means most of the tools and services that you are using today, will continue to work. This Solution can also integrate with native AWS file transfer offerings like data sync, snow* devices to help transfer assets between physical locations for customers who do not currently integrate S3 into the media supply chain. You can also use this to move content across large geographical distances by leveraging AWS global infrastructure.
 
-Please see [FAQs](docs/gaqs.md) for more details.
+Please see [FAQs](docs/faqs.md) for more details.
 
 ## Architecture
 
