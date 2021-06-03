@@ -49,12 +49,15 @@ Outputs:
   FixtyAPIURL:
     Description: "Fixity endpoint URL"
     Value: !Sub "https://${FixityApi}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/run"
-  FixtyDriverFunctionName:
+  FixtyDriverFunctionArn:
     Description: "Fixity Driver Function Arn"
     Value: !GetAtt DriverFunction.Arn
-  FixtyS3BatchIAMRole:
+  FixtyS3BatchIAMRoleArn:
     Description: "Fixity IAM Role to use with S3 Batch"
     Value: !GetAtt S3BatchRole.Arn
+  FlowLogBucketName:
+    Description: "Flow log Bucket Name"
+    Value: !Ref FlowLogBucket
 
 Globals:
   Function:
@@ -423,6 +426,13 @@ Resources:
   FixityApi:
     Type: AWS::Serverless::Api
     Properties:
+      Auth:
+        DefaultAuthorizer: AWS_IAM
+      Cors:
+        AllowMethods: "'POST'"
+        AllowHeaders: "'X-Forwarded-For'"
+        AllowOrigin: "'*'"
+        MaxAge: "'1200'"
       StageName:
         Ref: Environment
       EndpointConfiguration:

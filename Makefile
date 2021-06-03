@@ -101,15 +101,23 @@ endif
 
 
 testclean:
-	- @aws cloudformation delete-stack --stack-name $(STACKPREFIX)-provision-$(ENV) --region $(AWS_REGION)
-	- @aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-provision-$(ENV) --region $(AWS_REGION)
+	- aws cloudformation delete-stack --stack-name $(STACKPREFIX)-provision-$(ENV) --region $(AWS_REGION)
+	- aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-provision-$(ENV) --region $(AWS_REGION)
 
 clean: testclean
-	@aws cloudformation delete-stack --stack-name $(STACKPREFIX)-selfprovision-$(ENV) --region $(AWS_REGION)
-	@aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-selfprovision-$(ENV) --region $(AWS_REGION)
+	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-selfprovision-$(ENV) --region $(AWS_REGION)
+	aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-selfprovision-$(ENV) --region $(AWS_REGION)
 
-	@aws cloudformation delete-stack --stack-name $(STACKPREFIX)-servicecatalog-stack-$(ENV) --region $(AWS_REGION)
-	@aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-servicecatalog-stack-$(ENV) --region $(AWS_REGION)
+	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-servicecatalog-stack-$(ENV) --region $(AWS_REGION)
+	aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-servicecatalog-stack-$(ENV) --region $(AWS_REGION)
 
+	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-agreement-$(ENV) --region $(AWS_REGION)
+	aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-agreement-$(ENV) --region $(AWS_REGION)
+
+	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-publisher-$(ENV) --region $(AWS_REGION)
+	aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-publisher-$(ENV) --region $(AWS_REGION)
+
+	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-subscriber-$(ENV) --region $(AWS_REGION)
+	aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-subscriber-$(ENV) --region $(AWS_REGION)
 
 .PHONY: install provision test clean testclean quickstart quickclean

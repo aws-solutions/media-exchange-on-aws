@@ -1,13 +1,9 @@
 # MediaSync
 
-There are a number of tools that one can use to move files between S3 buckets. This includes S3 API, SDK, CLI and higher level services like S3 Batch Jobs. However, it is non-trivial to move large (100s of GBs) files, thousands of files or (worse) thousands of large files using these tools. MediaSync helps mitigate that challenge by scaling the copy process to thousands of files. It can handle file sizes upto 5TB, is resilient and cost effective and runs multiple transfers in parallel. And it can be configured to achieve very high per file throughput.
+This optional utility moves assets between Amazon S3 buckets. When you deploy this, it enables a new toolset in the AWS Management Console that helps move large (100s of GBs) files or hundreds of thousands of small files. The MediaSync utility scales up by running the copy operation in parallel to thousands of concurrent processes. It can handle file sizes up to 5 TB, is resilient, and cost effective. The utility uses S3 server-side copy to move assets between buckets and AWS Fargate Spot for its compute environment.
 
-This can also be used for cross region transfers.  
+![Architecture](images/mediasync.jpeg)
 
-If MediaSync is used in conjunction with MediaExchange (not an absolute requirement), it can encapsulate publisher and subscriber configuration(s) at the deployment time.
-
-## Getting Started
-It is deployed on publisher or subscriber's account. It is configured slightly differently for publishers and subscriber workflows.
 
 ## Prerequisites
 * GNU make
@@ -21,23 +17,28 @@ It is deployed on publisher or subscriber's account. It is configured slightly d
 * (optional) Build and publish custom container
   * At the command prompt type `make publish`. This publishes the custom container to a private ECR repository.
   * follow the on-screen instructions for configuration parameters.
+
+![](images/repo.gif)
+
 * Deploy MediaSync
   * At the command prompt type `make install`.
   * follow the on-screen instructions for configuration parameters.
     * If you have built a custom image in the previous step, specify that in the ImageName parameter. Otherwise leave default as amazon/aws-cli.
-    * Select permissions as ReadOnly if deploying for publisher. It requires you to specify subscriber cannoical user id.
+    * Select permissions as ReadOnly if deploying for publisher. It requires you to specify subscriber Cannoical user id.
     * Select permissions as Full if deploying for subscriber or other bucket to bucket transfers.
     * Specify the destination bucket name.
 
+![](images/install.gif)
+
 ### Copying Media Assets between S3 buckets.
 
-MediaSync uses S3 batch operations as frontend. S3 Batch operations works with a CSV formatted inventory list file. You can use s3 [inventory reports](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html) if you already have one. Otherwise, you can generate an inventory list by utilizing the included scripts/generate_inventory.sh script. Please note that the script works for hundreds of files. If you have thousands of objects in the bucket, inventory reports are the way to go.
+MediaSync uses S3 batch operations . S3 Batch operations works with a CSV formatted inventory list file. You can use s3 [inventory reports](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html) if you already have one. Otherwise, you can generate an inventory list by utilizing the included scripts/generate_inventory.sh script. Please note that the script works best if there are less than one hundred thousand objects in the source bucket. If you have more objects in the bucket, inventory reports are the way to go.
 
-S3 Batch Jobs invoke a lambda function that performs a few basic checks before handing off the actual copy operation to a script. This script runs in containers in AWS Batch and Fargate. The copy operation itself uses S3 server side copy, so the containers themselves do not handle the actual bytes. If the object is small (<500MB) the copy happens in lambda. This model takes advantage of the low cost SPOT pricing in FARGATE. This also mitigates the potential duration limits in lambda.
+S3 Batch Jobs invoke a lambda function that performs a few basic checks before handing off the actual copy operation to a script. This script runs in containers in AWS Batch and Fargate. The copy operation itself uses S3 server side copy, so the containers themselves do not handle the actual bytes. If the object is small (<500MB) the copy happens in lambda.
 
-S3 Batch Jobs works like an orchestrator. The lambdas not only ensures the basic permission checks but also works as a protection mechanism for S3 throttles.
+#### Performance (same region)
 
-#### Performance (S3->S3 same region)
+Single object performance is
 
 * 24 seconds for 1 GB
 * 32 seconds for 5 GB
@@ -47,8 +48,10 @@ S3 Batch Jobs works like an orchestrator. The lambdas not only ensures the basic
 * 11 minutes for 1TB
 * 27 minutes for 5TB
 
+It runs many of these transfers in parallel. It takes about three hours to copy 1PB of assets between two buckets in the same region.
 
-#### Start a Transfer
+
+#### Transfer
 
 1. Login into AWS account and navigate to S3.
 1. Click on batch operations on the left menu.
@@ -67,11 +70,8 @@ S3 Batch Jobs works like an orchestrator. The lambdas not only ensures the basic
 1. Once the Job is created, it goes from new to awaiting user confirmation state. Click on run job when ready.
 1. The S3 Batch job invokes the lambda function that drops copy jobs into an ECS batch job queue. Tasks from this queue are executed in FARGATE.  
 
-#### Verify
+There is a helper script available in scripts/run_copy_job.sh that automates all of these steps. The script takes inventory bucket name and key as inputs.
 
-1. Check if the S3 Batch Job was complete.
-1. Check if there are any pending jobs in the JobQueue and if all the Jobs were successful.
-1. Once you have verified that the job was successful, check the destination S3 buckets.
 
 ### Pricing
 
@@ -89,16 +89,14 @@ S3 Batch Jobs works like an orchestrator. The lambdas not only ensures the basic
 
 * Navigate to MediaExchnageOnAWS/tools/mediasync directory.
 * Remove MediaSync
+  * Navigate to MediaExchnageOnAWS/tools/mediasync directory.
+  * At the command prompt type `make outputs`. And make a note of the value of _FlowLogBucketName_.
   * At the command prompt type `make clean`.
-  * This process leaves a VPC Flow Log Bucket. This bucket needs to be cleaned up manually.
-    * Find the bucket name(s) with the following command.
+  * This process leaves a VPC Flow Log Bucket. This bucket needs to be cleaned up manually. You noted _FlowLogBucketName_ in the first step.
+  * Run the following command to remove the bucket and its contents.
     ```
-    $ aws s3 ls | grep -i mediaexchange-tools-mediasync-
-    ```
-    * for each of these bucket names, run the following command.
-    ```
-    $ aws s3 rm s3://<bucket name> --recursive
-    $ aws s3 rb s3://<bucket name>
+    $ aws s3 rm s3://<log bucket name> --recursive
+    $ aws s3 rb s3://<log bucket name>
     ```
 * (Optional) Remove custom container images, if you choose to use them.
   *  At the command prompt type `make clean-repository mediasync-repository-delete-stack`.

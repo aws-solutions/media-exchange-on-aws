@@ -14,215 +14,42 @@ Please see [FAQs](docs/gaqs.md) for more details.
 
 ## Architecture
 
-![](assets/Architecture.png)
+![Architecture](images/main.png)
 
-## Included Tools & Utilities
+MediaExchnageOnAWS solution helps build a transfer architecture that puts a shared S3 bucket between publisher and subscribers. In addition, it enables S3 Events from the shared bucket to be routed to the publishers and subscribers over EventBridge and SNS. The shared S3 bucket at the core of the architecture is configured with bucket policy so that the publisher account (or a designated role in publisher account) has read/write permissions and the subscriber account (or a designated role in the subscriber account) has permissions to read from this bucket. This model allows assets to be transferred from publisher to subscriber without having to share a credential. The assets in flight are secured using AWS security best practices. You can read more about security [here](docs/security.md).
 
-### Fixity
-Compute Checksums at scale. See [here](tools/fixity)
+The solution is designed to help you build this target transfer architecture. You can manage an arbitrary number of publishers, subscribers and their relationships out of the same deployment. When you deploy the solution, it enables a set of products in service catalog so that a media exchange administrator can onboard new publishers and subscribers and establish a relationship between them enabling the transfer architecture shown in the diagram. The base system gets deployed in the dedicated account, but other optional Components can be deployed in the publisher and subscriber accounts further simplifying the asset transfer workflow.
 
-### MediaSync
-Transfer assets between s3 buckets. See [here](tools/mediasync)
+## Solution Components
+
+### Onboarding Tool
+
+![Onboarding tool](images/sc.jpeg)
+
+When you deploy the Media Exchange on AWS solution, it adds deployable products on AWS Service Catalog. AWS Service Catalog deploys infrastructure for a number of publisher and subscriber transfers by deploying a unique, isolated set of resources for each of the transfer relationships.
 
 ### AutoIngest
-Ingest assets automatically in subscriber's bucket. See [here](tools/autoingest)
+
+Subscribers to a MediaExchange bucket have the option to automatically ingest using this component. It automatically moves assets shared through Media Exchange into a subscriber-owned S3 bucket. This optional component is deployed in the subscriber’s account. See [here](tools/autoingest)
 
 ### AutoAcl
-Set permissions automatically. See [here](tools/autoacl)
 
-## Setup Requirements
-You will need three AWS accounts to deploy this effectively (a) publisher, (b) subscriber and (c) MediaExchange. The CloudFormation templates are deployed in (c) MediaExchange account. It is also possible to install in a single account for testing. See the developer guide for instructions.
+This optional utility is deployed in the publisher’s account so that existing Amazon S3 workflows can adopt to MediaExchange-based transfer workflows without making code changes. The existing workflows treat the MediaExchange S3 bucket like any other S3 bucket with write permissions. The Auto ACL utility automates permissions and asset sharing from the MediaExchange S3 bucket so that objects copied into the MediaExchange S3 bucket have their permissions set for the target subscriber.  See [here](tools/autoacl)
 
-## Getting Started
+### MediaSync
 
-### Install
+This optional utility moves assets between Amazon S3 buckets. When you deploy the solution, it enables a new toolset in the AWS Management Console that helps move large (100s of GBs) files or hundreds of thousands of small files. The MediaSync utility scales up by running the copy operation in parallel to thousands of concurrent processes. It can handle file sizes up to 5 TB, is resilient, and cost effective. The utility uses S3 server-side copy to move assets between buckets and AWS Fargate Spot for its compute environment. See [here](tools/mediasync)
 
-* Login into MediaExchange account and navigate to S3.
-* You will need to use a S3 Bucket for storing the packaged CloudFormation templates. Please create a bucket if needed. Make sure to select a region where you are planning to deploy MediaExchange.
-* Create a folder structure for media-exchange-on-aws/v1.0.0/.
-* Copy all the template files (.yaml) under deployment into this folder.
-* Navigate to services > CloudFormation. Note the region on the top right corner.
-  1. Click on Create Stack.
-  1. Select "Template is Ready" (default option) in prepare template section and select "Upload a template file" in the specify template section.
-  1. Click "choose file" to select media-exchange-on-aws.yaml from media-exchange-base/deployment/ folder.
-  1. Click next
-  1. Enter a name of the stack eg. mediaexchange-poc.
-  1. Enter the name of the bucket where CloudFormation templates were copied.
-  1. Click next
-  1. Accept the capabilities and transforms by checking the boxes and click on create stack.
-  1. Wait for the the status to change to create_complete.
-  1. Navigate to the outputs tab of the stack and make a note of the ConsoleUrl parameter. You will be using that URL to add publishers and subscribers in the next step.
+### Fixity
 
-### Uninstall
+This optional standalone utility computes checksums at scale by publishers (at source) or by subscribers (at destination) to ensure file integrity. Often checksum computation is required as part of contractual agreements. The Fixity utility uses AWS Batch and Amazon Elastic Compute Cloud (Amazon EC2) Spot Instances to orchestrate the infrastructure. There are no servers to manage. Moreover, the utility calculates checksums by streaming the objects directly from Amazon S3, so that there is no dependency on local storage. In the case of larger files, it can achieve 85% of the theoretical maximum speed - roughly 550 MB/s for md5 on an Intel Skylake/Cascade Lake CPU. See [here](tools/fixity)
 
-* Sign in to the AWS CloudFormation console.
-* Navigate to the outputs tab of the stack mediaexchange-servicecatalog. Navigate to the URL in the ConsoleUrl parameter.
-  * Using the service catalog interface, terminate the provisioned instances of the agreement products.
-  * Using the service catalog interface, terminate the provisioned instances of the subscriber products.
-  * Using the service catalog interface, terminate the provisioned instances of the publisher products.
-* Sign in as administrator into AWS CloudFormation console.
-  * Delete the mediaexchange-servicecatalog stack.
-  * After delete is complete, navigate to Amazon s3 Console.
-  * cleanup all s3 buckets with "mediaexchange" in their names by following instructions from [here](ttps://docs.aws.amazon.com/AmazonS3/latest/userguide/RemDelMarker.html)
-
-## User Guide
-
-1. [Add a publisher](#Add-a-publisher)
-1. [Add a subscriber](#Add-a-subscriber)
-1. [Setup transfer agreement](#Setup-transfer-agreement)
-1. [Share assets](#Share-assets-from-publisher's-account)
-1. [Receive assets](#Receive-assets-in-subscriber's-account)
-
-### Add a publisher
-
-1. Login into MediaExchange account using the ConsoleUrl to launch ServiceCatalog portfolio manager. This URL is available in the stack outputs section of the MediaExchange-On-AWS CloudFormation stack.
-1. The page should list out three products from AWS Solutions Library. Use _publisher_ to onboard an account that can share assets through MediaExchange
-1. Click on _publisher_ and then click launch product button.
-1. Enter a product name eg. mediaexchange-poc-publisher.
-1. Enter a name for publisher. This is used for identifying the publisher in the MediaExchange and will be used to link up to a subscriber.
-1. Enter the AWS Account Id of the publisher account. See [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/console_account-alias.html#FindingYourAWSId) to find account id.
-1. (Optional) add tags to resources by specifying them as key-value pairs.
-1. Clink launch product.
-1. Wait for service catalog to finish deploying the product.
-
-### Add a subscriber
-
-1. Login into MediaExchange account using the ConsoleUrl to launch ServiceCatalog portfolio manager. This URL is available in the stack outputs section of the MediaExchange CloudFormation stack.
-1. The page should list out three products from AWS Solutions Library. Use _subscriber_ to onboard an account that can receive assets through MediaExchange
-1. On the product list screen, click on _subscriber_ and then click launch product button.
-1. Enter a product name eg. mediaexchange-poc-subscriber.
-1. Enter a name for subscriber. This is used for identifying the publisher in the MediaExchange and will be used to link up to a publisher.
-1. Enter the AWS Account Id of the subscriber account. See [here](https://docs.aws.amazon.com/IAM/latest/UserGuide/console_account-alias.html#FindingYourAWSId) to find account id.
-1. Enter the Canonical User ID of the subscriber. See [here](https://docs.aws.amazon.com/general/latest/gr/acct-identifiers.html#FindingCanonicalId) to find Canonical Id.
-1. Enter an email address for subscriber. This email is used to send asset availability notifications.
-1. (Optional) add tags to resources by specifying them as key-value pairs.
-1. Clink launch product.
-1. Wait for service catalog to finish deploying the product.
-
-### Setup transfer agreement
-
-1. Login into MediaExchange account using the ConsoleUrl to launch ServiceCatalog portfolio manager. This URL is available in the stack outputs section of the MediaExchange CloudFormation stack.
-1. The page should list out three products from AWS Solutions Library. Use _Transfer agreement_ to link a publisher and subscriber.
-1. On the product list screen, click on _transfer agreement_ and then click launch product button.
-1. Enter a stack name eg. mediaexchange-poc-ta.
-1. Enter names for publisher and subscriber.
-1. (Optional) add tags to resources by specifying them as key-value pairs.
-1. Clink launch product.
-1. Wait for service catalog to finish deploying the product.
-1. The outputs section of the provisioned product has the information needed by the publishers and subscribers to complete a transfer. Please share _ConsoleUrl_ and _PublisherOnboardingSummary_ to the publisher and _ConsoleUrl_ and _SubscriberOnboardingSummary_ to the subscribers over email.
-
-### Share assets from publisher's account
-
-* Login into publisher account using the _ConsoleUrl_ from onboarding information.
-* Upload an asset by clicking the "upload" button.
-  * Click Add Files, and select an asset from disk.
-  * Expand Additional upload options
-  * Click Add Account button next to "Access for other AWS account".
-  * Select standard storage class.
-  * In the Access control list (ACL) section, next to "Access for other AWS accounts", click add grantee
-  * In the textbox, enter the value of SUBSCRIBER_CANONICAL_USER_ID from _PublisherOnboardingSummary_
-  * Check the "read" box. Click save. This will allow the subscriber account to have read access.
-  * Click upload.
-
-### Receive assets in subscriber's account
-
-* Login into subscriber account using the _ConsoleUrl_ from onboarding information.
-* You will see a list of assets shared with you.
-* Select assets and click the download button to download.
-
-## Notifications  
-
-The subscribers can receive event notifications via email from MediaExchange every time an asset is shared. The email address is configured as part of the subscriber onboarding process. Email notifications can be enabled or disabled for every transfer agreement, configured at the deployment time.  
+## Usage
+You will need three AWS accounts to deploy this effectively (a) publisher, (b) subscriber and (c) MediaExchange. The CloudFormation templates are deployed in (c) MediaExchange account. It is also possible to install in a single account for testing. See the implementation guide for instructions.
 
 
-## Developer Guide
-
-1. [Prerequisites](#Prerequisites)
-1. [install](#Quick-start)
-1. [Share assets](#Share-assets)
-1. [Receive assets](#Receive-assets)
-1. [Running tests](#Running-tests)
-1. [Single account deployment](#Single-account-deployment)
-1. [cleanup](#)
-
-### Prerequisites
-
-* GNU make
-* Install docker desktop
-* Install and configure [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html)
-* Install [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
-
-#### Install
-
-#### Update
-
-#### Uninstall
-
-#### Running tests
-
-### Developer Mode
-
-This method bypasses the service catalog setup to deploy a single publisher, subscriber and mediaexchange. This is primarily intended for developers to test this out from command line.  
-
-* Initialize a shell with the necessary credentials for publisher account. You can do this by adding AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN as environment variables or by selecting the appropriate profile by adding AWS_PROFILE environment variable.
-  1. Navigate to MediaExchnageOnAWS (root) directory.
-  1. `make testrole-stack`
-  1. Enter the mediaexchange ACCOUNT_ID for parameter TestAccountId.
-  1. Enter 'n' for "Save arguments to configuration file" (Y/n)
-
-* Initialize a shell with the necessary credentials for subscriber account.
-  1. Navigate to MediaExchnageOnAWS (root) directory.
-  1. `make testrole-stack`
-  1. Enter the mediaexchange ACCOUNT_ID for parameter TestAccountId.
-  1. Enter 'n' for "Save arguments to configuration file" (Y/n)
-
-* Initialize a shell with the necessary credentials for MediaExchange account.
-  1. Navigate to MediaExchnageOnAWS (root) directory.
-  1. `make quickstart`
-  1. Follow the instructions to provide publisher and subscriber information. The default values are printed out for the mediaexchange account id.  
-
-### Share assets
-
-```
-$ aws s3 cp <filename> s3://<bucket name>/ --grants read=id=<subscriber canonical user id>
-
-```
-
-### Receive assets
-
-```
-$ aws s3 cp s3://<bucket name>/<object> <filename>
-
-```
-
-### Running tests
-
-The tests are run from the mediaexchange account. The test script assumes a role in the publisher and subscriber accounts to run the tests.
-
-* Initialize a shell with the necessary credentials for MediaExchange account.
-  1. Navigate to MediaExchnageOnAWS (root) directory.
-  1. `make test`
-
-### Single account deployment
-
-It is possible to simulate a publisher, subscriber and mediaexchange in a single account. This is a simplified setup for test automation and situations where you do not have access to more than one account. Unless you know what you are doing, generally not recommended for production setup.
-
-
-* Initialize a shell with the necessary credentials for MediaExchange account.
-  1. Navigate to MediaExchnageOnAWS (root) directory.
-  1. `make localinstall`
-
-It will deploy a publisher, subscriber and mediaexchange in the current account and run the tests.
-
-### Cleanup
-
-* Initialize a shell with the necessary credentials to the account where you have deployed this. You can do this by adding AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN as environment variables or by selecting the appropriate profile by adding AWS_PROFILE environment variable.
-
-1. Navigate to MediaExchnageOnAWS (root) directory.
-  * At the command prompt type `make clean`.
-  * This process leaves the mediaexchange and a s3 access logs Bucket. This bucket needs to be cleaned up manually.
-    * Find the bucket name(s) with mediaexchange and delete their contents.
-    * Verioned buckets that fail to delete from the command above, will require additional steps to cleanup. please see the instructions [here](https://docs.aws.amazon.com/AmazonS3/latest/userguide/RemDelMarker.html)
+## Developers
+Please see the developer guide [here](docs/developer.md)
 
 ## License
 This project is licensed under the Apache-2.0 License.

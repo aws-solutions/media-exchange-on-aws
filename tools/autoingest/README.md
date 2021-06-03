@@ -1,10 +1,9 @@
 # AutoIngest
 
-This is a utility to automatically copy assets from MediaExchange bucket to another bucket in subscriber account. A lambda function is hooked up to the SNS notification through a buffering SQS queue. This lambda copies the object specified in the notification to another bucket. The lambda itself uses multipart copy, so even for a large file the 900s timeout should be good for 4-5TB objects.
+Subscribers to a MediaExchange bucket have the option to automatically ingest using this component. It automatically moves assets shared through Media Exchange into a subscriber-owned S3 bucket. This optional component is deployed in the subscriber’s account.
 
+![Architecture](images/autoingest.jpeg)
 
-## Getting Started
-It is deployed on subscriber's account.
 
 ## Prerequisites
 * GNU make

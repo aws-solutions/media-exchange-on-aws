@@ -143,7 +143,10 @@ Resources:
               -
                 StorageClass: GLACIER
                 TransitionInDays: 90
-
+      Tags:
+        -
+          Key: createdby
+          Value: __SOLUTION_NAME__/__VERSION__
 
   ExchangeLogBucketPolicy:
     Type: AWS::S3::BucketPolicy

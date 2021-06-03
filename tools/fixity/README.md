@@ -1,43 +1,15 @@
 # Fixity
 
-AWS customers often need to compute checksums for the objects in S3. This is often required by contractual agreements i.e the customers deliver checksums alongside the file deliverables. The media industry have been using MD5, SHA1 and more recently XXHASH for checksums. A common problem with these algorithms (MD* and SHA*) is that they can not be parallelized effectively in a distributed compute environment. They have to be computed serially by sequentially reading the file.
-
-If you have a need to calculate checksums at scale, this utility helps you run checksums at scale by running them in parallel. It uses AWS Batch and EC2 SPOT instances to orchestrate the infrastructure. There are no servers to manage. Moreover, it calculates checksums by streaming the objects directly from S3, so that there is no dependency on local storage.  
-
-It is fast! In case of larger files, it can achieve 85% of the theoretical maximum speed which is roughly 550MB/s for md5 on Intel Skylake/Cascade Lake CPU. sha1 is slower, and xxhash can go three times as fast.
+This optional standalone utility computes checksums at scale by publishers (at source) or by subscribers (at destination) to ensure file integrity. Often checksum computation is required as part of contractual agreements. The Fixity utility uses AWS Batch and Amazon Elastic Compute Cloud (Amazon EC2) Spot Instances to orchestrate the infrastructure. There are no servers to manage. Moreover, the utility calculates checksums by streaming the objects directly from Amazon S3, so that there is no dependency on local storage. In the case of larger files, it can achieve 85% of the theoretical maximum speed - roughly 550 MB/s for md5 on an Intel Skylake/Cascade Lake CPU
 
 ## Architecture
 This utility reads the objects from S3 and computes md5, sha1, xxhash and xx64hash. The resultant checksums are stored as Tags on the source S3 objects. This process is executed in containers managed by AWS Batch.
 
-## Getting Started
+![Architecture](images/fixity.jpeg)
 
-## Prerequisites
-* GNU make
-* Install docker desktop
-* Install and configure [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html)
-* Install [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
+### Performance
 
-### Install
-* Initialize a shell with the necessary credentials to deploy to target account. You can do this by adding AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN as environment variables or by selecting the appropriate profile by adding AWS_PROFILE environment variable.
-* Deploy Fixity
-  * At the command prompt type `make install`.
-  * follow the on-screen instructions for configuration parameters.
-
-### Calculate checksums of Media Assets in S3 buckets.
-
-It offers two ways to initiate the checksums.
-
-In the first method, it uses S3 batch operations as frontend. S3 Batch operations works with a CSV formatted inventory list file. You can use s3 [inventory reports](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html) if you already have one. Otherwise, you can generate an inventory list by utilizing the included scripts/generate_inventory.sh script. Please note that the script works for hundreds of files. If you have thousands of objects in the bucket, inventory reports are the way to go. S3 Batch Jobs invoke a lambda function that performs a few basic checks before handing off the actual fixity operation to a script. This script runs in containers in AWS Batch and Fargate for files smaller than 10GB. If the files are larger than 10GB it runs on Ec2 SPOT which opens up use of high performance and larger instance types. It produces the following checksums, as store them as custom tags with the s3 objects.
-
-* md5sum
-* sha1sum
-* xxhsum
-
-This process works well if you have lots of objects that needs checksumming.
-
-There is also an API that can be used to invoke the checksumming process one object at a time. The API takes a bucketname and key as parameters. It uses the same underlying AWS Batch infrastructure to compute the checksums.
-
-#### Performance
+Single file:
 
 * 16 seconds for 1 GB
 * 23 seconds for 5 GB
@@ -49,7 +21,20 @@ There is also an API that can be used to invoke the checksumming process one obj
 
 An even bigger instance type does not yield to better performance, mainly due to the limitations of the hashing algorithms. These numbers are ~85% of the theoretical maximum on the respective CPU types.
 
-#### Start
+### Prerequisites
+* GNU make
+* Install docker desktop
+* Install and configure [AWS CLI](https://docs.aws.amazon.com/cli/latest/userguide/cli-chap-install.html)
+* Install [AWS SAM CLI](https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/serverless-sam-cli-install.html)
+
+### Install
+* Initialize a shell with the necessary credentials to deploy to target account. You can do this by adding AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN as environment variables or by selecting the appropriate profile by adding AWS_PROFILE environment variable.
+* At the command prompt type `make install`.
+* follow the on-screen instructions for configuration parameters.
+
+![Image of install](images/install.gif)
+
+## Usage
 
 1. Login into AWS account and navigate to S3.
 1. Click on batch operations on the left menu.
@@ -67,6 +52,24 @@ An even bigger instance type does not yield to better performance, mainly due to
   1. Review the Job in the last page and click create job.
 1. Once the Job is created, it goes from new to awaiting user confirmation state. Click on run job when ready.
 1. The S3 Batch job invokes the lambda function that drops copy jobs into an ECS batch job queue. Tasks from this queue are executed in FARGATE.  
+
+
+### Calculate checksums of Media Assets in S3 buckets.
+
+It offers two ways to initiate the checksums.
+
+In the first method, it uses S3 batch operations as frontend. S3 Batch operations works with a CSV formatted inventory list file. You can use s3 [inventory reports](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html) if you already have one. Otherwise, you can generate an inventory list by utilizing the included scripts/generate_inventory.sh script. Please note that the script works for hundreds of files. If you have thousands of objects in the bucket, inventory reports are the way to go. S3 Batch Jobs invoke a lambda function that performs a few basic checks before handing off the actual fixity operation to a script. This script runs in containers in AWS Batch and Fargate for files smaller than 10GB. If the files are larger than 10GB it runs on Ec2 SPOT which opens up use of high performance and larger instance types. It produces the following checksums, as store them as custom tags with the s3 objects.
+
+* md5sum
+* sha1sum
+* xxhsum
+
+This process works well if you have lots of objects that needs checksumming.
+
+There is also an API that can be used to invoke the checksumming process one object at a time. The API takes a bucketname and key as parameters. It uses the same underlying AWS Batch infrastructure to compute the checksums.
+
+
+
 
 #### Verify
 
@@ -88,14 +91,11 @@ An even bigger instance type does not yield to better performance, mainly due to
 * Initialize a shell with the necessary credentials to the account where you have deployed this. You can do this by adding AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN as environment variables or by selecting the appropriate profile by adding AWS_PROFILE environment variable.
 
 * Navigate to MediaExchnageOnAWS/tools/fixity directory.
+* At the command prompt type `make outputs`. And make a note of the value of _FlowLogBucketName_.
 * At the command prompt type `make clean`.
-* This process leaves a VPC Flow Log Bucket. This bucket needs to be cleaned up manually.
-  * Find the bucket name(s) with the following command.
+* This process leaves a VPC Flow Log Bucket. This bucket needs to be cleaned up manually. You noted _FlowLogBucketName_ in the first step.
+* Run the following command to remove the bucket and its contents.
   ```
-  $ aws s3 ls | grep -i mediaexchange-tools-fixity-
-  ```
-  * for each of these bucket names, run the following command.
-  ```
-  $ aws s3 rm s3://<bucket name> --recursive
-  $ aws s3 rb s3://<bucket name>
+  $ aws s3 rm s3://<log bucket name> --recursive
+  $ aws s3 rb s3://<log bucket name>
   ```

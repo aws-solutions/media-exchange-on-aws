@@ -103,6 +103,14 @@ Resources:
 
   CFNRole:
     Type: 'AWS::IAM::Role'
+    Metadata:
+      cfn_nag:
+        rules_to_suppress:
+          - id: W11
+            reason: "(W11) IAM role should not allow * resource on its permissions policy: Many of the resources created/updated/deleted by this role is created on the fly, as part of the normal usage ot the solution. So, the names are not known at the deployment time."
+          - id: W28
+            reason: "(W28) Resource found with an explicit name, this disallows updates that require replacement of this resource"
+
     Properties:
       RoleName:
         Fn::Sub: mediaexchange-${AWS::Region}-${Environment}-cfn-deploy
@@ -179,6 +187,8 @@ Resources:
         rules_to_suppress:
           - id: W11
             reason: "(W11) IAM role should not allow * resource on its permissions policy: Many of the resources created/updated/deleted by this role is created on the fly, as part of the normal usage ot the solution. So, the names are not known at the deployment time."
+          - id: W28
+            reason: "(W28) Resource found with an explicit name, this disallows updates that require replacement of this resource"
 
     Properties:
       RoleName:
