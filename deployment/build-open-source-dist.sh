@@ -23,41 +23,6 @@ dist_template_dir="$dist_dir/deployment"
 source_dir="$source_template_dir/../source"
 github_dir="$source_template_dir/../.github"
 
-# specific folders for this soultion
-tools_dir="$CODEBUILD_SRC_DIR/tools"
-tests_dir="$CODEBUILD_SRC_DIR/tests"
-images_dir="$CODEBUILD_SRC_DIR/images"
-docs_dir="$CODEBUILD_SRC_DIR/docs"
-assets_dir="$CODEBUILD_SRC_DIR/assets"
-
-echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOO"
-echo "leah debugging"
-
-echo "source_template_dir"
-echo "$source_template_dir/.."
-ls $source_template_dir/..
-
-echo "dist_dir"
-echo "ls $dist_dir"
-ls $dist_dir
-
-echo "dist_template_dir"
-echo "ls $dist_template_dir"
-ls $dist_template_dir
-
-echo "github_dir"
-echo "ls $github_dir"
-ls $github_dir
-
-echo "tools_dir"
-echo "ls $tools_dir"
-ls $tools_dir
-
-
-echo "end leah debugging"
-echo "OOOOOOOOOOOOOOOOOOOOOOOOOOOO"
-
-
 echo "------------------------------------------------------------------------------"
 echo "[Init] Clean old open-source folder"
 echo "------------------------------------------------------------------------------"
@@ -86,6 +51,8 @@ echo "[Packing] Build Script"
 echo "------------------------------------------------------------------------------"
 echo "cp $source_template_dir/build-s3-dist.sh $dist_template_dir"
 cp $source_template_dir/build-s3-dist.sh $dist_template_dir
+echo "cp $source_template_dir/run-unit-tests.sh $dist_template_dir"
+cp $source_template_dir/run-unit-tests.sh $dist_template_dir
 
 echo "------------------------------------------------------------------------------"
 echo "[Packing] GitHub templates"
@@ -94,34 +61,10 @@ echo "cp -r $github_dir $dist_dir"
 cp -r $github_dir $dist_dir
 
 echo "------------------------------------------------------------------------------"
-echo "[Packing] tools_dir Folder"
+echo "[Packing] Source Folder"
 echo "------------------------------------------------------------------------------"
-echo "cp -r $tools_dir $dist_dir"
-cp -r $tools_dir $dist_dir
-
-echo "------------------------------------------------------------------------------"
-echo "[Packing] tests_dir Folder"
-echo "------------------------------------------------------------------------------"
-echo "cp -r $tests_dir $dist_dir"
-cp -r $tests_dir $dist_dir
-
-echo "------------------------------------------------------------------------------"
-echo "[Packing] images_dir Folder"
-echo "------------------------------------------------------------------------------"
-echo "cp -r $images_dir $dist_dir"
-cp -r $images_dir $dist_dir
-
-echo "------------------------------------------------------------------------------"
-echo "[Packing] docs_dir Folder"
-echo "------------------------------------------------------------------------------"
-echo "cp -r $docs_dir $dist_dir"
-cp -r $docs_dir $dist_dir
-
-echo "------------------------------------------------------------------------------"
-echo "[Packing] assets_dir Folder"
-echo "------------------------------------------------------------------------------"
-echo "cp -r $assets_dir $dist_dir"
-cp -r $assets_dir $dist_dir
+echo "cp -r $source_dir $dist_dir"
+cp -r $source_dir $dist_dir
 
 echo "------------------------------------------------------------------------------"
 echo "[Packing] Files from the root level of the project"
@@ -140,22 +83,20 @@ echo "cp $source_template_dir/../CHANGELOG.md $dist_dir"
 cp $source_template_dir/../CHANGELOG.md $dist_dir
 echo "cp $source_template_dir/../.gitignore $dist_dir"
 cp $source_template_dir/../.gitignore $dist_dir
-echo "cp $source_template_dir/../Makefile $dist_dir"
-cp $source_template_dir/../Makefile $dist_dir
 
-# echo "------------------------------------------------------------------------------"
-# echo "[Packing] Clean dist, node_modules and bower_components folders"
-# echo "------------------------------------------------------------------------------"
-# echo "find $dist_dir -iname "node_modules" -type d -exec rm -r "{}" \; 2> /dev/null"
-# find $dist_dir -iname "node_modules" -type d -exec rm -r "{}" \; 2> /dev/null
-# # echo "find $dist_dir -iname "tests" -type d -exec rm -r "{}" \; 2> /dev/null"
-# # find $dist_dir -iname "tests" -type d -exec rm -r "{}" \; 2> /dev/null
-# echo "find $dist_dir -iname "dist" -type d -exec rm -r "{}" \; 2> /dev/null"
-# find $dist_dir -iname "dist" -type d -exec rm -r "{}" \; 2> /dev/null
-# echo "find $dist_dir -iname "bower_components" -type d -exec rm -r "{}" \; 2> /dev/null"
-# find $dist_dir -iname "bower_components" -type d -exec rm -r "{}" \; 2> /dev/null
-# echo "find ../ -type f -name 'package-lock.json' -delete"
-# find $dist_dir -type f -name 'package-lock.json' -delete
+echo "------------------------------------------------------------------------------"
+echo "[Packing] Clean dist, node_modules and bower_components folders"
+echo "------------------------------------------------------------------------------"
+echo "find $dist_dir -iname "node_modules" -type d -exec rm -r "{}" \; 2> /dev/null"
+find $dist_dir -iname "node_modules" -type d -exec rm -r "{}" \; 2> /dev/null
+echo "find $dist_dir -iname "tests" -type d -exec rm -r "{}" \; 2> /dev/null"
+find $dist_dir -iname "tests" -type d -exec rm -r "{}" \; 2> /dev/null
+echo "find $dist_dir -iname "dist" -type d -exec rm -r "{}" \; 2> /dev/null"
+find $dist_dir -iname "dist" -type d -exec rm -r "{}" \; 2> /dev/null
+echo "find $dist_dir -iname "bower_components" -type d -exec rm -r "{}" \; 2> /dev/null"
+find $dist_dir -iname "bower_components" -type d -exec rm -r "{}" \; 2> /dev/null
+echo "find ../ -type f -name 'package-lock.json' -delete"
+find $dist_dir -type f -name 'package-lock.json' -delete
 
 echo "------------------------------------------------------------------------------"
 echo "[Packing] Create GitHub (open-source) zip file"

@@ -36,29 +36,29 @@ An even bigger instance type does not yield to better performance, mainly due to
 
 ## Usage
 
-1. Login into AWS account and navigate to S3.
-1. Click on batch operations on the left menu.
-1. Click Create Job
-  1. Select the region where you have installed the fixity.
-  1. For the manifest, select CSV or S3 inventory report based on what you prepared.
-  1. click next
-  1. Select "invoke AWS lambda function"
-  1. In the section below, select "Choose from functions in your account" and select the lambda function ending with _fixity_.
-  1. click next
-  1. In the "Additional options" section, enter an appropriate description.
-  1. For the completion report, select failed tasks only and select a destination s3 bucket.
-  1. Under the permissions section, select choose from existing IAM roles, and select the IAM role ending in _fixity_role_ in the same region.
-  1. click next
-  1. Review the Job in the last page and click create job.
-1. Once the Job is created, it goes from new to awaiting user confirmation state. Click on run job when ready.
-1. The S3 Batch job invokes the lambda function that drops copy jobs into an ECS batch job queue. Tasks from this queue are executed in FARGATE.  
+1. Sign in to your AWS account and navigate to S3.
+2. On the left menu, select batch operations.
+3. Choose Create Job:
+  a. Select the region where you have installed the fixity.
+  b. For the manifest, select CSV or S3 inventory report based on what you prepared.
+  c. Choose Next.
+  d. Select Invoke AWS lambda function.
+  e. In the section below, select Choose from functions in your account and select the lambda function ending with fixity.
+  f. Choose Next.
+  g. Under Additional options, enter an appropriate description.
+  h. For the completion report, select Failed tasks only and select a destination s3 bucket.
+  i. Under the permissions section, select choose from existing IAM roles, and select the IAM role ending in fixity_role in the same region.
+  j. Choose Next.
+  k. Review the Job in the last page and choose Create job.
+4. Once the Job is created, it goes from new to awaiting user confirmation state. Choose Run job when ready.
+5. The S3 Batch job invokes the lambda function that drops copy jobs into an ECS batch job queue. Tasks from this queue are executed in FARGATE.
 
 
 ### Calculate checksums of Media Assets in S3 buckets.
 
 It offers two ways to initiate the checksums.
 
-In the first method, it uses S3 batch operations as frontend. S3 Batch operations works with a CSV formatted inventory list file. You can use s3 [inventory reports](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html) if you already have one. Otherwise, you can generate an inventory list by utilizing the included scripts/generate_inventory.sh script. Please note that the script works for hundreds of files. If you have thousands of objects in the bucket, inventory reports are the way to go. S3 Batch Jobs invoke a lambda function that performs a few basic checks before handing off the actual fixity operation to a script. This script runs in containers in AWS Batch and Fargate for files smaller than 10GB. If the files are larger than 10GB it runs on Ec2 SPOT which opens up use of high performance and larger instance types. It produces the following checksums, as store them as custom tags with the s3 objects.
+In the first method, it uses S3 batch operations as frontend. S3 Batch operations works with a CSV formatted inventory list file. You can use S3 [inventory reports](https://docs.aws.amazon.com/AmazonS3/latest/userguide/storage-inventory.html) if you already have one. Otherwise, you can generate an inventory list by utilizing the included scripts/generate_inventory.sh script. Please note that the script works for hundreds of files. If you have thousands of objects in the bucket, inventory reports are the way to go. S3 Batch Jobs invoke a lambda function that performs a few basic checks before handing off the actual fixity operation to a script. This script runs in containers in AWS Batch and Fargate for files smaller than 10GB. If the files are larger than 10GB it runs on Ec2 SPOT which opens up use of high performance and larger instance types. It produces the following checksums, as store them as custom tags with the s3 objects.
 
 * md5sum
 * sha1sum
