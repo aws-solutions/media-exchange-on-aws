@@ -1,5 +1,10 @@
 build/
 
+#temporary
+tools/*/lambda/tests/
+tools.txt
+
+terminalizer/
 
 # Created by https://www.gitignore.io/api/osx,linux,python,windows,pycharm,visualstudiocode
 

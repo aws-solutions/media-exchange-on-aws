@@ -86,16 +86,16 @@ Resources:
         - Key: Name
           Value: MediaExchange Fixity
 
-  S3Endpoint:
-    Type: AWS::EC2::VPCEndpoint
-    Properties:
-      RouteTableIds:
-        - Ref: RouteTable
-      ServiceName:
-        Fn::Sub: com.amazonaws.${AWS::Region}.s3
-      VpcEndpointType: Gateway
-      VpcId:
-        Ref: VPC
+  # S3Endpoint:
+  #   Type: AWS::EC2::VPCEndpoint
+  #   Properties:
+  #     RouteTableIds:
+  #       - Ref: RouteTable
+  #     ServiceName:
+  #       Fn::Sub: com.amazonaws.${AWS::Region}.s3
+  #     VpcEndpointType: Gateway
+  #     VpcId:
+  #       Ref: VPC
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
