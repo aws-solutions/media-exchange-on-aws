@@ -11,84 +11,85 @@
 
 ### What is Media Exchange on AWS?
 
-It is a simple, secure, reliable and scalable way of transferring assets over AWS. It uses Amazon S3 as the underlying transport layer, S3 offers 11 9's of durability, industry standard security and compliance controls and virtually unlimited bandwidth for transfers. There are no credentials to share and manage. On top of that, it is significantly cheaper to own and operate when compared to 3rd party transfer services.
+It is a simple, secure, reliable and scalable way of transferring files over AWS. It uses Amazon S3 as the underlying transport layer, Amazon S3 offers 11 9's of durability, industry standard security and compliance controls and very high bandwidth for transfers. There are no credentials to share and manage. On top of that, it is more cost effective to own and operate when compared to 3rd party transfer services.
 
-### What are the benefits of MediaExchangeOnAWS?
+### What are the benefits of Media Exchange on AWS?
 
-Traditional data transfer services are expensive with licensing and per-gigabyte transfer fees. When compared to traditional file transfer services, MediaExchangeOnAWS is more secure, significantly cheaper to operate with extremely high transfer speeds between sender and recipient. It facilitates direct account-to-account transfers in AWS, thus minimizing egress. There are no licensing fees or servers to manage.
+Traditional data transfer services are expensive with licensing and per-gigabyte transfer fees. When compared to traditional file transfer services, Media Exchange on AWS is secure and cheaper to operate with extremely high transfer speeds between senders and recipients. It facilitates direct account-to-account transfers in AWS, thus minimizing egress. There are no licensing fees or servers to manage.
 
-It improves overall security with compliance controls for access and audit, with features like AES256 encryption, AWS managed encryption keys, TLS 1.2 for transport. It integrates with available AWS security related offerings for maximum control. Moreover, with direct account to account transfers there are no credentials to manage.  
+It improves overall security with compliance controls for access and audit, with features like AES-256 encryption, AWS managed encryption keys, TLS 1.2 for transport. It integrates with available AWS security related offerings for maximum control. Moreover, with direct account to account transfers there are no credentials to manage.  
 
 It improves quality by minimizing generational loss (lossless transfer) and package/conform risk by shifting ownership of transcode/package to the sender, where package quality/conformance is under the sender's control.
 
 It also enables workflow automation / integration with notifications, access logs and delivery receipts.
 
-### Who are the primary users of MediaExchangeOnAWS?
+### How does Media Exchange on AWS work with other AWS services?
 
-AWS customers who are using S3 as part of their media processing workflow are the primary users of MediaExchangeOnAWS. In addition, a number of customers are using MediaExchangeOnAWS for supporting their hybrid workflows.
+It uses Amazon S3 as the underlying storage and transport for transferring files between two AWS customer accounts. The files are secured with AWS KMS managed encryption keys. It uses AWS IAM for authentication and access control.
 
-### What type of assets can I transfer with MediaExchangeOnAWS?
+### Who are the primary users of Media Exchange on AWS?
 
-MediaExchangeOnAWS is built for file based workflows. Any types of files can be transferred using MediaExchangeOnAWS.
+AWS customers who are using Amazon S3 as part of their cloud native or hybrid media supply chain workflow are the primary users of Media Exchange on AWS.
 
-### Do I need to be an Amazon S3 user to take advantage of MediaExchangeOnAWS?
+### What type of files can I transfer with Media Exchange on AWS?
 
-MediaExchangeOnAWS uses Amazon S3 as the underlying storage and transport. You do not need to have your assets in S3 to take advantage of MediaExchangeOnAWS, but you will need to use tools/workflows that can interface with S3.  
+Media Exchange on AWS is built for file based workflows. Any file type that can be stored in Amazon S3 can also be transferred using Media Exchange on AWS.
 
+### Do I need to be an Amazon S3 user to take advantage of Media Exchange on AWS?
+
+Media Exchange on AWS uses Amazon S3 as the underlying storage and transport. Although, you do not need to have all of your files in S3 to take advantage of Media Exchange on AWS, but you will need to use tools/workflows that can interface with Amazon S3.
 
 ## Security
 
-### How does MediaExchangeOnAWS ensure that my assets are secure?
+### How does Media Exchange on AWS ensure that my files are secure?
 
-- _Encryption_ all the assets are encrypted at rest with AES256 and on transit with TLS.
-- _Key Management_ all the encryption keys are secured by AWS Key Management Service
-- _Authentication_ users are authenticated at the account level with AWS Identity and Access Management system. MediaExchangeOnAWS grants access at the account level, so publishers are subscribers use their current authentication mechanism. There is no additional credentials to manage.
-- _Access Control_ It allocates a bucket per transfer agreement. Publishers have write permissions to the bucket and the subscribers have read permissions. Moreover, all the assets shared with MediaExchangeOnAWS has singular access control that enables read permissions for the subscribers and write permissions for the publishers. On top of that the encryption keys used to protect the assets have similar levels of access control; encrypt permissions for publishers and decrypt for subscribers.
-- _Audit_ all actions on the assets are tracked in access logs. It is deployed in an AWS account different from publisher and subscriber's account. All of the security & compliance tools/processes that you use today can be applied on this account.
-
+- _Encryption_ the files are encrypted at rest with AES256 and secured in transit with TLS
+- _Key Management_ the encryption keys are managed by AWS Key Management Service
+- _Authentication_ users are authenticated at the account level with AWS Identity and Access Management. Media Exchange on AWS grants access at the account level, so that there are no additional credentials to manage.
+- _Access Control_ It allocates a bucket per transfer agreement. Content publishers have write permissions to the shared bucket and the subscribers have read permissions to the files. Moreover, all the files shared with Media Exchange on AWS has singular access control that enables read permissions for the subscribers and write permissions for the publishers. On top of that the encryption keys used to protect the files have similar levels of access control; encrypt permissions for publishers and decrypt for subscribers.
+- _Audit_ all actions on the files are tracked in Amazon S3 access logs. The S3 access logs are made available to the publishers. Media Exchange is deployed in an AWS account different from publisher and subscriber's primary account. All of the security & compliance tools/processes that you use today are applicable and can be used on this account.
 
 ### How quickly can I remove access and/or cancel transfer?
 
-The assets are owned by the publisher's account. Publishers are in full control at all phases of the transfer. They can remove asset level permissions or even delete the assets at any point in time.  
+The files are owned by the publisher's account. Publishers are in full control at all phases of the transfer. They can remove object level permissions or even delete any of the files at any point in time.  
 
 ## Management
 
-### How do I transfer assets with MediaExchangeOnAWS?
-
-Publishers copy the assets over to the exchange bucket corresponding to the subscriber in MediaExchangeOnAWS. The subscribers get a notification about the assets being available and they download them into their account.
-
 ### Who is a publisher?
 
-A publisher in MediaExchangeOnAWS is sending assets.
+A publisher in Media Exchange on AWS is sending files.
 
 ### Who is a subscriber?
 
-A subscriber in MediaExchangeOnAWS is receiving the assets.
+A subscriber in Media Exchange on AWS is receiving files.
 
+### How do I transfer files with Media Exchange on AWS?
 
-### I currently publish assets directly from/to S3 bucket(s). Why should I consider using MediaExchangeOnAWS?
+Publishers copy the files over to the exchange bucket corresponding to the subscriber's transfer agreement in Media Exchange on AWS. The subscribers get a notification about the files being available and they download them into their account.
 
-It enables account to account transfers without having to manage shared credentials, having to create a role or bucket policy. As a matter of fact, neither the publishers or subscribers would have to make a change in their security posture to use MediaExchangeOnAWS. The publishers are pushing to a bucket external to their account and the subscribers are pulling from a bucket that is not in their account.
+### I currently publish files directly from/to S3 bucket(s). Why should I consider using Media Exchange on AWS?
 
-### I am using `xxx` application to move assets to/from Amazon S3. Will it work?
+It enables account to account transfers without having to manage shared credentials; without having to create a role; or bucket policy. The publishers and subscribers would not have to make a change in their security posture to use Media Exchange on AWS. In this case, publishers are pushing to a shared bucket external to their account and the subscribers are pulling from a bucket that is not in their account.
 
-MediaExchangeOnAWS operates with standard s3 interface, so it is highly likely that your current application will continue to operate as is after you point it to the appropriate exchange bucket.
+### I am using my (custom/3rd party) application to move files to/from Amazon S3. Will it work?
+
+Media Exchange on AWS operates with Amazon S3 APIs. It is very likely that your current application will continue to operate without modifications.
 
 ### What type of workflow automation does it support?
 
-It does not come with a workflow orchestrator. Rather it integrates to your workflow automation by standardized event notifications.    
+It does not come with a workflow orchestrator. It integrates to your workflow automation with standardized event notifications.    
 
-### How do I integrate by workflow(s) to MediaExchangeOnAWS?
+### How do I integrate my media processing workflow to Media Exchange on AWS?
 
-It works with standard S3 interface, so, likely any workflow automation that can deliver assets to S3, will work well. In addition, it delivers event notifications of all asset transfers over Amazon Simple Notifications Service and Amazon Eventbridge.
+It works with Amazon S3 APIs. Event notifications are delivered over Amazon SNS or Eventbridge. You will have to configure your workflow with the respective S3 buckets for sending and receiving files. Similarly, you can trigger your workflow automation steps by configuring it to receive notifications from Amazon SNS or Eventbridge.
 
-### What type of reporting does it offer?
+### What type of analytics does it offer?
 
-It creates and saves standard s3 access logs for all activities to a bucket. Publishers can use these to build their own reporting.
+It produces Amazon S3 access logs for all activities to the shared objects. Publishers can use these to build their own reporting.
 
-### Who owns the assets in transit?
+### Who owns the files in transit?
 
-Publishers have full control over the assets in transit.
+Publishers have full control over the files in transit.
 
 ### Can I customize pricing or terms for select customers?
 
@@ -96,43 +97,43 @@ It is not supported at this time.
 
 ### Can I remove an asset that I have shared?
 
-Yes, you can cancel the transfer and remove the assets whenever you want. However, if the recipients have made a copy, MediaExchangeOnAWS can not remove those copies.  
+Yes, you can cancel the transfer and remove the files whenever you want. However, if the recipients have made a copy, Media Exchange on AWS does not have control over those.  
 
 ## Pricing
 
-### How much does it cost to transfer assets using Media Exchange On AWS?
+### How much does it cost to transfer files using Media Exchange on AWS?
 
-There is no additional charge for AWS Batch. You pay for AWS resources (e.g. S3, AWS EC2 etc.) you create to store and move your assets.
+There is no additional charge for using Media Exchange on AWS. You pay for underlying AWS resources (e.g. S3,  EC2 etc.) you create to store and move your files. It is pay-as-you-go and there are no servers to manage.
 
-### What should I expect in AWS charges for transferring assets?
+### What should I expect in AWS charges for transferring files?
 
-There is are no data transfer fees if the assets are moving bucket to bucket within the same region. The primary cost of using MediaExchangeOnAWS is the s3 storage fees associated with keeping the assets in the temporary storage area in MediaExchangeOnAWS bucket. In addition there are S3 charges for the GET and PUT API calls and AWS Key Management service costs. In default setting, it is less than `$0.01/GB` in the same region. If you use workflow automation that optimizes the duration in the temporary storage, the costs can be as low as for `$0.001/GB` in the same region.
+There is are no data transfer fees if the files are transferred within the same region. The main operational expense of using Media Exchange on AWS is the s3 storage fees associated with keeping the files in the temporary storage bucket. You can reduce the storage fees by configuring a shorter duration. And also by deleting the files from the temporary storage area after they have been copied over by the subscriber.
+
+In addition to storage, there are S3 charges for the GET and PUT API calls and for key management in AWS KMS.  Standard data transfer charges apply when transferred to another region or over internet.
 
 ### What should I expect to pay in data transfer charges?
 
-There are no data transfer charges for moving the assets into MediaExchangeOnAWS bucket. There are no data transfer fees when transferring to other buckets within the same region. If you are delivering to buckets in another region, standard AWS cross region transfer fees apply. Likewise, if you are moving assets to data centers, standard AWS data transfer fees apply based on transport mechanism (direct connect vs internet).
+There are no data transfer charges for moving the files into Media Exchange on AWS bucket. There are no data transfer fees when transferring to other buckets within the same region. If you are delivering to buckets in another region, standard AWS cross region transfer fees apply. Likewise, if you are moving files to your data center, standard AWS data transfer fees apply based on transport mechanism (direct connect vs internet).
 
-### How does it compare to ``<ABC>`` file transfer service?
+### How does Media Exchange on AWS compare to my (custom / 3rd party) file transfer service?
 
-In terms of pricing, there are no licensing fees. Moreover, there are no servers to manage. You only pay for the charges incurred for the underlying AWS services, which could net in `1/100th` of the cost in comparable setting.
+It is a simple, secure and easy to operate. In terms of pricing, there are no licensing fees. There are no servers to manage. You only pay for the charges incurred for the underlying AWS services, which could potentially net in `1/100th` of the cost in comparable setting.
 
 ## Scalability and Performance
 
-### How many transfers can be done in MediaExchangeOnAWS?
+### How many transfers can be done in Media Exchange on AWS?
 
-MediaExchangeOnAWS can support hundreds of concurrent transfers.  
+Media Exchange on AWS supports hundreds of concurrent transfers.  
 
-### I am can transfer `xxx GB` in `yyy hours` with my ``<ABC>`` file transfer service. How does MediaExchangeOnAWS compare?
+### I am transferring hundreds of GBs with my file transfer service. How does Media Exchange on AWS compare?
 
-There is virtually unlimited bandwidth between S3 buckets. You can expect `100GB/s` transfer speed in the same region if you are using the included MediaSync utility. Cross region transfers can go almost as fast. That is moving `1PB` of assets in about `3` hours. This is for a single transfer. You can run many such transfers at the same time.
-
-### Can I track my spending on a specific transfer so that it can be charged back to my customer?
+There is very high bandwidth between S3 buckets. You can expect `100GB/s` transfer speed in the same region if you are using the included MediaSync utility. Cross region transfers take advantage of AWS managed network connectivity.
 
 ## Quality
 
-### How does MediaExchangeOnAWS ensures that the assets are delivered with source quality and there are no data loss in the process?
+### How does Media Exchange on AWS ensures that the files are delivered with source quality and there are no data loss in the process?
 
-The underlying transport, S3, is designed to provide 99.999999999% durability of objects over a given year. This durability level corresponds to an average annual expected loss of 0.000000001% of objects. For example, if you transfer 10,000,000 objects with MediaExchangeOnAWS, you can on average expect to incur a loss of a single object once every 10,000 years.
+The underlying transport, S3, is designed to provide 99.999999999% durability of objects over a given year. This durability level corresponds to an average annual expected loss of 0.000000001% of objects. For example, if you transfer 10,000,000 objects with Media Exchange on AWS, you can on average expect to incur a loss of a single object once every 10,000 years.
 
 In addition, it calculates checksums on all network traffic to detect corruption of data packets when storing or retrieving data. This is available and enabled by default on AWS SDK(s) and command line interfaces. Most 3rd party tools, that use AWS SDK, takes advantage of this automatically.
 
