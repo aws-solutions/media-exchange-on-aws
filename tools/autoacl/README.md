@@ -19,6 +19,9 @@ $ aws s3 cp <filename> s3://<bucket name>/
 
 
 ### Install
+
+**The steps below are tested to work on Linux and Mac. Windows isn't supported** 
+
 * Initialize a shell with the necessary credentials to deploy to target (publisher / subscriber) account. You can do this by adding AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY and AWS_SESSION_TOKEN as environment variables or by selecting the appropriate profile by adding AWS_PROFILE environment variable.
 * Deploy AutoIngest
   * At the command prompt type `make install`.
