@@ -17,7 +17,7 @@ TEST_ACCOUNT_ID ?= $(ACCOUNT_ID)
 CANONICAL_ID ?= $(shell aws s3api list-buckets --query "Owner.ID" --output text)
 PARAMETER_OVERRIDES := Environment=$(ENV)
 AWS_REGION ?= $(shell aws configure get region --output text)
-DIST_OUTPUT_BUCKET ?= $(STACKPREFIX)-cftemplates-$(AWS_REGION)-$(ACCOUNT_ID)
+TEMPLATE_OUTPUT_BUCKET ?= $(STACKPREFIX)-cftemplates-$(AWS_REGION)-$(ACCOUNT_ID)
 
 ifeq ($(PUBLISHER_ACCOUNT_ID), $(ACCOUNT_ID))
 	PUBLISHER_ROLE ?= arn:aws:iam::$(ACCOUNT_ID):role/publisher-role
@@ -53,11 +53,11 @@ quickclean:
 EXT_VERSION := $(VERSION)-$(shell date +"%s")
 
 configure:
-	@aws s3api head-bucket --bucket $(DIST_OUTPUT_BUCKET) || aws s3 mb s3://$(DIST_OUTPUT_BUCKET)
-	@cd $(CURRENT_DIR)/deployment/ && ./build-s3-dist.sh $(DIST_OUTPUT_BUCKET) $(SOLUTION_NAME) $(EXT_VERSION)
+	@aws s3api head-bucket --bucket $(TEMPLATE_OUTPUT_BUCKET) || aws s3 mb s3://$(TEMPLATE_OUTPUT_BUCKET)
+	@cd $(CURRENT_DIR)/deployment/ && ./build-s3-dist.sh $(TEMPLATE_OUTPUT_BUCKET) $(SOLUTION_NAME) $(EXT_VERSION)
 
 	@for product in publisher subscriber agreement; do \
-		aws s3 cp $(CURRENT_DIR)/deployment/global-s3-assets/$$product.template s3://$(DIST_OUTPUT_BUCKET)/$(SOLUTION_NAME)/$(EXT_VERSION)/$$product.template --no-progress --only-show-errors; \
+		aws s3 cp $(CURRENT_DIR)/deployment/global-s3-assets/$$product.template s3://$(TEMPLATE_OUTPUT_BUCKET)/$(SOLUTION_NAME)/$(EXT_VERSION)/$$product.template --no-progress --only-show-errors; \
 	done
 
 install: configure
