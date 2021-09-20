@@ -9,6 +9,7 @@ import jsonpickle
 from botocore.exceptions import ClientError
 # import unicodedata
 from time import sleep
+import urllib
 from random import randint
 
 logger = logging.getLogger()
@@ -27,7 +28,7 @@ def lambda_handler(event, context):
         logger.info('## MESSAGE\r' + jsonpickle.encode(dict(**message)))
 
         sourceBucket = message['Records'][0]['s3']['bucket']['name']
-        sourceKey = message['Records'][0]['s3']['object']['key']
+        sourceKey = urllib.parse.unquote_plus(message['Records'][0]['s3']['object']['key'])
         sourceVersion = message['Records'][0]['s3']['object']['versionId']
 
         resultCode = '0'

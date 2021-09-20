@@ -5,6 +5,7 @@ import os
 import logging
 import boto3
 import jsonpickle
+import urllib
 from botocore.exceptions import ClientError
 
 logger = logging.getLogger()
@@ -24,7 +25,7 @@ def lambda_handler(event, context):
         logger.info('## MESSAGE\r' + jsonpickle.encode(dict(**message)))
 
         sourceBucket = message['Records'][0]['s3']['bucket']['name']
-        sourceKey = message['Records'][0]['s3']['object']['key']
+        sourceKey = urllib.parse.unquote_plus(message['Records'][0]['s3']['object']['key'])
         versionId = message['Records'][0]['s3']['object']['versionId']
 
         resultCode = '0'
@@ -54,7 +55,7 @@ def lambda_handler(event, context):
             newMessage = message
             currentVersion = response['ResponseMetadata']['HTTPHeaders']['x-amz-version-id']
             newMessage['Records'][0]['s3']['object']['versionId'] = currentVersion
-            # it's always same. 
+            # it's always same.
 
             newMessage['Records'][0]['eventSource'] = 'mxc.pubisher'
 
