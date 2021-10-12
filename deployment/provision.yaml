@@ -103,6 +103,10 @@ Resources:
       ProvisioningArtifactName: latest
       ProvisioningParameters:
         -
+          Key: Environment
+          Value:
+            Ref: Environment
+        -
           Key: PublisherName
           Value:
             Ref: PublisherName
@@ -122,6 +126,10 @@ Resources:
           Fn::Sub: mxc-${AWS::Region}-${Environment}-sc-subscriber-productid
       ProvisioningArtifactName: latest
       ProvisioningParameters:
+        -
+          Key: Environment
+          Value:
+            Ref: Environment
         -
           Key: SubscriberName
           Value:
@@ -151,6 +159,10 @@ Resources:
           Fn::Sub: mxc-${AWS::Region}-${Environment}-sc-agreement-productid
       ProvisioningArtifactName: latest
       ProvisioningParameters:
+        -
+          Key: Environment
+          Value:
+            Ref: Environment
         -
           Key: SubscriberName
           Value:

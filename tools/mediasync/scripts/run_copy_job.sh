@@ -21,7 +21,8 @@ then
 fi
 
 
-AWS_REGION=$(aws configure get region --output text)
+DEFAULT_REGION=$(aws configure get region --output text)
+AWS_REGION=${AWS_REGION:-$DEFAULT_REGION}
 LAMBDA_ARN=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey == 'LambdaFunctionArn'].OutputValue" --output text)
 ROLE_ARN=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey == 'S3BatchRoleArn'].OutputValue" --output text)
 
@@ -46,7 +47,6 @@ JobId=$(aws \
     --report $REPORT \
     --role-arn $ROLE_ARN \
     --client-request-token "$(uuidgen)" \
-    --region us-west-2 \
     --priority 10 \
     --description "MediaSync" --query "JobId" --output text);
 

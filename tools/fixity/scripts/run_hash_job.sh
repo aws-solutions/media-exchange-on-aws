@@ -20,8 +20,8 @@ then
     exit
 fi
 
-
-AWS_REGION=$(aws configure get region --output text)
+DEFAULT_REGION=$(aws configure get region --output text)
+AWS_REGION=${AWS_REGION:-$DEFAULT_REGION}
 LAMBDA_ARN=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey == 'FixtyDriverFunctionArn'].OutputValue" --output text)
 ROLE_ARN=$(aws cloudformation describe-stacks --stack-name $STACK_NAME --query "Stacks[0].Outputs[?OutputKey == 'FixtyS3BatchIAMRoleArn'].OutputValue" --output text)
 
@@ -46,8 +46,7 @@ JobId=$(aws \
     --report $REPORT \
     --role-arn $ROLE_ARN \
     --client-request-token "$(uuidgen)" \
-    --region us-west-2 \
     --priority 10 \
     --description "fixity" --query "JobId" --output text);
 
-echo "See your job status at https://$AWS_REGION.console.aws.amazon.com/batch/v2/home?region=$AWS_REGION#dashboard"
+echo "See your job status at https://$REGION.console.aws.amazon.com/batch/v2/home?region=$REGION#dashboard"
