@@ -441,7 +441,7 @@ Resources:
         -
           DataTraceEnabled: True
           HttpMethod: '*'
-          LoggingLevel: INFO
+          # LoggingLevel: INFO
           ResourcePath: '/*'
 
   ApiFunction:

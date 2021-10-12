@@ -144,7 +144,7 @@ Parameters:
     Type: String
     Description: Select yes to turn off S3 ObjectCreated* notifications. If "yes" (default is no) only the notifications originating from publisher are processed. If the email notifications are disabled, they are only available via EventBridge and SNS.
 
-    Default: "no"
+    Default: "yes"
     AllowedValues:
       - "yes"
       - "no"

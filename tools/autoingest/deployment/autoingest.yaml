@@ -34,7 +34,7 @@ Metadata:
           default: "Copy Configuration"
           Parameters:
             - NotificationTopicArn
-            - SourceBucket
+            - MediaExchangeBucket
             - DestinationBucket
             - DestinationPrefix
 
@@ -56,9 +56,9 @@ Parameters:
     Type: String
     Description: Destination S3 Bucket Name
 
-  SourceBucket:
+  MediaExchangeBucket:
     Type: String
-    Description: Destination S3 Bucket Name
+    Description: MediaExchange S3 Bucket Name
 
   DestinationPrefix:
     Type: String
@@ -122,7 +122,7 @@ Resources:
             Resource: '*'
 
   NQ:
-    Type: 'AWS::SQS::Queue'
+    Type: AWS::SQS::Queue
     Properties:
       KmsMasterKeyId:
         Ref: CMK
@@ -165,13 +165,28 @@ Resources:
 
       Policies:
         - AWSLambdaBasicExecutionRole
-        - S3ReadPolicy:
-            BucketName:
-              Ref: SourceBucket
-        - S3WritePolicy:
-            BucketName:
-              Ref: DestinationBucket
         - Statement:
+          - Sid: S3Read
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:PutObject
+              - s3:PutObjectAcl
+              - s3:PutObjectVersionAcl
+              - s3:PutObjectTagging
+              - s3:PutObjectVersionTagging
+              - s3:ListBucket
+            Resource: !Sub arn:${AWS::Partition}:s3:::${DestinationBucket}/*
+          - Sid: S3Write
+            Effect: Allow
+            Action:
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:GetObjectTagging
+              - s3:GetObjectVersionTagging
+              - s3:AbortMultipartUpload
+              - s3:ListMultipartUploadParts
+            Resource: !Sub arn:${AWS::Partition}:s3:::${MediaExchangeBucket}/* 
           - Sid: kms
             Effect: Allow
             Action:
@@ -187,7 +202,7 @@ Resources:
       Environment:
         Variables:
           SOURCE_BUCKET_NAME:
-            Ref: SourceBucket
+            Ref: MediaExchangeBucket
           DESTINATION_BUCKET_NAME:
             Ref: DestinationBucket
           DESTINATION_PREFIX:

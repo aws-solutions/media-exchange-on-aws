@@ -124,11 +124,10 @@ def lambda_handler(event, context):
             # <5GB
             copy_response= {}
 
-            if (os.environ['IS_READ_ONLY'] == 'TRUE'):
+            if (os.environ['IS_BUCKET_OWNER_FULL_CONTROL'] == 'FALSE'):
                 copy_response = s3client.copy_object(
                     Bucket=destinationBucket,
                     CopySource={'Bucket': sourceBucket,'Key': sourceKey},
-                    GrantRead='id="'+ os.environ['CANNONICAL_USER_ID'] + '"',
                     Key=sourceKey
                 )
             else:

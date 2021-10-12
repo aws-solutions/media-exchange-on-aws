@@ -47,9 +47,8 @@ Metadata:
         Label:
           default: "Copy Configuration"
           Parameters:
-            - Permissions
+            - BucketOwnerFullControl
             - DestinationBucketName
-            - CannoicalUserID
 
 Parameters:
   Environment:
@@ -66,25 +65,21 @@ Parameters:
     Description: Image Name
     Default: amazon/aws-cli
 
-  Permissions:
+  BucketOwnerFullControl:
     Type: String
-    AllowedValues: ["Full", "ReadOnly"]
-    Description: Select "Full" to provide full access to copied objects. Select "ReadOnly" for read access. If "ReadOnly" is selected, "CannoicalUserID" required.
-    Default: "Full"
+    AllowedValues: ["Yes", "No"]
+    Description: Select "Yes" to provide full access to copied objects. Select "No" for no access.
+    Default: "Yes"
 
   DestinationBucketName:
     Type: String
     Description: Destination S3 Bucket Name
 
-  CannoicalUserID:
-    Type: String
-    Description: (conditional) Cannoical User Id of reader == destination bucket's owner
-
 Conditions:
-  IsReadOnly:
+  IsBucketOwnerFullControl:
     Fn::Equals:
-      - "ReadOnly"
-      - Ref: Permissions
+      - "Yes"
+      - Ref: BucketOwnerFullControl
 
 Resources:
 
@@ -96,17 +91,6 @@ Resources:
       Tags:
        - Key: Name
          Value: mediasync
-
-  # S3Endpoint:
-  #   Type: AWS::EC2::VPCEndpoint
-  #   Properties:
-  #     RouteTableIds:
-  #       - Ref: RouteTable
-  #     ServiceName:
-  #       Fn::Sub: com.amazonaws.${AWS::Region}.s3
-  #     VpcEndpointType: Gateway
-  #     VpcId:
-  #       Ref: VPC
 
   InternetGateway:
     Type: AWS::EC2::InternetGateway
@@ -362,12 +346,24 @@ Resources:
               - batch:TagResource
             Resource: '*'
 
-        # control read/write access at the bucket level
-        - S3ReadPolicy:
-            BucketName: '*'
-        - S3WritePolicy:
-            BucketName: '*'
         - Statement:
+          - Sid: S3
+            Effect: Allow
+            Action:
+              - s3:PutObject
+              - s3:PutObjectAcl
+              - s3:PutObjectVersionAcl
+              - s3:PutObjectTagging
+              - s3:PutObjectVersionTagging
+              - s3:GetObject
+              - s3:GetObjectVersion
+              - s3:GetObjectAcl
+              - s3:GetObjectVersionAcl
+              - s3:GetObjectTagging
+              - s3:GetObjectVersionTagging
+              - s3:AbortMultipartUpload
+              - s3:ListMultipartUploadParts
+            Resource: '*'
           - Sid: kms
             Effect: Allow
             Action:
@@ -389,9 +385,7 @@ Resources:
             Ref: MediaSyncJobQueue
           DESTINATION_BUCKET_NAME:
             Ref: DestinationBucketName
-          IS_READ_ONLY: !If [IsReadOnly, 'TRUE', 'FALSE']
-          CANNONICAL_USER_ID:
-            Ref: CannoicalUserID
+          IS_BUCKET_OWNER_FULL_CONTROL: !If [IsBucketOwnerFullControl, 'TRUE', 'FALSE']
           DISABLE_PENDING_JOBS_CHECK: true
           MAX_NUMBER_OF_PENDING_JOBS: 96 #== 2x of MaxvCpus
           MN_SIZE_FOR_BATCH_IN_BYTES: 524288000 #500MB - this optimizaed for cost. Set it to 5GB for optimal speed.
@@ -430,11 +424,10 @@ Resources:
           - Ref::SourceS3Uri
           - Ref::DestinationS3Uri
           - --copy-props
-          - metadata-directive
+          - default
           - --expected-size
           - Ref::Size
-          - !If [ IsReadOnly, '--grants' , '--acl' ]
-          - !If [ IsReadOnly, !Join [ '=', [ 'read', 'id', Ref: CannoicalUserID ] ]  , 'bucket-owner-full-control' ]
+          - !If [ IsBucketOwnerFullControl, '--acl bucket-owner-full-control', !Ref 'AWS::NoValue']
 
         JobRoleArn:
           Fn::GetAtt: JobRole.Arn
@@ -490,11 +483,20 @@ Resources:
               -
                 Effect: Allow
                 Action:
+                  - s3:GetObject
+                  - s3:GetObjectVersion
+                  - s3:GetObjectAcl
+                  - s3:GetObjectVersionAcl
+                  - s3:GetObjectTagging
+                  - s3:GetObjectVersionTagging
+                  - s3:ListBucket
                   - s3:PutObject
                   - s3:PutObjectAcl
                   - s3:PutObjectVersionAcl
                   - s3:AbortMultipartUpload
                   - s3:ListMultipartUploadParts
+                  - s3:PutObjectTagging
+                  - s3:PutObjectVersionTagging
                 Resource:
                   Fn::Sub: arn:aws:s3:::${DestinationBucketName}/*
 
