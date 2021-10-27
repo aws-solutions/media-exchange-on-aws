@@ -68,7 +68,7 @@ Parameters:
   BucketOwnerFullControl:
     Type: String
     AllowedValues: ["Yes", "No"]
-    Description: Select "Yes" to provide full access to copied objects. Select "No" for no access.
+    Description: Select "Yes" to provide full access to copied objects.
     Default: "Yes"
 
   DestinationBucketName:
@@ -423,11 +423,10 @@ Resources:
           - cp
           - Ref::SourceS3Uri
           - Ref::DestinationS3Uri
-          - --copy-props
-          - default
+          - !If [ IsBucketOwnerFullControl, '--acl', !Ref 'AWS::NoValue']
+          - !If [ IsBucketOwnerFullControl, 'bucket-owner-full-control', !Ref 'AWS::NoValue']
           - --expected-size
           - Ref::Size
-          - !If [ IsBucketOwnerFullControl, '--acl bucket-owner-full-control', !Ref 'AWS::NoValue']
 
         JobRoleArn:
           Fn::GetAtt: JobRole.Arn
