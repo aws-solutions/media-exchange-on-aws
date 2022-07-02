@@ -6,6 +6,8 @@ help:
 GUIDED ?= --guided
 IMAGEVERSION ?= latest
 ENV ?= dev
+VERSION ?= 1.1.0
+
 
 STACKPREFIX = mediaexchange-tools
 CURRENT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -22,6 +24,8 @@ configure:
 %-build: deployment/%.yaml configure
 	@echo "Building lambda..."
 	@sam build -s $(CURRENT_DIR) -b $(CURRENT_DIR)/build --template $(CURRENT_DIR)/$< --use-container  $(DEBUG)
+
+	@sed -i -e "s/__VERSION__/$(VERSION)/g" $(CURRENT_DIR)/build/template.yaml
 
 autoingest-stack: autoingest-build
 	sam deploy -t $(CURRENT_DIR)/build/template.yaml --stack-name $(STACKPREFIX)-autoingest-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --config-env autoingest $(GUIDED) --region $(AWS_REGION) --parameter-overrides $(PARAMETER_OVERRIDES) --config-file $(SAM_CONFIG_FILE)

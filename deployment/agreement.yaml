@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   (SO0133) - __SOLUTION_NAME__ __VERSION__ - setup publisher and subscriber shared resources for asset exchange.
@@ -53,11 +56,6 @@ Outputs:
               - Fn::ImportValue:
                   Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-logs
           - Fn::Join:
-            - ''
-            - - SUBSCRIBER_CANONICAL_USER_ID=
-              - Fn::ImportValue:
-                  Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-canonicalid
-          - Fn::Join:
             - '='
             - - PUBLISHER_ROLE
               - Fn::ImportValue:
@@ -96,7 +94,6 @@ Metadata:
           - SubscriberName
           - ExpirationInDays
           - EmailNotifications
-          - DeactivateS3Events
 
 
 Parameters:
@@ -140,24 +137,12 @@ Parameters:
       - "yes"
       - "no"
 
-  DeactivateS3Events:
-    Type: String
-    Description: Select yes to turn off S3 ObjectCreated* notifications. If "yes" (default is no) only the notifications originating from publisher are processed. If the email notifications are disabled, they are only available via EventBridge and SNS.
-
-    Default: "yes"
-    AllowedValues:
-      - "yes"
-      - "no"
 
 Conditions:
   EnableEmailNotifications:
     Fn::Equals:
     - "yes"
     - Ref: EmailNotifications
-  S3Events:
-    Fn::Equals:
-    - "no"
-    - Ref: DeactivateS3Events
 
 
 Resources:
@@ -165,6 +150,14 @@ Resources:
   ExchangeBucket:
     Type: AWS::S3::Bucket
     Properties:
+
+      NotificationConfiguration:
+        EventBridgeConfiguration:
+          EventBridgeEnabled: true
+
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership: BucketOwnerEnforced
 
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
@@ -203,14 +196,6 @@ Resources:
             AbortIncompleteMultipartUpload:
               DaysAfterInitiation: 2
 
-      NotificationConfiguration:
-        LambdaConfigurations:
-          -
-            Event: 's3:ObjectCreated:*'
-            Function:
-              Fn::GetAtt: S3EventForwarderFunction.Arn
-
-
       BucketEncryption:
         ServerSideEncryptionConfiguration:
           -
@@ -222,12 +207,11 @@ Resources:
 
       Tags:
         -
-          Key: createdby
+          Key: Createdby
           Value: __SOLUTION_NAME__/__VERSION__
 
     UpdateReplacePolicy: Retain
     DeletionPolicy: Retain
-    DependsOn: LambdaPermissionForS3Bucket
 
 
   #bucket policy
@@ -263,8 +247,6 @@ Resources:
             Effect: Allow
             Action:
               - s3:PutObject
-              # - s3:PutObjectAcl
-              # - s3:PutObjectVersionAcl
             Resource:
               Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeBucket}/*
             Principal:
@@ -273,16 +255,6 @@ Resources:
                     Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
 
             Condition:
-              'Null':
-                s3:x-amz-acl: true
-              'Null':
-                s3:x-amz-grant-full-control: true
-              'Null':
-                s3:x-amz-grant-read-acp: true
-              'Null':
-                s3:x-amz-grant-write: true
-              'Null':
-                s3:x-amz-grant-write-acp: true
 
               StringEqualsIfExists:
                 s3:x-amz-storage-class: STANDARD
@@ -291,34 +263,6 @@ Resources:
               StringEqualsIfExists:
                 s3:x-amz-server-side-encryption-aws-kms-key-id:
                   Fn::GetAtt: CMK.Arn
-
-          -
-            Sid: "AllowPutObjectACL"
-            Effect: Allow
-            Action:
-              - s3:PutObjectAcl
-              - s3:PutObjectVersionAcl
-            Resource:
-              Fn::Sub: arn:${AWS::Partition}:s3:::${ExchangeBucket}/*
-            Principal:
-              AWS:
-                - Fn::ImportValue:
-                    Fn::Sub: mxc-${AWS::Region}-${Environment}-publisher-${PublisherName}-role
-
-            Condition:
-              'Null':
-                s3:x-amz-acl: true
-              'Null':
-                s3:x-amz-grant-full-control: true
-              'Null':
-                s3:x-amz-grant-read-acp: true
-              'Null':
-                s3:x-amz-grant-write: true
-              'Null':
-                s3:x-amz-grant-write-acp: true
-
-              StringEqualsIfExists:
-                s3:x-amz-storage-class: STANDARD
 
 
           -
@@ -449,30 +393,20 @@ Resources:
                 'kms:ViaService' :
                   Fn::Sub: s3.${AWS::Region}.amazonaws.com
 
-  LambdaPermissionForS3Bucket:
-    Type: AWS::Lambda::Permission
-    Properties:
-      Action: 'lambda:InvokeFunction'
-      FunctionName:
-        Ref: S3EventForwarderFunction
-      Principal: s3.amazonaws.com
-      SourceAccount:
-        Ref: AWS::AccountId
-
   S3NotifySubscriberRule:
     Type: AWS::Events::Rule
     Properties:
       Description: "Notify Content Published"
-      State:
-        Fn::If:
-          - S3Events
-          - "ENABLED"
-          - "DISABLED"
       EventPattern:
         source:
-          - mxc.s3
+          - aws.s3
         detail-type:
-          - Fn::Sub: bucket=${ExchangeBucket}
+          - Object Created
+          - Object Deleted
+        detail:
+          bucket:
+            name:
+              - Fn::Sub: ${ExchangeBucket}
       Targets:
         -
           Id: "SNSEvent"
@@ -505,9 +439,14 @@ Resources:
       Description: "Notify Content Published"
       EventPattern:
         source:
-          - mxc.s3
+          - aws.s3
         detail-type:
-          - Fn::Sub: bucket=${ExchangeBucket}
+          - Object Created
+          - Object Deleted
+        detail:
+          bucket:
+            name:
+              - Fn::Sub: ${ExchangeBucket}
       Targets:
         -
           Id: "SNSEvent"
@@ -542,104 +481,3 @@ Resources:
             Arn:
               Fn::ImportValue:
                 Fn::Sub: mxc-${AWS::Region}-${Environment}-subscriber-${SubscriberName}-notificationdlq
-
-
-  S3EventForwarderFunctionRole:
-    Type: 'AWS::IAM::Role'
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W11
-            reason: "The lambda function’s log group name is not known at deployment time"
-    Properties:
-      Description: Role for EventForwarer Lambda.
-      AssumeRolePolicyDocument:
-        Version: 2012-10-17
-        Statement:
-          -
-            Effect: Allow
-            Principal:
-              Service: lambda.amazonaws.com
-            Action: 'sts:AssumeRole'
-      Path: /
-      Policies:
-        -
-          PolicyName: mxc-lambda-putevents
-          PolicyDocument:
-            Version: 2012-10-17
-            Statement:
-              -
-                Effect: Allow
-                Action:
-                  - events:PutEvents
-                Resource:
-                  Fn::Sub: arn:${AWS::Partition}:events:${AWS::Region}:${AWS::AccountId}:event-bus/default
-              -
-                Effect: Allow
-                Action:
-                  - logs:CreateLogGroup
-                  - logs:CreateLogStream
-                  - logs:PutLogEvents
-                Resource: '*'
-
-  #lambda to send s3 events to EventBus
-  S3EventForwarderFunction:
-    Type: AWS::Lambda::Function
-    Metadata:
-      cfn_nag:
-        rules_to_suppress:
-          - id: W89
-            reason: "(W89) Lambda functions should be deployed inside a VPC"
-          - id: W92
-            reason: "(W92) Lambda functions should define ReservedConcurrentExecutions to reserve simultaneous executions"
-    Properties:
-      Description: Lambda function to forward the S3 event notifications to EventBridge
-      MemorySize: 128
-      Role:
-        Fn::GetAtt: S3EventForwarderFunctionRole.Arn
-      Runtime: python3.7
-      Timeout: 10
-      Handler: index.handler
-      Environment:
-        Variables:
-          LogLevel: INFO
-
-      Code:
-        ZipFile: |
-          import os
-          import logging
-          import boto3
-          import json
-
-          logger = logging.getLogger()
-          logger.setLevel(os.environ['LogLevel'])
-
-          #events client
-          client = boto3.client('events')
-
-          def handler(event, context):
-            try:
-              logger.info("forwarding Event to EventBridge")
-
-              bucket = event["Records"][0]["s3"]["bucket"]["name"]
-              key = event['Records'][0]['s3']['object']['key']
-              versionId = event['Records'][0]['s3']['object']['versionId']
-
-              logger.info("bucket={}/key={}/version={}".format(bucket,key,versionId))
-
-              client.put_events(
-                Entries=[
-                    {
-                        'Source': "mxc.s3",
-                        'DetailType': "bucket={}".format(bucket),
-                        'Detail': json.dumps(event)
-                    },
-                ]
-              )
-
-              logger.debug("finished forwarding event")
-
-            except Exception as e:
-                # Catch all exceptions
-                result = 'Exception: {}'.format(e)
-                logger.error(result)

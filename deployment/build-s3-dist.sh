@@ -53,7 +53,7 @@ echo "cd $template_dist_dir"
 cd $template_dist_dir
 
 # Rename all *.yaml to *.template
-for f in *.yaml; do 
+for f in *.yaml; do
     mv -- "$f" "${f%.yaml}.template"
 done
 
@@ -77,6 +77,6 @@ echo "--------------------------------------------------------------------------
 echo "[Rebuild] Creating Dummy File"
 echo "------------------------------------------------------------------------------"
 # the build process needs something to exist in the $build_dist_dir or it will break
-cd $source_dir/dummy-file
-cp note.txt $build_dist_dir/note.txt
-echo "copying note.txt to $build_dist_dir"
+echo "copying /tmp/dummy.txt to $build_dist_dir"
+echo "This dummy file is created to satisfy the requirement of the deployment/regional-s3-assets/ directory existing for the build process. This is not needed for the solution to function." > /tmp/dummy.txt
+cp /tmp/dummy.txt $build_dist_dir/dummy.txt

@@ -9,6 +9,8 @@ help:
 GUIDED ?= --guided
 IMAGEVERSION ?= latest
 ENV ?= dev
+VERSION ?= 1.1.0
+
 
 STACKPREFIX = mediaexchange-tools
 CURRENT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
@@ -24,7 +26,7 @@ configure:
 
 %-image-build:
 	@echo "Building docker image..."
-	docker build -t $(IMAGENAME):$(IMAGEVERSION) copier/
+	docker buildx build --platform=linux/amd64 -t $(IMAGENAME):$(IMAGEVERSION) copier/
 
 %-image-push: %-image-build
 	@echo "Publishing Docker image to registry..."
@@ -37,9 +39,12 @@ configure:
 	@echo "Building template..."
 	@sam build -s $(CURRENT_DIR) -b $(CURRENT_DIR)/build/$*/ --template $(CURRENT_DIR)/$< --use-container
 
+	@sed -i -e "s/__VERSION__/$(VERSION)/g" $(CURRENT_DIR)/build/$*/template.yaml
+
+
 %-stack-install: %-stack-build
 	@echo "deploying cloudformation template"
-	sam deploy -t $(CURRENT_DIR)/build/$*/template.yaml --stack-name $(STACKPREFIX)-$*-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE)
+	sam deploy -t $(CURRENT_DIR)/build/$*/template.yaml --stack-name $(STACKPREFIX)-$*-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE) --resolve-s3
 
 %-stack-delete:
 	@echo "deleting cloudformation stack"

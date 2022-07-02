@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
@@ -74,6 +77,7 @@ Globals:
         JOB_QUEUE:
           Ref: JobQueue
         LogLevel: INFO
+        SOLUTION_IDENTIFIER: "AwsSolution/SO0133/__VERSION__"
 
 Resources:
 
@@ -201,6 +205,8 @@ Resources:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
     Properties:
+      VersioningConfiguration:
+        Status: Suspended
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -407,6 +413,12 @@ Resources:
               - s3:GetObjectVersion
             Resource: '*'
 
+  DriverFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${DriverFunction}
+      RetentionInDays: 30
+
   DriverFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -443,6 +455,12 @@ Resources:
           HttpMethod: '*'
           # LoggingLevel: INFO
           ResourcePath: '/*'
+
+  ApiFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${ApiFunction}
+      RetentionInDays: 30
 
   ApiFunction:
     Type: AWS::Serverless::Function

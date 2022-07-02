@@ -69,24 +69,8 @@ def test_push_pull(config):
         s3_client.put_object(
             Body=f,
             Bucket=config['MEDIAEXCHANGE_BUCKET_NAME'],
-            GrantRead="id="+config['SUBSCRIBER_CANONICAL_USER_ID'],
             Key=config['FILE_NAME']
         )
-
-    resp = s3_client.list_buckets()
-    owner_cannonical_id = resp['Owner']['ID']
-
-    resp = s3_client.get_object_acl(
-        Bucket=config['MEDIAEXCHANGE_BUCKET_NAME'],
-        Key=config['FILE_NAME']
-    )
-
-    assert len(resp['Grants']) == 1
-    assert resp['Grants'][0]['Grantee']['ID'] == config['SUBSCRIBER_CANONICAL_USER_ID']
-    assert resp['Grants'][0]['Grantee']['Type'] == 'CanonicalUser'
-    assert resp['Grants'][0]['Permission'] == 'READ'
-
-    assert resp['Owner']['ID'] == owner_cannonical_id
 
     resp = sts.assume_role(
         RoleArn=config['SUBSCRIBER_ROLE'],
@@ -107,8 +91,8 @@ def test_push_pull(config):
     assert ff == True
 
     s3 = session.resource('s3')
-    object = s3.Object(config['MEDIAEXCHANGE_BUCKET_NAME'],config['FILE_NAME'])
-    object.download_file(config['FILE_NAME']+'.1')
+    test_object = s3.Object(config['MEDIAEXCHANGE_BUCKET_NAME'],config['FILE_NAME'])
+    test_object.download_file(config['FILE_NAME']+'.1')
 
     hasher = hashlib.sha256()
     with open(config['FILE_NAME']+'.1', 'rb') as f:

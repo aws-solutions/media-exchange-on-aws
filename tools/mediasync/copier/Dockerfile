@@ -4,6 +4,15 @@
 
 
 FROM amazon/aws-cli:latest
-# OPTIONAL: these configurations are recommeneded for high throughput S3 -> S3 transfer in the same region.
+
+COPY stream.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/stream.sh
+
+COPY ssc.sh /usr/local/bin/
+RUN chmod +x /usr/local/bin/ssc.sh
+
 
 RUN aws configure set default.s3.max_concurrent_requests 64 && aws configure set default.s3.multipart_chunksize 64MB
+
+ENTRYPOINT ["/bin/bash"]
+CMD []

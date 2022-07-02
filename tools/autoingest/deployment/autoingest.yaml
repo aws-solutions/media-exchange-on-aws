@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
@@ -135,6 +138,12 @@ Resources:
     Properties:
       MessageRetentionPeriod: 1209600
 
+  DriverFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${DriverFunction}
+      RetentionInDays: 30
+
   DriverFunction:
     Type: AWS::Serverless::Function
     Properties:
@@ -186,7 +195,7 @@ Resources:
               - s3:GetObjectVersionTagging
               - s3:AbortMultipartUpload
               - s3:ListMultipartUploadParts
-            Resource: !Sub arn:${AWS::Partition}:s3:::${MediaExchangeBucket}/* 
+            Resource: !Sub arn:${AWS::Partition}:s3:::${MediaExchangeBucket}/*
           - Sid: kms
             Effect: Allow
             Action:
@@ -208,3 +217,4 @@ Resources:
           DESTINATION_PREFIX:
             Ref: DestinationPrefix
           LogLevel: INFO
+          SOLUTION_IDENTIFIER: "AwsSolution/SO0133/v1.1.0"

@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   Cloudformation template for media exchange publisher/subscriber role for testing.
@@ -42,22 +45,6 @@ Parameters:
 
 Resources:
 
-  SubscriberBucket:
-    Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
-    Properties:
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          -
-            BucketKeyEnabled: true
-            ServerSideEncryptionByDefault:
-              SSEAlgorithm: 'aws:kms'
-
   SubscriberRole:
     Type: AWS::IAM::Role
     Properties:
@@ -91,22 +78,6 @@ Resources:
                   - kms:DescribeKey
                 Resource: '*'
 
-
-  PublisherBucket:
-    Type: AWS::S3::Bucket
-    DeletionPolicy: Retain
-    Properties:
-      PublicAccessBlockConfiguration:
-        BlockPublicAcls: true
-        BlockPublicPolicy: true
-        IgnorePublicAcls: true
-        RestrictPublicBuckets: true
-      BucketEncryption:
-        ServerSideEncryptionConfiguration:
-          -
-            BucketKeyEnabled: true
-            ServerSideEncryptionByDefault:
-              SSEAlgorithm: 'aws:kms'
 
   PublisherRole:
     Type: AWS::IAM::Role

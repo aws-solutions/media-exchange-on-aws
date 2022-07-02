@@ -1,1 +1,14 @@
 Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+SPDX-License-Identifier: Apache-2.0
+
+**********************
+THIRD PARTY COMPONENTS
+**********************
+This software includes third party software subject to the following copyrights:
+
+AWS SDK under the Apache License Version 2.0
+AWS SDK Mock under the Apache License Version 2.0
+requests under the Apache License Version 2.0
+pytest under the Massachusetts Institute of Technology (MIT) license
+boto3 under the Apache License Version 2.0
+jsonpickle under a New BSD license (https://github.com/jsonpickle/jsonpickle/raw/master/COPYING)
