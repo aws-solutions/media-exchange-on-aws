@@ -3,7 +3,7 @@ help:
 	@echo 'deploys Media Exchange cloudformation templates'
 
 SOLUTION_NAME = "media-exchange-on-aws"
-VERSION ?= 1.0.0
+VERSION ?= 1.1.0
 
 GUIDED ?= --guided
 ENV ?= dev
@@ -13,11 +13,28 @@ STACKPREFIX=mediaexchange
 
 
 ACCOUNT_ID := $(shell aws sts get-caller-identity --query Account --output text)
-TEST_ACCOUNT_ID ?= $(ACCOUNT_ID)
-CANONICAL_ID ?= $(shell aws s3api list-buckets --query "Owner.ID" --output text)
 PARAMETER_OVERRIDES := Environment=$(ENV)
 AWS_REGION ?= $(shell aws configure get region --output text)
-TEMPLATE_OUTPUT_BUCKET ?= $(STACKPREFIX)-cftemplates-$(AWS_REGION)-$(ACCOUNT_ID)
+
+
+%-stack-build: deployment/%.yaml configure
+	@echo "Building template..."
+	@sam build -s $(CURRENT_DIR) -b $(CURRENT_DIR)/build/$*/ --template $(CURRENT_DIR)/$< --use-container
+
+%-stack-deploy: %-stack-build
+	@echo "deploying cloudformation template"
+	sam deploy -t $(CURRENT_DIR)/build/$*/template.yaml --stack-name $(STACKPREFIX)-$*-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --resolve-s3 --parameter-overrides  $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE)
+
+%-stack-delete:
+	@echo "deleting cloudformation stack"
+	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-$*-$(ENV)
+	aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-$*-$(ENV)
+
+quickstart: publisher-stack-deploy subscriber-stack-deploy agreement-stack-deploy
+quickclean: agreement-stack-delete publisher-stack-delete subscriber-stack-delete
+
+##Testing
+TEST_ACCOUNT_ID ?= $(ACCOUNT_ID)
 
 ifeq ($(PUBLISHER_ACCOUNT_ID), $(ACCOUNT_ID))
 	PUBLISHER_ROLE ?= arn:aws:iam::$(ACCOUNT_ID):role/publisher-role
@@ -27,28 +44,14 @@ ifeq ($(SUBSCRIBER_ACCOUNT_ID), $(ACCOUNT_ID))
 	SUBSCRIBER_ROLE ?= arn:aws:iam::$(ACCOUNT_ID):role/subscriber-role
 endif
 
-%-stack: deployment/%.yaml
-	sam deploy -t $(CURRENT_DIR)/$< --stack-name $(STACKPREFIX)-$*-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE)
+testrole-stack-deploy:
+	sam deploy -t $(CURRENT_DIR)/tests/deployment/testrole.yaml --stack-name $(STACKPREFIX)-testrole-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --resolve-s3 --parameter-overrides  $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE)
 
-%-delete-stack:
-	@echo "deleting cloudformation stack"
-	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-$*-$(ENV)
-
-testrole-stack:
-	sam deploy -t $(CURRENT_DIR)/tests/deployment/testrole.yaml --stack-name $(STACKPREFIX)-testrole-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --guided --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE)
-
-testrole-stack:  PARAMETER_OVERRIDES += TestAccountId=$(TEST_ACCOUNT_ID)
-
-quickstart: publisher-stack subscriber-stack agreement-stack
-
-quickclean:
-	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-agreement-$(ENV)
-	aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-agreement-$(ENV)
-	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-publisher-$(ENV)
-	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-subscriber-$(ENV)
+testrole-stack-deploy:  PARAMETER_OVERRIDES += TestAccountId=$(TEST_ACCOUNT_ID)
 
 
 ################
+TEMPLATE_OUTPUT_BUCKET ?= $(STACKPREFIX)-cftemplates-$(AWS_REGION)-$(ACCOUNT_ID)
 
 EXT_VERSION := $(VERSION)-$(shell date +"%s")
 
@@ -64,11 +67,11 @@ install: configure
 
 	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/media-exchange-on-aws.template $(GUIDED) --stack-name $(STACKPREFIX)-servicecatalog-stack-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) --config-env servicecatalog-stack --config-file $(SAM_CONFIG_FILE) --region $(AWS_REGION)
 
-	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/provision.template --stack-name $(STACKPREFIX)-selfprovision-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) PublisherAccountId=$(ACCOUNT_ID) PublisherName=self SubscriberAccountId=$(ACCOUNT_ID) SubscriberName=self CanonicalID=$(CANONICAL_ID) --config-env selfprovision-stack --config-file $(SAM_CONFIG_FILE) --role-arn   arn:aws:iam::$(ACCOUNT_ID):role/mediaexchange-$(AWS_REGION)-$(ENV)-cfn-deploy --region $(AWS_REGION)
+	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/provision.template --stack-name $(STACKPREFIX)-selfprovision-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) PublisherAccountId=$(ACCOUNT_ID) PublisherName=self SubscriberAccountId=$(ACCOUNT_ID) SubscriberName=self --config-env selfprovision-stack --config-file $(SAM_CONFIG_FILE) --role-arn   arn:aws:iam::$(ACCOUNT_ID):role/mediaexchange-$(AWS_REGION)-$(ENV)-cfn-deploy --region $(AWS_REGION)
 
 provision:
 
-	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/provision.template $(GUIDED) --stack-name $(STACKPREFIX)-provision-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) --config-env provision-stack --config-file $(SAM_CONFIG_FILE) --role-arn   arn:aws:iam::$(ACCOUNT_ID):role/mediaexchange-$(AWS_REGION)-$(ENV)-cfn-deploy --region $(AWS_REGION)
+	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/provision.template $(GUIDED) --stack-name $(STACKPREFIX)-provision-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) --config-env provision-stack --config-file $(SAM_CONFIG_FILE) --role-arn  arn:aws:iam::$(ACCOUNT_ID):role/mediaexchange-$(AWS_REGION)-$(ENV)-cfn-deploy --region $(AWS_REGION)
 
 summarize:
 
@@ -82,7 +85,7 @@ summarize:
 	@aws cloudformation describe-stacks --stack-name $(shell aws cloudformation describe-stacks --stack-name $(STACKPREFIX)-provision-$(ENV) --query "Stacks[0].Outputs[?OutputKey == 'AgreementStackArn'].OutputValue" --output text) --query "Stacks[0].Outputs[?OutputKey == 'SubscriberOnboardingSummary'].OutputValue" --output text | sed 's/ /\n/g'
 
 
-test: provision
+test:
 ifneq ($(PUBLISHER_ACCOUNT_ID), $(ACCOUNT_ID))
 	$(info ****ACTION**** please deploy cloudformation template :testrole.yaml: to create the test role in $(PUBLISHER_ACCOUNT_ID))
 endif
@@ -111,13 +114,5 @@ clean: testclean
 	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-servicecatalog-stack-$(ENV) --region $(AWS_REGION)
 	aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-servicecatalog-stack-$(ENV) --region $(AWS_REGION)
 
-	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-agreement-$(ENV) --region $(AWS_REGION)
-	aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-agreement-$(ENV) --region $(AWS_REGION)
-
-	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-publisher-$(ENV) --region $(AWS_REGION)
-	aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-publisher-$(ENV) --region $(AWS_REGION)
-
-	aws cloudformation delete-stack --stack-name $(STACKPREFIX)-subscriber-$(ENV) --region $(AWS_REGION)
-	aws cloudformation wait stack-delete-complete --stack-name $(STACKPREFIX)-subscriber-$(ENV) --region $(AWS_REGION)
 
 .PHONY: install provision test clean testclean quickstart quickclean

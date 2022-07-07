@@ -1,1 +1,0 @@
-This dummy file is created to satisfy the requirement of the deployment/regional-s3-assets/ directory existing for the build process. This is not needed for the solution to function.

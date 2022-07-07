@@ -1,13 +1,13 @@
-# Frequently Asked Questions
+## Table of contents
+- [General](#general)
+- [Security](#security)
+- [Management](#management)
+- [Pricing](#pricing)
+- [Scalability and Performance](#performance-and-scalability)
+- [Reliability](#reliability)
 
-- [General](#General)
-- [Security](#Security)
-- [Management](#Management)
-- [Pricing](#Pricing)
-- [Quality](#Quality)
-- [Scalability and Performance](#Scalability-and-Performance)
-
-## General
+<a name="general"></a>
+# General
 
 ### What is Media Exchange on AWS?
 
@@ -39,7 +39,8 @@ Media Exchange on AWS is built for file based workflows. Any file type that can 
 
 Media Exchange on AWS uses Amazon S3 as the underlying storage and transport. Although, you do not need to have all of your files in S3 to take advantage of Media Exchange on AWS, but you will need to use tools/workflows that can interface with Amazon S3.
 
-## Security
+<a name="security"></a>
+# Security
 
 ### How does Media Exchange on AWS ensure that my files are secure?
 
@@ -51,9 +52,10 @@ Media Exchange on AWS uses Amazon S3 as the underlying storage and transport. Al
 
 ### How quickly can I remove access and/or cancel transfer?
 
-The files are owned by the publisher's account. Publishers are in full control at all phases of the transfer. They can remove object level permissions or even delete any of the files at any point in time.  
+Publishers are in full control at all phases of the transfer. They can remove object level permissions or even delete any of the files at any point in time.  
 
-## Management
+<a name="management"></a>
+# Management
 
 ### Who is a publisher?
 
@@ -99,6 +101,7 @@ It is not supported at this time.
 
 Yes, you can cancel the transfer and remove the files whenever you want. However, if the recipients have made a copy, Media Exchange on AWS does not have control over those.  
 
+<a name="pricing"></a>
 ## Pricing
 
 ### How much does it cost to transfer files using Media Exchange on AWS?
@@ -119,7 +122,8 @@ There are no data transfer charges for moving the files into Media Exchange on A
 
 It is a simple, secure and easy to operate. In terms of pricing, there are no licensing fees. There are no servers to manage. You only pay for the charges incurred for the underlying AWS services, which could potentially net in `1/100th` of the cost in comparable setting.
 
-## Scalability and Performance
+<a name="performance-and-scalability"></a>
+## Performance and Scalability
 
 ### How many transfers can be done in Media Exchange on AWS?
 
@@ -129,7 +133,8 @@ Media Exchange on AWS supports hundreds of concurrent transfers.
 
 There is very high bandwidth between S3 buckets. You can expect `100GB/s` transfer speed in the same region if you are using the included MediaSync utility. Cross region transfers take advantage of AWS managed network connectivity.
 
-## Quality
+<a name="reliability"></a>
+## Reliability
 
 ### How does Media Exchange on AWS ensures that the files are delivered with source quality and there are no data loss in the process?
 

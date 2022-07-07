@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 AWSTemplateFormatVersion: '2010-09-09'
 Description: >
   (SO0133) - __SOLUTION_NAME__ __VERSION__ - mediaexchange service catalog setup
@@ -319,7 +322,7 @@ Resources:
             LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/publisher.template
           Name: latest
         - Info:
-            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/subscriber.template
+            LoadTemplateFromURL: https://s3.amazonaws.com/__BUCKET_NAME__/__SOLUTION_NAME__/__VERSION__/publisher.template
           Name: __VERSION__
       ReplaceProvisioningArtifacts: True
 
@@ -464,6 +467,7 @@ Resources:
                   - s3:PutEncryptionConfiguration
                   - s3:PutLifecycleConfiguration
 
+
                   - sns:Get*
                   - sns:Describe*
                   - sns:CreateTopic
@@ -590,6 +594,8 @@ Resources:
                   - s3:PutBucketVersioning
                   - s3:PutEncryptionConfiguration
                   - s3:PutLifecycleConfiguration
+                  - s3:PutBucketOwnershipControls
+                  - s3:DeleteBucketOwnershipControls
 
                   - lambda:List*
                   - lambda:Get*

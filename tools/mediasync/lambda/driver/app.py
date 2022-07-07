@@ -9,185 +9,124 @@ import urllib
 import jsonpickle
 from botocore.exceptions import ClientError
 import unicodedata
+from botocore import config
+
+solution_identifier= os.environ['SOLUTION_IDENTIFIER']
+user_agent_extra_param = {"user_agent_extra":solution_identifier}
+config = config.Config(**user_agent_extra_param)
 
 logger = logging.getLogger()
 logger.setLevel(os.environ['LogLevel'])
 
-batchclient = boto3.client('batch')
-s3client = boto3.client('s3')
+batchclient = boto3.client('batch', config=config)
+s3client = boto3.client('s3', config=config)
+
+class ObjectDeletedError(Exception):
+    pass
+
+class UnsupportedStorageClassError(Exception):
+    pass
+
+class UnsupportedTextFormatError(Exception):
+    pass
+
+def get_bucket_region(bucket):
+
+    bucket_location_resp = s3client.get_bucket_location(
+        Bucket=bucket
+    )
+    bucket_region=bucket_location_resp['LocationConstraint']
+    logger.info("bucket_name="+ bucket +",bucket_region=" + bucket_region)
+
+    return bucket_region
+
+def pre_flight_check(source_bucket, source_key):
+    #preflight checks _read_
+    logger.debug("preflight check start")
+
+    pre_flight_response = s3client.head_object(
+        Bucket=source_bucket,
+        Key=source_key
+    )
+    logger.debug('## PREFLIGHT_RESPONSE\r' + jsonpickle.encode(dict(**pre_flight_response)))
+    logger.debug("preflight check end")
+    return pre_flight_response
 
 
-def lambda_handler(event, context):
+def check_if_deleted(source_key, pre_flight_response):
 
-    logger.debug('## EVENT\r' + jsonpickle.encode(dict(**event)))
+    if 'DeleteMarker' in pre_flight_response and pre_flight_response['pre_flight_response'] == True:
+        raise ObjectDeletedError( source_key + ' is deleted')
 
-    jobId = event['job']['id']
-    invocationId = event['invocationId']
-    invocationSchemaVersion = event['invocationSchemaVersion']
+def check_if_supported_storage_class(source_key, pre_flight_response):
 
-    taskId = event['tasks'][0]['taskId']
-    sourceKey = urllib.parse.unquote_plus(event['tasks'][0]['s3Key'])
-    s3BucketArn = event['tasks'][0]['s3BucketArn']
-    sourceBucket = s3BucketArn.split(':::')[-1]
+    unsupported_storage_class = False
 
-    results = []
-    # Prepare result code and string
-    resultCode = None
-    resultString = None
-
-    minsizeforbatch = int(os.environ['MN_SIZE_FOR_BATCH_IN_BYTES'])
-
-    # Copy object to new bucket with new key name
-    try:
-        logger.debug("preflight check start")
-
-        #preflight checks _read_
-        pre_flight_response = s3client.head_object(
-            Bucket=sourceBucket,
-            Key=sourceKey
-        )
-
-        logger.debug('## PREFLIGHT_RESPONSE\r' + jsonpickle.encode(dict(**pre_flight_response)))
-
-        if 'DeleteMarker' in pre_flight_response:
-            if  pre_flight_response['pre_flight_response'] == True:
-                raise Exception('Object ' + sourceKey + ' is deleted')
-
-        size = pre_flight_response['ContentLength']
-        destinationBucket=os.environ['DESTINATION_BUCKET_NAME']
-
-        logger.debug("preflight check end")
-
-        if (size > minsizeforbatch):
-
-            unsupportedStorageClass = False
-
-            #Storage class check
-            if 'StorageClass' in pre_flight_response:
-                if pre_flight_response['StorageClass'] in ['GLACIER', 'DEEP_ARCHIVE']:
-                    #check restore status:
-                    if 'Restore' in pre_flight_response:
-                        restore = pre_flight_response['Restore']
-                        logger.debug(restore)
-                        if 'ongoing-request="false"' not in restore:
-                            logger.info('restore is in progress')
-                            raise Exception('Object ' + sourceKey + ' is restoring from '  + pre_flight_response['StorageClass'])
-                    else:
-                        unsupportedStorageClass = True
-
-            if (unsupportedStorageClass):
-                raise Exception('Object ' + sourceKey + ' is in unsupported StorageClass '  + pre_flight_response['StorageClass'])
-
-            #NFC for unicodedata
-            if unicodedata.is_normalized('NFC', sourceKey) == False:
-                raise Exception('Object ' + sourceKey + ' is not in Normalized Form C' )
-
-
-            if (is_can_submit_jobs() == False):
-
-                logger.info("too many jobs pending. returning slowdown")
-                resultCode = 'TemporaryFailure'
-                resultString = 'Retry request to batch due to too many pending jobs.'
-
+    #Storage class check
+    if 'StorageClass' in pre_flight_response and pre_flight_response['StorageClass'] in ['GLACIER', 'DEEP_ARCHIVE']:
+            #check restore status:
+            if 'Restore' in pre_flight_response:
+                restore = pre_flight_response['Restore']
+                logger.debug(restore)
+                if 'ongoing-request="false"' not in restore:
+                    logger.info('restore is in progress')
+                    raise UnsupportedStorageClassError( source_key + ' is restoring from '  + pre_flight_response['StorageClass'])
             else:
+                unsupported_storage_class = True
 
-                logger.debug("job submission start")
+    if (unsupported_storage_class):
+        raise UnsupportedStorageClassError( source_key + ' is in unsupported StorageClass '  + pre_flight_response['StorageClass'])
 
-                #submit job
-                response = batchclient.submit_job(
-                    jobName="MediaSyncJob",
-                    jobQueue=os.environ['JOB_QUEUE'],
-                    jobDefinition=os.environ['JOB_DEFINITION'],
-                    parameters={
-                        'SourceS3Uri': 's3://' + sourceBucket + '/' + sourceKey,
-                        'DestinationS3Uri': 's3://' + destinationBucket + '/' + sourceKey,
-                        'Size': str(size)
-                    },
-                    tags={
-                        'S3BatchJobId': jobId,
-                        'SourceBucket': sourceBucket,
-                        'DestinationBucket': destinationBucket,
-                        'Key': sourceKey,
-                        'Size': str(size)
-                    }
-                )
+    #NFC for unicodedata
+    if unicodedata.is_normalized('NFC', source_key) == False:
+        raise UnsupportedTextFormatError( source_key + ' is not in Normalized Form C' )
 
-                logger.debug('## BATCH_RESPONSE\r' + jsonpickle.encode(dict(**pre_flight_response)))
-                logger.debug("job submission complete")
-                resultCode = 'Succeeded'
+def submit_job(s3_batch_job_id, source_bucket, source_key, destination_bucket, size):
 
-                detail = 'https://console.aws.amazon.com/batch/v2/home?region=' + os.environ['AWS_REGION'] + '#jobs/detail/'+ response['jobId']
-                resultString = detail
-                resultCode = 'Succeeded'
+    source_bucket_region = get_bucket_region(source_bucket)
 
-        else:
-            # <5GB
-            copy_response= {}
+    job_definition = os.environ['JOB_DEFINITION'] if get_bucket_region(destination_bucket) == source_bucket_region else  os.environ['JOB_DEFINITION_X_REGION']
 
-            if (os.environ['IS_BUCKET_OWNER_FULL_CONTROL'] == 'FALSE'):
-                copy_response = s3client.copy_object(
-                    Bucket=destinationBucket,
-                    CopySource={'Bucket': sourceBucket,'Key': sourceKey},
-                    Key=sourceKey
-                )
-            else:
-                copy_response = s3client.copy_object(
-                    Bucket=destinationBucket,
-                    CopySource={'Bucket': sourceBucket,'Key': sourceKey},
-                    ACL='bucket-owner-full-control',
-                    Key=sourceKey
-                )
+    logger.debug("job submission start")
 
-            logger.debug('## COPY_RESPONSE\r' + jsonpickle.encode(dict(**copy_response)))
-            resultString = 'Lambda copy complete'
-            resultCode = 'Succeeded'
+    #submit job
+    response = batchclient.submit_job(
+        jobName="MediaSyncJob",
+        jobQueue=os.environ['JOB_QUEUE'],
+        jobDefinition=job_definition,
+        parameters={
+            'SourceS3Uri': 's3://' + source_bucket + '/' + source_key,
+            'DestinationS3Uri': 's3://' + destination_bucket + '/' + source_key,
+            'Size': str(size),
+            'SourceBucketRegion': source_bucket_region
+        },
+        tags={
+            'S3BatchJobId': s3_batch_job_id,
+            'SourceBucket': source_bucket,
+            'DestinationBucket': destination_bucket,
+            'Key': source_key,
+            'Size': str(size)
+        }
+    )
+
+    logger.debug('## BATCH_RESPONSE\r' + jsonpickle.encode(dict(**response)))
+    logger.debug("job submission complete")
+
+    job_id = '#' if 'jobId' not in response else response['jobId']
+
+    return job_id
 
 
-    except ClientError as e:
-        # If request timed out, mark as a temp failure
-        # and S3 Batch Operations will make the task for retry. If
-        # any other exceptions are received, mark as permanent failure.
-        errorCode = e.response['Error']['Code']
-        errorMessage = e.response['Error']['Message']
+def in_place_copy(source_bucket, source_key, destination_bucket):
 
-        logger.debug(errorMessage)
+    copy_response= {}
+    copy_response = s3client.copy_object(
+        Bucket=destination_bucket,
+        CopySource={'Bucket': source_bucket,'Key': source_key},
+        Key=source_key
+    )
 
-        if errorCode == 'TooManyRequestsException':
-            resultCode = 'TemporaryFailure'
-            resultString = 'Retry request to batch due to throttling.'
-        elif errorCode == 'RequestTimeout':
-            resultCode = 'TemporaryFailure'
-            resultString = 'Retry request to Amazon S3 due to timeout.'
-        elif (errorCode == '304'):
-            resultCode = 'Succeeded'
-            resultString = 'Not modified'
-        elif (errorCode == 'SlowDown'):
-            resultCode = 'TemporaryFailure'
-            resultString = 'Retry request to s3 due to throttling.'
-        else:
-            resultCode = 'PermanentFailure'
-            resultString = '{}: {}'.format(errorCode, errorMessage)
-
-    except Exception as e:
-        # Catch all exceptions to permanently fail the task
-        resultCode = 'PermanentFailure'
-        resultString = 'Exception: {}'.format(e)
-
-    finally:
-        results.append({
-            'taskId': taskId,
-            'resultCode': resultCode,
-            'resultString': resultString
-        })
-        logger.info(resultCode + " # " + resultString)
-
-    return {
-        'invocationSchemaVersion': invocationSchemaVersion,
-        'treatMissingKeysAs': 'PermanentFailure',
-        'invocationId': invocationId,
-        'results': results
-    }
-
+    logger.debug('## COPY_RESPONSE\r' + jsonpickle.encode(dict(**copy_response)))
 
 def is_can_submit_jobs():
 
@@ -211,3 +150,101 @@ def is_can_submit_jobs():
         logger.debug("Pending jobs check is disabled")
 
     return True
+
+def lambda_handler(event, _):
+
+    logger.debug('## EVENT\r' + jsonpickle.encode(dict(**event)))
+
+    destination_bucket=os.environ['DESTINATION_BUCKET_NAME']
+
+    s3_batch_job_id = event['job']['id']
+    invocation_id = event['invocationId']
+    invocation_schema_version = event['invocationSchemaVersion']
+
+    task_id = event['tasks'][0]['taskId']
+    source_key = urllib.parse.unquote_plus(event['tasks'][0]['s3Key'])
+    s3_bucket_arn = event['tasks'][0]['s3BucketArn']
+    source_bucket = s3_bucket_arn.split(':::')[-1]
+
+    results = []
+    # Prepare result code and string
+    result_code = None
+    result_string = None
+
+    minsizeforbatch = int(os.environ['MN_SIZE_FOR_BATCH_IN_BYTES'])
+
+    # Copy object to new bucket with new key name
+    try:
+
+        pre_flight_response = pre_flight_check(source_bucket, source_key)
+
+        check_if_deleted(source_key, pre_flight_response)
+        size = pre_flight_response['ContentLength']
+
+        if (size > minsizeforbatch):
+
+            check_if_supported_storage_class(source_key, pre_flight_response)
+
+            if (is_can_submit_jobs() == False):
+
+                logger.info("too many jobs pending. returning slowdown")
+                result_code = 'TemporaryFailure'
+                result_string = 'Retry request to batch due to too many pending jobs.'
+
+            else:
+
+                batch_job_id = submit_job(s3_batch_job_id, source_bucket, source_key, destination_bucket, size)
+                result_code = 'Succeeded'
+                result_string = 'https://console.aws.amazon.com/batch/v2/home?region=' + os.environ['AWS_REGION'] + '#jobs/detail/'+ batch_job_id
+
+        else:
+            # <5GB
+            in_place_copy(source_bucket, source_key, destination_bucket)
+            result_string = 'Lambda copy complete'
+            result_code = 'Succeeded'
+
+
+    except ClientError as e:
+        # If request timed out, mark as a temp failure
+        # and S3 Batch Operations will make the task for retry. If
+        # any other exceptions are received, mark as permanent failure.
+        error_code = e.response['Error']['Code']
+        error_message = e.response['Error']['Message']
+
+        logger.debug(error_message)
+
+        if error_code == 'TooManyRequestsException':
+            result_code = 'TemporaryFailure'
+            result_string = 'Retry request to batch due to throttling.'
+        elif error_code == 'RequestTimeout':
+            result_code = 'TemporaryFailure'
+            result_string = 'Retry request to Amazon S3 due to timeout.'
+        elif (error_code == '304'):
+            result_code = 'Succeeded'
+            result_string = 'Not modified'
+        elif (error_code == 'SlowDown'):
+            result_code = 'TemporaryFailure'
+            result_string = 'Retry request to s3 due to throttling.'
+        else:
+            result_code = 'PermanentFailure'
+            result_string = '{}: {}'.format(error_code, error_message)
+
+    except Exception as e:
+        # Catch all exceptions to permanently fail the task
+        result_code = 'PermanentFailure'
+        result_string = 'Exception: {}'.format(e)
+
+    finally:
+        results.append({
+            'taskId': task_id,
+            'resultCode': result_code,
+            'resultString': result_string
+        })
+        logger.info(result_code + " # " + result_string)
+
+    return {
+        'invocationSchemaVersion': invocation_schema_version,
+        'treatMissingKeysAs': 'PermanentFailure',
+        'invocationId': invocation_id,
+        'results': results
+    }

@@ -1,3 +1,6 @@
+# Copyright Amazon.com, Inc. or its affiliates. All Rights Reserved.
+# SPDX-License-Identifier: Apache-2.0
+
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
 
@@ -47,7 +50,6 @@ Metadata:
         Label:
           default: "Copy Configuration"
           Parameters:
-            - BucketOwnerFullControl
             - DestinationBucketName
 
 Parameters:
@@ -65,21 +67,9 @@ Parameters:
     Description: Image Name
     Default: amazon/aws-cli
 
-  BucketOwnerFullControl:
-    Type: String
-    AllowedValues: ["Yes", "No"]
-    Description: Select "Yes" to provide full access to copied objects.
-    Default: "Yes"
-
   DestinationBucketName:
     Type: String
     Description: Destination S3 Bucket Name
-
-Conditions:
-  IsBucketOwnerFullControl:
-    Fn::Equals:
-      - "Yes"
-      - Ref: BucketOwnerFullControl
 
 Resources:
 
@@ -196,6 +186,8 @@ Resources:
     Type: AWS::S3::Bucket
     DeletionPolicy: Retain
     Properties:
+      VersioningConfiguration:
+        Status: Suspended
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true
@@ -317,6 +309,11 @@ Resources:
       ManagedPolicyArns:
         - arn:aws:iam::aws:policy/service-role/AWSBatchServiceRole
 
+  DriverFunctionLogGroup:
+    Type: AWS::Logs::LogGroup
+    Properties:
+      LogGroupName: !Sub /aws/lambda/${MediaSyncDriverFunction}
+      RetentionInDays: 30
 
   MediaSyncDriverFunction:
     Type: AWS::Serverless::Function
@@ -363,6 +360,7 @@ Resources:
               - s3:GetObjectVersionTagging
               - s3:AbortMultipartUpload
               - s3:ListMultipartUploadParts
+              - s3:GetBucketLocation
             Resource: '*'
           - Sid: kms
             Effect: Allow
@@ -381,15 +379,99 @@ Resources:
         Variables:
           JOB_DEFINITION:
             Ref: CopyJobDefinition
+          JOB_DEFINITION_X_REGION:
+            Ref: CopyJobDefinitionXRegion
           JOB_QUEUE:
             Ref: MediaSyncJobQueue
           DESTINATION_BUCKET_NAME:
             Ref: DestinationBucketName
-          IS_BUCKET_OWNER_FULL_CONTROL: !If [IsBucketOwnerFullControl, 'TRUE', 'FALSE']
           DISABLE_PENDING_JOBS_CHECK: true
           MAX_NUMBER_OF_PENDING_JOBS: 96 #== 2x of MaxvCpus
           MN_SIZE_FOR_BATCH_IN_BYTES: 524288000 #500MB - this optimizaed for cost. Set it to 5GB for optimal speed.
           LogLevel: INFO
+          SOLUTION_IDENTIFIER: "AwsSolution/SO0133/__VERSION__"
+
+  CopyJobDefinitionXRegion:
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      Type: container
+      PlatformCapabilities:
+        - FARGATE
+      ContainerProperties:
+        Image:
+          Fn::Sub: ${ImageName}
+
+        ExecutionRoleArn:
+          Fn::GetAtt: ExecutionRole.Arn
+
+        FargatePlatformConfiguration:
+          PlatformVersion: 1.4.0
+        NetworkConfiguration:
+          AssignPublicIp: ENABLED
+
+        ResourceRequirements:
+          -
+            Type: VCPU
+            Value: 4
+          -
+            Type: MEMORY
+            Value: 8192
+
+        Command:
+          - /usr/local/bin/stream.sh
+          - Ref::SourceS3Uri
+          - Ref::DestinationS3Uri
+          - Ref::Size
+          - Ref::SourceBucketRegion
+
+        JobRoleArn:
+          Fn::GetAtt: JobRole.Arn
+
+      RetryStrategy:
+        Attempts: 1
+        # TODO inspect exit codes for throttles
+        #  only retry for 1, and 255
+
+  CopyJobDefinitionXRegion:
+    Type: AWS::Batch::JobDefinition
+    Properties:
+      Type: container
+      PlatformCapabilities:
+        - FARGATE
+      ContainerProperties:
+        Image:
+          Fn::Sub: ${ImageName}
+
+        ExecutionRoleArn:
+          Fn::GetAtt: ExecutionRole.Arn
+
+        FargatePlatformConfiguration:
+          PlatformVersion: 1.4.0
+        NetworkConfiguration:
+          AssignPublicIp: ENABLED
+
+        ResourceRequirements:
+          -
+            Type: VCPU
+            Value: 4
+          -
+            Type: MEMORY
+            Value: 8192
+
+        Command:
+          - /usr/local/bin/stream.sh
+          - Ref::SourceS3Uri
+          - Ref::DestinationS3Uri
+          - Ref::Size
+          - Ref::SourceBucketRegion
+
+        JobRoleArn:
+          Fn::GetAtt: JobRole.Arn
+
+      RetryStrategy:
+        Attempts: 1
+        # TODO inspect exit codes for throttles
+        #  only retry for 1, and 255
 
   CopyJobDefinition:
     Type: AWS::Batch::JobDefinition
@@ -418,21 +500,17 @@ Resources:
             Value: 2048
 
         Command:
-          # - aws
-          - s3
-          - cp
+          - /usr/local/bin/ssc.sh
           - Ref::SourceS3Uri
           - Ref::DestinationS3Uri
-          - !If [ IsBucketOwnerFullControl, '--acl', !Ref 'AWS::NoValue']
-          - !If [ IsBucketOwnerFullControl, 'bucket-owner-full-control', !Ref 'AWS::NoValue']
-          - --expected-size
           - Ref::Size
+          - Ref::SourceBucketRegion
 
         JobRoleArn:
           Fn::GetAtt: JobRole.Arn
 
       RetryStrategy:
-        Attempts: 3
+        Attempts: 2
         # TODO inspect exit codes for throttles
         #  only retry for 1, and 255
 
