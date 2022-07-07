@@ -13,6 +13,7 @@ Note: If you want to use the solution without building from source, navigate to 
   - [Fixity](#fixity)  
 - [Customizing the Solution](#customizing-the-solution)
 - [Usage](#usage)
+- [Developers](#developers)
 - [File Structure](#file-structure)
 - [License](#license)
 
@@ -68,31 +69,29 @@ Please refer to the developer guide [here](docs/developer.md)
 # Usage
 You will need three AWS accounts to deploy this effectively (a) publisher, (b) subscriber and (c) MediaExchange. The CloudFormation templates are deployed in (c) MediaExchange account. It is also possible to install in a single account for testing. See the implementation guide for instructions.
 
+<a name="developers"></a>
+## Developers
+Please refer to the developer guide [here](docs/developer.md)
+
 <a name="file-structure"></a>
 # File structure
 
 <pre>
-├── deployment								 [Folder with cloudformation templates for deployment]
-│   ├── agreement.yaml
-│   ├── media-exchange-on-aws.yaml
-│   ├── provision.yaml
-│   ├── publisher.yaml
-│   └── subscriber.yaml
-├── docs									     [Folder with additional documentation]
+├── deployment                          [folder containing build scripts]
+├── docs                                [folder containing documentation]
 │   ├── developer.md
 │   ├── faqs.md
 │   └── security.md
-├── images								     [Folder with images]
-│   ├── main.png
-│   └── sc.jpeg
-├── tests									     [Folder with integration/system tests]
-│   ├── deployment				
+├── images                              [folder containing images]
+├── tests                               [folder containing integration/system tests]
+│   ├── deployment                      [folder containing build scripts for tests]
 │   └── python
-└── tools									     [Folder containing the optional tools/utilitys]
-    ├── autoingest             [ingest media exchange assets into subscriber’s s3 bucket]
-    ├── fixity								 [checksums at scale]
-    └── mediasync							 [easily move assets between s3 buckets]
-<pre>
+└── tools                               [Folder containing the optional tools/utilities]
+    ├── autoingest                      [ingest media exchange assets into subscriber’s s3 bucket]
+    ├── fixity                          [checksums at scale]
+    └── mediasync                       [easily move assets between s3 buckets]
+</pre>
+
 
 <a name="license"></a>
 # License

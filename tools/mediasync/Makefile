@@ -44,7 +44,7 @@ configure:
 
 %-stack-install: %-stack-build
 	@echo "deploying cloudformation template"
-	sam deploy -t $(CURRENT_DIR)/build/$*/template.yaml --stack-name $(STACKPREFIX)-$*-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE) --resolve-s3
+	sam deploy -t $(CURRENT_DIR)/build/$*/template.yaml --stack-name $(STACKPREFIX)-$*-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE)
 
 %-stack-delete:
 	@echo "deleting cloudformation stack"

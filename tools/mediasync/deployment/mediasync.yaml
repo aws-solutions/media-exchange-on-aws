@@ -473,47 +473,6 @@ Resources:
         # TODO inspect exit codes for throttles
         #  only retry for 1, and 255
 
-  CopyJobDefinitionXRegion:
-    Type: AWS::Batch::JobDefinition
-    Properties:
-      Type: container
-      PlatformCapabilities:
-        - FARGATE
-      ContainerProperties:
-        Image:
-          Fn::Sub: ${ImageName}
-
-        ExecutionRoleArn:
-          Fn::GetAtt: ExecutionRole.Arn
-
-        FargatePlatformConfiguration:
-          PlatformVersion: 1.4.0
-        NetworkConfiguration:
-          AssignPublicIp: ENABLED
-
-        ResourceRequirements:
-          -
-            Type: VCPU
-            Value: 4
-          -
-            Type: MEMORY
-            Value: 8192
-
-        Command:
-          - /usr/local/bin/stream.sh
-          - Ref::SourceS3Uri
-          - Ref::DestinationS3Uri
-          - Ref::Size
-          - Ref::SourceBucketRegion
-
-        JobRoleArn:
-          Fn::GetAtt: JobRole.Arn
-
-      RetryStrategy:
-        Attempts: 1
-        # TODO inspect exit codes for throttles
-        #  only retry for 1, and 255
-
   CopyJobDefinition:
     Type: AWS::Batch::JobDefinition
     Properties:
