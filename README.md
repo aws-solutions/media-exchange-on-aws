@@ -95,4 +95,4 @@ Please refer to the developer guide [here](docs/developer.md)
 
 <a name="license"></a>
 # License
-See license [here](https://github.com/aws-solutions/media-exchange-on-aws/blob/master/LICENSE.txt)
+See license [here](https://github.com/aws-solutions/media-exchange-on-aws/blob/main/LICENSE.txt)
