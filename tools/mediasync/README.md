@@ -119,4 +119,4 @@ It runs many of these transfers in parallel. It takes about three hours to copy 
 
 <a name="license"></a>
 # License
-See license [here](https://github.com/aws-solutions/media-exchange-on-aws/blob/master/LICENSE.txt)
+See license [here](https://github.com/aws-solutions/media-exchange-on-aws/blob/main/LICENSE.txt)

@@ -114,4 +114,4 @@ Out of the box, it can run 256 checksums in parallel.
 
 <a name="license"></a>
 # License
-See license [here](https://github.com/aws-solutions/media-exchange-on-aws/blob/master/LICENSE.txt)
+See license [here](https://github.com/aws-solutions/media-exchange-on-aws/blob/main/LICENSE.txt)
