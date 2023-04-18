@@ -128,6 +128,9 @@ Resources:
       VersioningConfiguration:
         Status: Suspended
       AccessControl: LogDeliveryWrite
+      OwnershipControls:
+        Rules:
+          - ObjectOwnership:  ObjectWriter
       PublicAccessBlockConfiguration:
         BlockPublicAcls: true
         BlockPublicPolicy: true

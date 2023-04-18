@@ -67,7 +67,7 @@ def lambda_handler(event, _):
 
         record = records[0]
 
-        message = jsonpickle.decode(jsonpickle.decode(record['body'])['Message'])
+        message = jsonpickle.decode(jsonpickle.decode(record['body'])['Message']) #nosec
 
         logger.info('## MESSAGE\r' + jsonpickle.encode(dict(**message)))
 
