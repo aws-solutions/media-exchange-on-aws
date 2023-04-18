@@ -9,12 +9,17 @@ import time
 import requests
 import hashlib
 import jsonpickle
+import tempfile
 
 @pytest.fixture()
 def config():
+    tmpdir = tempfile.mkdtemp()
+    predictable_filename = 'media-exchange-test-object'
+
+    path = os.path.join(tmpdir, predictable_filename)
 
     onboarding_info = {}
-    onboarding_info['FILE_NAME'] = '/tmp/media-exchange-test-object'
+    onboarding_info['FILE_NAME'] = path
 
     with open(onboarding_info['FILE_NAME'], 'wb') as f:
         f.write(os.urandom(1024*100)) #100 KB
