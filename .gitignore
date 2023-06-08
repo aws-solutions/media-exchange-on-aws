@@ -116,6 +116,9 @@ __pycache__/
 *.py[cod]
 *$py.class
 
+# node modules
+node_modules
+
 # C extensions
 *.so
 
@@ -127,7 +130,6 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
 lib64/
 parts/
 sdist/
@@ -255,7 +257,6 @@ media-exchange-base/test/template.yaml
 .vscode
 .factorypath
 .settings
-bin/
 build.gradle
 checkstyle.*
 gradle/*
@@ -267,3 +268,15 @@ gradle/*
 **/open-source
 
 cleanup.txt
+
+# lambda assets
+asset*/
+
+# coverage 
+coverage-reports
+
+# optional deployments
+**/autoingest/deployment
+**/fixity/deployment
+**/mediasync/deployment
+

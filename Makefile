@@ -8,7 +8,6 @@ VERSION ?= 1.1.0
 GUIDED ?= --guided
 ENV ?= dev
 CURRENT_DIR := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-SAM_CONFIG_FILE ?= $(CURRENT_DIR)deployment/samconfig-$(ACCOUNT_ID).toml
 STACKPREFIX=mediaexchange
 
 
@@ -23,7 +22,7 @@ AWS_REGION ?= $(shell aws configure get region --output text)
 
 %-stack-deploy: %-stack-build
 	@echo "deploying cloudformation template"
-	sam deploy -t $(CURRENT_DIR)/build/$*/template.yaml --stack-name $(STACKPREFIX)-$*-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --resolve-s3 --parameter-overrides  $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE)
+	sam deploy -t $(CURRENT_DIR)/build/$*/template.yaml --stack-name $(STACKPREFIX)-$*-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --resolve-s3 --parameter-overrides  $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION)
 
 %-stack-delete:
 	@echo "deleting cloudformation stack"
@@ -45,7 +44,7 @@ ifeq ($(SUBSCRIBER_ACCOUNT_ID), $(ACCOUNT_ID))
 endif
 
 testrole-stack-deploy:
-	sam deploy -t $(CURRENT_DIR)/tests/deployment/testrole.yaml --stack-name $(STACKPREFIX)-testrole-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --resolve-s3 --parameter-overrides  $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION) --config-file $(SAM_CONFIG_FILE)
+	sam deploy -t $(CURRENT_DIR)/tests/deployment/testrole.yaml --stack-name $(STACKPREFIX)-testrole-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --resolve-s3 --parameter-overrides  $(PARAMETER_OVERRIDES) --config-env $* $(GUIDED) --region $(AWS_REGION)
 
 testrole-stack-deploy:  PARAMETER_OVERRIDES += TestAccountId=$(TEST_ACCOUNT_ID)
 
@@ -65,13 +64,13 @@ configure:
 
 install: configure
 
-	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/media-exchange-on-aws.template $(GUIDED) --stack-name $(STACKPREFIX)-servicecatalog-stack-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) --config-env servicecatalog-stack --config-file $(SAM_CONFIG_FILE) --region $(AWS_REGION)
+	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/media-exchange-on-aws.template $(GUIDED) --stack-name $(STACKPREFIX)-servicecatalog-stack-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) --config-env servicecatalog-stack --region $(AWS_REGION)
 
-	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/provision.template --stack-name $(STACKPREFIX)-selfprovision-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) PublisherAccountId=$(ACCOUNT_ID) PublisherName=self SubscriberAccountId=$(ACCOUNT_ID) SubscriberName=self --config-env selfprovision-stack --config-file $(SAM_CONFIG_FILE) --role-arn   arn:aws:iam::$(ACCOUNT_ID):role/mediaexchange-$(AWS_REGION)-$(ENV)-cfn-deploy --region $(AWS_REGION)
+	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/provision.template --stack-name $(STACKPREFIX)-selfprovision-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) PublisherAccountId=$(ACCOUNT_ID) PublisherName=self SubscriberAccountId=$(ACCOUNT_ID) SubscriberName=self --config-env selfprovision-stack --role-arn   arn:aws:iam::$(ACCOUNT_ID):role/mediaexchange-$(AWS_REGION)-$(ENV)-cfn-deploy --region $(AWS_REGION)
 
 provision:
 
-	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/provision.template $(GUIDED) --stack-name $(STACKPREFIX)-provision-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) --config-env provision-stack --config-file $(SAM_CONFIG_FILE) --role-arn  arn:aws:iam::$(ACCOUNT_ID):role/mediaexchange-$(AWS_REGION)-$(ENV)-cfn-deploy --region $(AWS_REGION)
+	@sam deploy -t $(CURRENT_DIR)/deployment/global-s3-assets/provision.template $(GUIDED) --stack-name $(STACKPREFIX)-provision-$(ENV) --no-confirm-changeset --no-fail-on-empty-changeset --capabilities CAPABILITY_IAM CAPABILITY_NAMED_IAM --parameter-overrides Environment=$(ENV) --config-env provision-stack --role-arn  arn:aws:iam::$(ACCOUNT_ID):role/mediaexchange-$(AWS_REGION)-$(ENV)-cfn-deploy --region $(AWS_REGION)
 
 summarize:
 

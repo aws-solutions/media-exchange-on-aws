@@ -1,0 +1,12 @@
+*.js
+!jest.config.js
+*.d.ts
+node_modules
+asset.*
+**/autoingest/deployment
+**/fixity/deployment
+**/mediasync/deployment
+
+# CDK asset staging directory
+.cdk.staging
+cdk.out
