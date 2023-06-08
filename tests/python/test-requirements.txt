@@ -1,4 +1,4 @@
-boto3
-requests
-pytest
-jsonpickle
+boto3==1.26.57
+requests==2.31.0
+pytest==7.3.1
+jsonpickle==3.0.1
