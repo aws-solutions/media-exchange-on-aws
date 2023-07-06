@@ -13,6 +13,7 @@
 import * as cdk from "aws-cdk-lib";
 import { Construct } from "constructs";
 import * as iam from "aws-cdk-lib/aws-iam";
+import * as lambda from "aws-cdk-lib/aws-lambda";
 import * as serviceCatalog from "aws-cdk-lib/aws-servicecatalog";
 import * as appreg from "@aws-cdk/aws-servicecatalogappregistry-alpha";
 import { NagSuppressions } from "cdk-nag";
@@ -827,6 +828,122 @@ export class MEStack extends cdk.Stack {
 
     appRegistry.node.addDependency(attributeGroup);
     appRegistry.associateAttributeGroup(attributeGroup);
+
+    /**
+     * Custom Resource lambda, role, and policy.
+     * Creates custom resources for sending metrics to dashboard
+     */
+    const customResourceRoleMetrics = new iam.Role(this, 'CustomResourceRoleMetrics', {
+      assumedBy: new iam.ServicePrincipal('lambda.amazonaws.com')
+    });
+    const customResourcePolicyMetrics = new iam.Policy(this, 'CustomResourcePolicyMetrics', {
+      statements: [
+        new iam.PolicyStatement({
+          resources: [`arn:${cdk.Aws.PARTITION}:logs:${cdk.Aws.REGION}:${cdk.Aws.ACCOUNT_ID}:log-group:/aws/lambda/*`],
+          actions: [
+            'logs:CreateLogGroup',
+            'logs:CreateLogStream',
+            'logs:PutLogEvents'
+          ]
+        }),
+      ]
+    });
+    customResourcePolicyMetrics.attachToRole(customResourceRoleMetrics);
+
+    //cfn_nag
+    const cfnCustomResourceRoleMetrics = customResourceRoleMetrics.node.findChild('Resource') as iam.CfnRole;
+    cfnCustomResourceRoleMetrics.cfnOptions.metadata = {
+      cfn_nag: {
+        rules_to_suppress: [
+          {
+            id: 'W11',
+            reason: '* is required to create CloudWatch logs and interact with metrics actions that do not support resource level permissions'
+          }, {
+            id: 'W76',
+            reason: 'All policies are required by the custom resource.'
+          }
+        ]
+      }
+    };
+    const cfnCustomResourcePolicyMetrics = customResourcePolicyMetrics.node.findChild('Resource') as iam.CfnPolicy;
+    cfnCustomResourcePolicyMetrics.cfnOptions.metadata = {
+      cfn_nag: {
+        rules_to_suppress: [
+          {
+            id: 'W12',
+            reason: '* is required to create CloudWatch logs and interact with metrics actions that do not support resource level permissions'
+          }, {
+            id: 'W76',
+            reason: 'High complexity due to number of policy statements needed for creating all custom resources'
+          }
+        ]
+      }
+    };
+    //cdk_nag
+    NagSuppressions.addResourceSuppressions(
+      customResourcePolicy,
+      [
+        {
+          id: 'AwsSolutions-IAM5',
+          reason: 'Resource ARNs are not generated at the time of policy creation'
+        }
+      ]
+    );
+    const customResourceLambda = new lambda.Function(this, 'CustomResource', {
+      runtime: lambda.Runtime.NODEJS_18_X,
+      handler: 'index.handler',
+      description: 'Used to deploy resources not supported by CloudFormation',
+      environment: {
+        SOLUTION_IDENTIFIER: `AwsSolution/${solutionId}/__VERSION__`
+      },
+      functionName: `${cdk.Aws.STACK_NAME}-custom-resource`,
+      role: customResourceRoleMetrics,
+      code: lambda.Code.fromAsset('../custom-resource'),
+      timeout: cdk.Duration.seconds(30)
+    });
+    customResourceLambda.node.addDependency(customResourceRoleMetrics);
+    customResourceLambda.node.addDependency(customResourcePolicy);
+
+    //cfn_nag
+    const cfnCustomResourceLambda = customResourceLambda.node.findChild('Resource') as lambda.CfnFunction;
+    cfnCustomResourceLambda.cfnOptions.metadata = {
+      cfn_nag: {
+        rules_to_suppress: [
+          {
+            id: 'W58',
+            reason: 'Invalid warning: function has access to cloudwatch'
+          }, {
+            id: 'W89',
+            reason: 'This CustomResource does not need to be deployed inside a VPC'
+          }, {
+            id: 'W92',
+            reason: 'This CustomResource does not need to define ReservedConcurrentExecutions to reserve simultaneous executions'
+          }
+        ]
+      }
+    };
+    /**
+     * Custom Resource: UUID
+     */
+    const uuid = new cdk.CustomResource(this, 'UUID', {
+      serviceToken: customResourceLambda.functionArn,
+      properties: {
+        Resource: 'UUID'
+      }
+    });
+    /**
+     * Custom Resource: Anonymouse Metric
+     */
+    new cdk.CustomResource(this, 'AnonymousMetric', { // NOSONAR
+      serviceToken: customResourceLambda.functionArn,
+      properties: {
+        Resource: 'AnonymousMetric',
+        SolutionId: solutionId,
+        UUID: uuid.getAttString('UUID'),
+        Version: '__VERSION__',
+        SendAnonymizedMetric: cdk.Fn.findInMap('AnonymizedData', 'SendAnonymizedData', 'Data')
+      }
+    });
 
     // Outputs
     new cdk.CfnOutput(this, "CFNDeployerRole", { // NOSONAR

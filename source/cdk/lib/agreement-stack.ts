@@ -222,6 +222,7 @@ export class AgreementStack extends cdk.Stack {
     );
 
     const source = new s3.Bucket(this, "ExchangeBucket", {
+      enforceSSL: true,
       eventBridgeEnabled: true,
       objectOwnership: s3.ObjectOwnership.BUCKET_OWNER_ENFORCED,
       serverAccessLogsBucket: logBucket,

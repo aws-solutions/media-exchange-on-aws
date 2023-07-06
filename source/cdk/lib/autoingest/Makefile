@@ -6,7 +6,7 @@ help:
 GUIDED ?= --guided
 IMAGEVERSION ?= latest
 ENV ?= dev
-VERSION ?= 1.1.0
+VERSION ?= 1.2.0
 
 
 STACKPREFIX = mediaexchange-tools

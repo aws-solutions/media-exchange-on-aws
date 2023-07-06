@@ -93,6 +93,17 @@ export class AutoIngestStack extends cdk.Stack {
     };
 
     /**
+     * Mapping for sending anonymized metrics to AWS Solution Builders API
+     */
+    new cdk.CfnMapping(this, 'AnonymizedData', { // NOSONAR
+      mapping: {
+          SendAnonymizedData: {
+              Data: 'Yes'
+          }
+      }
+    });
+
+    /**
      * Roles and policy for lambda creation
      */
     const driverFunctionRole = new iam.Role(
@@ -204,10 +215,12 @@ export class AutoIngestStack extends cdk.Stack {
     });
 
     const dlq = new sqs.Queue(this, "DLQ", {
+      encryption: sqs.QueueEncryption.SQS_MANAGED,
       retentionPeriod: cdk.Duration.seconds(1209600),
     });
 
     const nq = new sqs.Queue(this, "NQ", {
+      encryption: sqs.QueueEncryption.KMS,
       retentionPeriod: cdk.Duration.seconds(86400),
       encryptionMasterKey: cmk,
       dataKeyReuse: cdk.Duration.seconds(86400),
@@ -223,8 +236,9 @@ export class AutoIngestStack extends cdk.Stack {
         SOURCE_BUCKET_NAME: mediaExchangeBucket.valueAsString,
         DESTINATION_BUCKET_NAME: destinationBucket.valueAsString,
         DESTINATION_PREFIX: destinationPrefix.valueAsString,
-        SOLUTION_IDENTIFIER: "AwsSolution/SO0133/__VERSION__",
+        SOLUTION_IDENTIFIER: "AwsSolution/SO0133/__VERSION__-Autoingest",
         LogLevel: "INFO",
+        SendAnonymizedMetric: cdk.Fn.findInMap('AnonymizedData', 'SendAnonymizedData', 'Data')
       },
       functionName: `${cdk.Aws.STACK_NAME}-custom-resource`,
       role: driverFunctionRole,

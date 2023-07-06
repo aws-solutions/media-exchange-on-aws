@@ -15,10 +15,14 @@ logger = logging.getLogger()
 logger.setLevel(os.environ['LogLevel'])
 
 solution_identifier= os.environ['SOLUTION_IDENTIFIER']
-user_agent_extra_param = {"user_agent_extra":solution_identifier}
-config = config.Config(**user_agent_extra_param)
 
-s3client = boto3.client('s3', config=config)
+user_agent_extra_param = {"user_agent_extra":solution_identifier}
+
+presetConfig = config.Config()
+if os.environ['SendAnonymizedMetric'] == 'Yes':
+    presetConfig = config.Config(**user_agent_extra_param)
+
+s3client = boto3.client('s3', config=presetConfig)
 
 
 def match_bucket_name(source_bucket):
@@ -68,7 +72,7 @@ def lambda_handler(event, _):
 
         record = records[0]
 
-        message = jsonpickle.decode(jsonpickle.decode(record['body'])['Message']) #nosec
+        message = jsonpickle.decode(jsonpickle.decode(record['body'])['Message'])
 
         logger.info('## MESSAGE\r' + jsonpickle.encode(dict(**message)))
 
@@ -123,7 +127,7 @@ def lambda_handler(event, _):
         if (result_code == 'TemporaryFailure'):
             #cooloff anytime between 1-10s. SQS does not support exponential backoff based retry
             logger.info("cooloff..")
-            sleep(randint(1,10)) #OK
+            sleep(randint(1,10)) # NOSONAR
             #retry
             raise
 

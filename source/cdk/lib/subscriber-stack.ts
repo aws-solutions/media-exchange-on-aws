@@ -203,6 +203,7 @@ export class SubscriberStack extends cdk.Stack {
     );
 
     const dlq = new sqs.Queue(this, "DLQ", {
+      encryption: sqs.QueueEncryption.KMS,
       encryptionMasterKey: cmk,
       dataKeyReuse: cdk.Duration.seconds(86400),
       retentionPeriod: cdk.Duration.seconds(1209600),

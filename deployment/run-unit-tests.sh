@@ -17,6 +17,7 @@ echo "Installing Dependencies And Testing CDK"
 echo "------------------------------------------------------------------------------"
 # Go to cdk directory
 cdk_dir=`cd ../source/cdk; pwd`
+custom_resource_dir=`cd ../source/custom-resource; pwd`
 cd "${cdk_dir}"
 
 prepare_jest_coverage_report() {
@@ -33,11 +34,13 @@ prepare_jest_coverage_report() {
     coverage_report_path=$coverage_reports_top_path/jest/$component_name
     rm -fr $coverage_report_path
     mv coverage $coverage_report_path
+    rm -fr coverage
 }
 
 run_cdk_project_test() {
     local component_path="$1"
-    local component_name=solutions-constructs
+    local component_path_name="$2"
+    local component_name=solutions-constructs-${component_path_name}
 
     echo "------------------------------------------------------------------------------"
     echo "[Test] $component_name"
@@ -59,7 +62,8 @@ slnroot_dir="$(dirname "$cdk_dir")"
 coverage_reports_top_path="../coverage-reports"
 
 # Test the CDK project
-run_cdk_project_test "$cdk_dir"
+run_cdk_project_test "$cdk_dir" "cdk"
+run_cdk_project_test "$custom_resource_dir" "custom"
 
 # Make sure we clean up
 cleanup_before_exit() {

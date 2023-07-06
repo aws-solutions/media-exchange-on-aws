@@ -74,10 +74,21 @@ export class MediaSyncStack extends cdk.Stack {
     };
 
     /**
+     * Mapping for sending anonymized metrics to AWS Solution Builders API
+     */
+    new cdk.CfnMapping(this, 'AnonymizedData', { // NOSONAR
+      mapping: {
+          SendAnonymizedData: {
+              Data: 'Yes'
+          }
+      }
+    });
+
+    /**
      * Create VPC, internet gateway, and subnets
      */
     const vpc = new ec2.Vpc(this, "Vpc", {
-      ipAddresses: ec2.IpAddresses.cidr("10.0.0.0/16"),
+      ipAddresses: ec2.IpAddresses.cidr("10.0.0.0/16"),  // NOSONAR
       enableDnsSupport: true,
       subnetConfiguration: [
         {
@@ -116,6 +127,7 @@ export class MediaSyncStack extends cdk.Stack {
      * FlowLogBucket bucket
      */
     const flowLogBucket = new s3.Bucket(this, "FlowLogBucket", {
+      enforceSSL: true,
       blockPublicAccess: new s3.BlockPublicAccess({
         blockPublicAcls: true,
         blockPublicPolicy: true,
@@ -500,7 +512,8 @@ export class MediaSyncStack extends cdk.Stack {
           MAX_NUMBER_OF_PENDING_JOBS: "96", //== 2x of MaxvCpus
           MN_SIZE_FOR_BATCH_IN_BYTES: "524288000", //500MB - this optimizaed for cost. Set it to 5GB for optimal speed.
           LogLevel: "INFO",
-          SOLUTION_IDENTIFIER: "AwsSolution/SO0133/__VERSION__",
+          SOLUTION_IDENTIFIER: "AwsSolution/SO0133/__VERSION__-Mediasync",
+          SendAnonymizedMetric: cdk.Fn.findInMap('AnonymizedData', 'SendAnonymizedData', 'Data')
         },
       }
     );
