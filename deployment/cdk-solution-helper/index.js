@@ -38,7 +38,7 @@ fs.readdirSync(global_s3_assets).forEach((file) => {
 
       // Set the S3 bucket reference
       prop.S3Bucket = {
-        "Fn::Sub": "__BUCKET_NAME__-${AWS::Region}",
+        "Fn::Sub": "__ASSET_BUCKET_NAME__-${AWS::Region}",
       };
     } else {
       console.warn(`No S3Bucket Property found for ${JSON.stringify(prop)}`);

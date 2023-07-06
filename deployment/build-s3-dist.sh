@@ -12,9 +12,10 @@
 #
 # This script should be run from the repo's deployment directory
 # cd deployment
-# ./build-s3-dist.sh source-bucket-base-name solution-name version-code
+# ./build-s3-dist.sh dist-bucket-name source-bucket-base-name solution-name version-code
 #
 # Parameters:
+#  - dist-bucket-base-name: Name for the S3 bucket location where the assets are
 #  - source-bucket-base-name: Name for the S3 bucket location where the template will source the Lambda
 #    code from. The template will append '-[region_name]' to this bucket name.
 #    For example: ./build-s3-dist.sh solutions my-solution v1.0.0
@@ -25,15 +26,16 @@
 set -e
 
 # Check to see if input has been provided:
-if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ]; then
+if [ -z "$1" ] || [ -z "$2" ] || [ -z "$3" ] || [ -z "$4" ]; then
     echo "Please provide all required parameters for the build script"
-    echo "For example: ./build-s3-dist.sh solutions trademarked-solution-name v1.0.0"
+    echo "For example: ./build-s3-dist.sh solutions solutions-reference trademarked-solution-name v1.0.0"
     exit 1
 fi
 
-bucket_name="$1"
-solution_name="$2"
-solution_version="$3"
+asset_bucket_name="$1"
+bucket_name="$2"
+solution_name="$3"
+solution_version="$4"
 
 # Get reference for all important folders
 template_dir="$PWD"
@@ -117,6 +119,9 @@ node $template_dir/cdk-solution-helper/index \
 
 for file in $template_dist_dir/*.template
 do
+    replace="s/__ASSET_BUCKET_NAME__/$asset_bucket_name/g"
+    sed -i.orig -e $replace $file
+    
     replace="s/__BUCKET_NAME__/$bucket_name/g"
     sed -i.orig -e $replace $file
 
