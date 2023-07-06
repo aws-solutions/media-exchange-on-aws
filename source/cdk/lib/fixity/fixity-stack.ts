@@ -62,11 +62,22 @@ export class FixityStack extends cdk.Stack {
     };
 
     /**
+     * Mapping for sending anonymized metrics to AWS Solution Builders API
+     */
+    new cdk.CfnMapping(this, 'AnonymizedData', { // NOSONAR
+      mapping: {
+          SendAnonymizedData: {
+              Data: 'Yes'
+          }
+      }
+    });
+
+    /**
      * Vpc, internet gateway, and subnet creation
      */
     const vpc = new ec2.Vpc(this, "Vpc", {
       vpcName: "Vpc",
-      ipAddresses: ec2.IpAddresses.cidr("10.0.0.0/16"),
+      ipAddresses: ec2.IpAddresses.cidr("10.0.0.0/16"), // NOSONAR
       enableDnsSupport: true,
       subnetConfiguration: [
         {
@@ -103,6 +114,7 @@ export class FixityStack extends cdk.Stack {
      * FlowLogBucket bucket
      */
     const flowLogBucket = new s3.Bucket(this, "FlowLogBucket", {
+      enforceSSL: true,
       blockPublicAccess: new s3.BlockPublicAccess({
         blockPublicAcls: true,
         blockPublicPolicy: true,
@@ -426,7 +438,8 @@ export class FixityStack extends cdk.Stack {
         JOB_SIZE_THRESHOLD: "10737418240",
         JOB_QUEUE: jobQueue.attrJobQueueArn,
         LogLevel: "INFO",
-        SOLUTION_IDENTIFIER: "AwsSolution/SO0133/__VERSION__",
+        SOLUTION_IDENTIFIER: "AwsSolution/SO0133/__VERSION__-Fixity",
+        SendAnonymizedMetric: cdk.Fn.findInMap('AnonymizedData', 'SendAnonymizedData', 'Data')
       },
     });
     driverFunction.node.addDependency(customLambdaRole);
@@ -477,7 +490,8 @@ export class FixityStack extends cdk.Stack {
         JOB_SIZE_THRESHOLD: "10737418240",
         JOB_QUEUE: jobQueue.attrJobQueueArn,
         LogLevel: "INFO",
-        SOLUTION_IDENTIFIER: "AwsSolution/SO0133/__VERSION__",
+        SOLUTION_IDENTIFIER: "AwsSolution/SO0133/__VERSION__-Fixity",
+        SendAnonymizedMetric: cdk.Fn.findInMap('AnonymizedData', 'SendAnonymizedData', 'Data')
       },
     });
     const demo = fixityApi.root.addResource("run");

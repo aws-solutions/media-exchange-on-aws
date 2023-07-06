@@ -773,6 +773,40 @@ def submit_response(event: dict, context, response_status: str, error_message: s
               "Action": "s3:*",
               "Condition": {
                 "Bool": {
+                  "aws:SecureTransport": "false",
+                },
+              },
+              "Effect": "Deny",
+              "Principal": {
+                "AWS": "*",
+              },
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "ExchangeBucket913FA88D",
+                    "Arn",
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "ExchangeBucket913FA88D",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": "s3:*",
+              "Condition": {
+                "Bool": {
                   "aws:SecureTransport": false,
                 },
                 "StringNotEquals": {
@@ -1366,6 +1400,13 @@ def submit_response(event: dict, context, response_status: str, error_message: s
 exports[`AutoIngest Stack Test 1`] = `
 {
   "Description": "CDK template for AutoIngest.",
+  "Mappings": {
+    "AnonymizedData": {
+      "SendAnonymizedData": {
+        "Data": "Yes",
+      },
+    },
+  },
   "Metadata": {
     "AWS::CloudFormation::Interface": {
       "ParameterGroups": [
@@ -1675,6 +1716,7 @@ exports[`AutoIngest Stack Test 1`] = `
       "DeletionPolicy": "Delete",
       "Properties": {
         "MessageRetentionPeriod": 1209600,
+        "SqsManagedSseEnabled": true,
       },
       "Type": "AWS::SQS::Queue",
       "UpdateReplacePolicy": "Delete",
@@ -1690,7 +1732,7 @@ exports[`AutoIngest Stack Test 1`] = `
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "2269ccfd08b0ca41e7a33534b06ba2527d25050bfc39ddc6f58b656aa987bf7f.zip",
+          "S3Key": "8b6be34614b0c77300a19384f0d04672d19ce2b976e5a3a887bb8c166f42eb69.zip",
         },
         "DeadLetterConfig": {
           "TargetArn": {
@@ -1710,9 +1752,16 @@ exports[`AutoIngest Stack Test 1`] = `
               "Ref": "DestinationPrefix",
             },
             "LogLevel": "INFO",
-            "SOLUTION_IDENTIFIER": "AwsSolution/SO0133/__VERSION__",
+            "SOLUTION_IDENTIFIER": "AwsSolution/SO0133/__VERSION__-Autoingest",
             "SOURCE_BUCKET_NAME": {
               "Ref": "MediaExchangeBucket",
+            },
+            "SendAnonymizedMetric": {
+              "Fn::FindInMap": [
+                "AnonymizedData",
+                "SendAnonymizedData",
+                "Data",
+              ],
             },
           },
         },
@@ -1952,6 +2001,13 @@ exports[`Fixity Repo Stack Test 1`] = `
 exports[`Fixity Stack Test 1`] = `
 {
   "Description": "Template for in-place checksum of objects in S3.",
+  "Mappings": {
+    "AnonymizedData": {
+      "SendAnonymizedData": {
+        "Data": "Yes",
+      },
+    },
+  },
   "Metadata": {
     "AWS::CloudFormation::Interface": {
       "ParameterGroups": [
@@ -2089,7 +2145,7 @@ exports[`Fixity Stack Test 1`] = `
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "51ea13a3bf369d354d0987329faa770a49d7ac882ec4a40eedab460814f388ca.zip",
+          "S3Key": "fc69804c8d6623409700af88667911fbf030791fabac8d180324b438bb2d3161.zip",
         },
         "Description": "Lambda function to be invoked by api",
         "Environment": {
@@ -2108,7 +2164,14 @@ exports[`Fixity Stack Test 1`] = `
             },
             "JOB_SIZE_THRESHOLD": "10737418240",
             "LogLevel": "INFO",
-            "SOLUTION_IDENTIFIER": "AwsSolution/SO0133/__VERSION__",
+            "SOLUTION_IDENTIFIER": "AwsSolution/SO0133/__VERSION__-Fixity",
+            "SendAnonymizedMetric": {
+              "Fn::FindInMap": [
+                "AnonymizedData",
+                "SendAnonymizedData",
+                "Data",
+              ],
+            },
           },
         },
         "Handler": "app.api_handler",
@@ -2283,7 +2346,7 @@ exports[`Fixity Stack Test 1`] = `
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "51ea13a3bf369d354d0987329faa770a49d7ac882ec4a40eedab460814f388ca.zip",
+          "S3Key": "fc69804c8d6623409700af88667911fbf030791fabac8d180324b438bb2d3161.zip",
         },
         "Description": "Lambda function to be invoked by s3 batch",
         "Environment": {
@@ -2302,7 +2365,14 @@ exports[`Fixity Stack Test 1`] = `
             },
             "JOB_SIZE_THRESHOLD": "10737418240",
             "LogLevel": "INFO",
-            "SOLUTION_IDENTIFIER": "AwsSolution/SO0133/__VERSION__",
+            "SOLUTION_IDENTIFIER": "AwsSolution/SO0133/__VERSION__-Fixity",
+            "SendAnonymizedMetric": {
+              "Fn::FindInMap": [
+                "AnonymizedData",
+                "SendAnonymizedData",
+                "Data",
+              ],
+            },
           },
         },
         "FunctionName": {
@@ -2840,6 +2910,40 @@ exports[`Fixity Stack Test 1`] = `
         },
         "PolicyDocument": {
           "Statement": [
+            {
+              "Action": "s3:*",
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false",
+                },
+              },
+              "Effect": "Deny",
+              "Principal": {
+                "AWS": "*",
+              },
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "FlowLogBucket0863ACCA",
+                    "Arn",
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "FlowLogBucket0863ACCA",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
             {
               "Action": "s3:*",
               "Condition": {
@@ -3834,6 +3938,35 @@ exports[`ME Stack Test 1`] = `
       },
       "Type": "AWS::ServiceCatalog::CloudFormationProduct",
     },
+    "AnonymousMetric": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "Resource": "AnonymousMetric",
+        "SendAnonymizedMetric": {
+          "Fn::FindInMap": [
+            "AnonymizedData",
+            "SendAnonymizedData",
+            "Data",
+          ],
+        },
+        "ServiceToken": {
+          "Fn::GetAtt": [
+            "CustomResource8CDCD7A7",
+            "Arn",
+          ],
+        },
+        "SolutionId": "SO0133",
+        "UUID": {
+          "Fn::GetAtt": [
+            "UUID",
+            "UUID",
+          ],
+        },
+        "Version": "__VERSION__",
+      },
+      "Type": "AWS::CloudFormation::CustomResource",
+      "UpdateReplacePolicy": "Delete",
+    },
     "AppRegistryApp5349BE86": {
       "DependsOn": [
         "DefaultApplicationAttributeGroup41AD7209",
@@ -3999,6 +4132,71 @@ exports[`ME Stack Test 1`] = `
       },
       "Type": "AWS::IAM::Role",
     },
+    "CustomResource8CDCD7A7": {
+      "DependsOn": [
+        "CustomResourcePolicy79526710",
+        "CustomResourceRoleMetrics802C29BA",
+      ],
+      "Metadata": {
+        "cfn_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "W58",
+              "reason": "Invalid warning: function has access to cloudwatch",
+            },
+            {
+              "id": "W89",
+              "reason": "This CustomResource does not need to be deployed inside a VPC",
+            },
+            {
+              "id": "W92",
+              "reason": "This CustomResource does not need to define ReservedConcurrentExecutions to reserve simultaneous executions",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "Code": {
+          "S3Bucket": {
+            "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
+          },
+          "S3Key": "de8675a52f7c7aa58be306cf7cc856d32e65aef73b043b0e8cf83a27ec07f63a.zip",
+        },
+        "Description": "Used to deploy resources not supported by CloudFormation",
+        "Environment": {
+          "Variables": {
+            "SOLUTION_IDENTIFIER": "AwsSolution/SO0133/__VERSION__",
+          },
+        },
+        "FunctionName": {
+          "Fn::Join": [
+            "",
+            [
+              {
+                "Ref": "AWS::StackName",
+              },
+              "-custom-resource",
+            ],
+          ],
+        },
+        "Handler": "index.handler",
+        "Role": {
+          "Fn::GetAtt": [
+            "CustomResourceRoleMetrics802C29BA",
+            "Arn",
+          ],
+        },
+        "Runtime": "nodejs18.x",
+        "Tags": [
+          {
+            "Key": "SolutionId",
+            "Value": "SO0133",
+          },
+        ],
+        "Timeout": 30,
+      },
+      "Type": "AWS::Lambda::Function",
+    },
     "CustomResourcePolicy79526710": {
       "Metadata": {
         "cdk_nag": {
@@ -4118,6 +4316,101 @@ exports[`ME Stack Test 1`] = `
         ],
       },
       "Type": "AWS::IAM::Policy",
+    },
+    "CustomResourcePolicyMetricsAA460E9C": {
+      "Metadata": {
+        "cfn_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "W12",
+              "reason": "* is required to create CloudWatch logs and interact with metrics actions that do not support resource level permissions",
+            },
+            {
+              "id": "W76",
+              "reason": "High complexity due to number of policy statements needed for creating all custom resources",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "PolicyDocument": {
+          "Statement": [
+            {
+              "Action": [
+                "logs:CreateLogGroup",
+                "logs:CreateLogStream",
+                "logs:PutLogEvents",
+              ],
+              "Effect": "Allow",
+              "Resource": {
+                "Fn::Join": [
+                  "",
+                  [
+                    "arn:",
+                    {
+                      "Ref": "AWS::Partition",
+                    },
+                    ":logs:",
+                    {
+                      "Ref": "AWS::Region",
+                    },
+                    ":",
+                    {
+                      "Ref": "AWS::AccountId",
+                    },
+                    ":log-group:/aws/lambda/*",
+                  ],
+                ],
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "PolicyName": "CustomResourcePolicyMetricsAA460E9C",
+        "Roles": [
+          {
+            "Ref": "CustomResourceRoleMetrics802C29BA",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Policy",
+    },
+    "CustomResourceRoleMetrics802C29BA": {
+      "Metadata": {
+        "cfn_nag": {
+          "rules_to_suppress": [
+            {
+              "id": "W11",
+              "reason": "* is required to create CloudWatch logs and interact with metrics actions that do not support resource level permissions",
+            },
+            {
+              "id": "W76",
+              "reason": "All policies are required by the custom resource.",
+            },
+          ],
+        },
+      },
+      "Properties": {
+        "AssumeRolePolicyDocument": {
+          "Statement": [
+            {
+              "Action": "sts:AssumeRole",
+              "Effect": "Allow",
+              "Principal": {
+                "Service": "lambda.amazonaws.com",
+              },
+            },
+          ],
+          "Version": "2012-10-17",
+        },
+        "Tags": [
+          {
+            "Key": "SolutionId",
+            "Value": "SO0133",
+          },
+        ],
+      },
+      "Type": "AWS::IAM::Role",
     },
     "DefaultApplicationAttributeGroup41AD7209": {
       "Properties": {
@@ -4592,6 +4885,20 @@ exports[`ME Stack Test 1`] = `
       },
       "Type": "AWS::ServiceCatalog::CloudFormationProduct",
     },
+    "UUID": {
+      "DeletionPolicy": "Delete",
+      "Properties": {
+        "Resource": "UUID",
+        "ServiceToken": {
+          "Fn::GetAtt": [
+            "CustomResource8CDCD7A7",
+            "Arn",
+          ],
+        },
+      },
+      "Type": "AWS::CloudFormation::CustomResource",
+      "UpdateReplacePolicy": "Delete",
+    },
     "mxcagreementdeploy5AF167CA": {
       "Metadata": {
         "cfn_nag": {
@@ -4932,6 +5239,13 @@ exports[`ME Stack Test 1`] = `
 exports[`MediaSync Stack Test 1`] = `
 {
   "Description": "Cloudformation template for MediaSync.",
+  "Mappings": {
+    "AnonymizedData": {
+      "SendAnonymizedData": {
+        "Data": "Yes",
+      },
+    },
+  },
   "Metadata": {
     "AWS::CloudFormation::Interface": {
       "ParameterGroups": [
@@ -5355,6 +5669,40 @@ exports[`MediaSync Stack Test 1`] = `
               "Action": "s3:*",
               "Condition": {
                 "Bool": {
+                  "aws:SecureTransport": "false",
+                },
+              },
+              "Effect": "Deny",
+              "Principal": {
+                "AWS": "*",
+              },
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "FlowLogBucket0863ACCA",
+                    "Arn",
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "FlowLogBucket0863ACCA",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
+            {
+              "Action": "s3:*",
+              "Condition": {
+                "Bool": {
                   "aws:SecureTransport": false,
                 },
               },
@@ -5522,7 +5870,7 @@ exports[`MediaSync Stack Test 1`] = `
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "707681ad43828078c0a5e260c90907968b338e45349b70f4a5d0019e18c97044.zip",
+          "S3Key": "7fc6d92d8e68b88be2bd038da238de6413d6ec97a9b452c75534fd747a562de0.zip",
         },
         "Description": "Lambda function to be invoked by s3 batch",
         "Environment": {
@@ -5546,7 +5894,14 @@ exports[`MediaSync Stack Test 1`] = `
             "LogLevel": "INFO",
             "MAX_NUMBER_OF_PENDING_JOBS": "96",
             "MN_SIZE_FOR_BATCH_IN_BYTES": "524288000",
-            "SOLUTION_IDENTIFIER": "AwsSolution/SO0133/__VERSION__",
+            "SOLUTION_IDENTIFIER": "AwsSolution/SO0133/__VERSION__-Mediasync",
+            "SendAnonymizedMetric": {
+              "Fn::FindInMap": [
+                "AnonymizedData",
+                "SendAnonymizedData",
+                "Data",
+              ],
+            },
           },
         },
         "Handler": "app.lambda_handler",
@@ -6980,6 +7335,40 @@ exports[`Publisher Stack Test 1`] = `
         },
         "PolicyDocument": {
           "Statement": [
+            {
+              "Action": "s3:*",
+              "Condition": {
+                "Bool": {
+                  "aws:SecureTransport": "false",
+                },
+              },
+              "Effect": "Deny",
+              "Principal": {
+                "AWS": "*",
+              },
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "ExchangeLogBucketE617C51D",
+                    "Arn",
+                  ],
+                },
+                {
+                  "Fn::Join": [
+                    "",
+                    [
+                      {
+                        "Fn::GetAtt": [
+                          "ExchangeLogBucketE617C51D",
+                          "Arn",
+                        ],
+                      },
+                      "/*",
+                    ],
+                  ],
+                },
+              ],
+            },
             {
               "Action": "s3:*",
               "Condition": {

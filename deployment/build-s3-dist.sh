@@ -79,12 +79,6 @@ echo "--------------------------------------------------------------------------
 echo "Run Cdk Helper and update template placeholders"
 echo "------------------------------------------------------------------------------"
 
-# Run the helper to clean-up the templates
-echo "Run the helper to clean-up the templates"
-echo "node $template_dir/cdk-solution-helper/index"
-node $template_dir/cdk-solution-helper/index \
-    || die "(cdk-solution-helper) ERROR: there is likely output above." $?
-
 mv MEStack.template.json $template_dist_dir/$solution_name.template
 mv SubscriberStack.template.json $template_dist_dir/subscriber.template
 mv PublisherStack.template.json $template_dist_dir/publisher.template
@@ -115,6 +109,12 @@ cp -R $MediaSyncAsset $tools_dir_mediasync/../
 mv AutoIngestStack.template.json $tools_dir_autoingest/autoingest.json
 cp -R $AutoIngestAsset $tools_dir_autoingest/../
 
+# Run the helper to clean-up the templates
+echo "Run the helper to clean-up the templates"
+echo "node $template_dir/cdk-solution-helper/index"
+node $template_dir/cdk-solution-helper/index \
+    || die "(cdk-solution-helper) ERROR: there is likely output above." $?
+
 for file in $template_dist_dir/*.template
 do
     replace="s/__BUCKET_NAME__/$bucket_name/g"
@@ -128,19 +128,38 @@ do
 done
 
 echo "------------------------------------------------------------------------------"
+echo "[Packing] Source code artifacts"
+echo "------------------------------------------------------------------------------"
+# ... For each asset.* source code artifact in the temporary /staging folder...
+cd $staging_dist_dir
+for d in `find . -mindepth 1 -maxdepth 1 -type d`; do
+    # Rename the artifact, removing the period for handler compatibility
+    pfname="$(basename -- $d)"
+    # Skip optional assets for deployment
+    if [ "$pfname" != *"$fixityAsset"* ] && [ "$pfname" != *"$MediaSyncAsset"* ] && [ "$pfname" != *"$AutoIngestAsset"* ];then
+        fname="$(echo $pfname | sed -e 's/\.//g')"
+        mv $d $fname
+
+        # Zip artifacts from asset folder
+        cd $fname
+        rm -rf node_modules/
+        if [ -f "package.json" ]
+        then
+            npm install --production
+        fi
+        zip -rq ../$fname.zip *
+        cd ..
+
+        # Copy the zipped artifact from /staging to /regional-s3-assets
+        mv $fname.zip $build_dist_dir
+    fi
+done
+
+echo "------------------------------------------------------------------------------"
 echo "[Cleanup]  Remove temporary files"
 echo "------------------------------------------------------------------------------"
 rm -rf $staging_dist_dir
 rm -f $template_dist_dir/*.orig
-
-
-echo "------------------------------------------------------------------------------"
-echo "[Rebuild] Creating Dummy File"
-echo "------------------------------------------------------------------------------"
-# the build process needs something to exist in the $build_dist_dir or it will break
-echo "copying /tmp/dummy.txt to $build_dist_dir"
-echo "This dummy file is created to satisfy the requirement of the deployment/regional-s3-assets/ directory existing for the build process. This is not needed for the solution to function." > /tmp/dummy.txt
-cp /tmp/dummy.txt $build_dist_dir/dummy.txt
 
 echo "------------------------------------------------------------------------------"
 echo "S3 Packaging Complete"

@@ -108,6 +108,7 @@ export class PublisherStack extends cdk.Stack {
      * Exchange bucket
      */
     const logBucket = new s3.Bucket(this, "ExchangeLogBucket", {
+      enforceSSL: true,
       blockPublicAccess: new s3.BlockPublicAccess({
         blockPublicAcls: true,
         blockPublicPolicy: true,
@@ -308,6 +309,7 @@ export class PublisherStack extends cdk.Stack {
     );
 
     const dlq = new sqs.Queue(this, "DLQ", {
+      encryption: sqs.QueueEncryption.KMS,
       encryptionMasterKey: cmk,
       dataKeyReuse: cdk.Duration.seconds(86400),
       retentionPeriod: cdk.Duration.seconds(1209600),

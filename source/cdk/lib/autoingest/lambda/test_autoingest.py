@@ -28,7 +28,7 @@ S3_TEST_FILE_CONTENT = [
 ]
 
 @mock_s3
-@mock.patch.dict(os.environ, {'SOURCE_BUCKET_NAME': S3_BUCKET_NAME,'SOLUTION_IDENTIFIER': 'SO0133', 'LogLevel': 'INFO', 'DESTINATION_BUCKET_NAME': DESTINATION_S3_BUCKET_NAME, 'DESTINATION_PREFIX': 'ingest'})
+@mock.patch.dict(os.environ, {'SOURCE_BUCKET_NAME': S3_BUCKET_NAME,'SOLUTION_IDENTIFIER': 'SO0133', 'LogLevel': 'INFO', 'DESTINATION_BUCKET_NAME': DESTINATION_S3_BUCKET_NAME, 'DESTINATION_PREFIX': 'ingest', 'SendAnonymizedMetric': 'No'})
 class TestAutoIngestLambdaFunction(unittest.TestCase):
     def setUp(self):
         # S3 setup

@@ -12,14 +12,18 @@ import unicodedata
 from botocore import config
 
 solution_identifier= os.environ['SOLUTION_IDENTIFIER']
+
 user_agent_extra_param = {"user_agent_extra":solution_identifier}
-config = config.Config(**user_agent_extra_param)
+
+presetConfig = config.Config()
+if os.environ['SendAnonymizedMetric'] == 'Yes':
+    presetConfig = config.Config(**user_agent_extra_param)
 
 logger = logging.getLogger()
 logger.setLevel(os.environ['LogLevel'])
 
-batchclient = boto3.client('batch', config=config)
-s3client = boto3.client('s3', config=config)
+batchclient = boto3.client('batch', config=presetConfig)
+s3client = boto3.client('s3', config=presetConfig)
 
 class ObjectDeletedError(Exception):
     pass

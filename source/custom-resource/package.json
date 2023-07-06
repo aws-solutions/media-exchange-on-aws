@@ -1,0 +1,28 @@
+{
+  "name": "me-custom-resource",
+  "version": "1.2.0",
+  "engines": {
+    "node": ">=12"
+  },
+  "description": "cfn custom resources for media exchange",
+  "main": "index.js",
+  "scripts": {
+    "pretest": "npm i --quiet",
+    "test": "jest --coverage"
+  },
+  "dependencies": {
+    "axios": "^1.4.0",
+    "uuid": "^9.0.0"
+  },
+  "devDependencies": {
+    "chai": "^4.2.0",
+    "axios-mock-adapter": "^1.17.0",
+    "lodash": "^4.17.15",
+    "jest": "^29.2.2"
+  },
+  "private": true,
+  "author": {
+    "name": "aws-solutions-builder"
+  },
+  "license": "Apache-2.0"
+}
