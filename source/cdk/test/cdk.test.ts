@@ -11,6 +11,14 @@ import * as MediaSyncRepo from "../lib/mediasync/mediasync-repository-stack";
 import * as Autoingest from "../lib/autoingest/autoingest-stack";
 import { Stack } from "aws-cdk-lib";
 
+const regexHashedFileName = /[A-Fa-f0-9]{64}(\.[a-z]{3,4})$/;
+const replaceHashedName = "[HASH REMOVED]$1";
+
+expect.addSnapshotSerializer({
+    test: (val) => typeof val === 'string' && regexHashedFileName.test(val),
+    serialize: (val) => JSON.stringify(val.replace(regexHashedFileName, replaceHashedName)),
+});
+
 test("ME Stack Test", () => {
   const stack = new Stack();
   const meTest = new MediaExchange.MEStack(stack, "MediaExchange");

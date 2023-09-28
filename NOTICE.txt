@@ -29,3 +29,5 @@ boto3 under the Apache License Version 2.0
 botocore under the Apache License Version 2.0
 awscli under the Apache License Version 2.0
 jsonpickle under a New BSD license (https://github.com/jsonpickle/jsonpickle/raw/master/COPYING)
+axios under the Massachusetts Institute of Technology (MIT) license
+uuid under the Massachusetts Institute of Technology (MIT) license

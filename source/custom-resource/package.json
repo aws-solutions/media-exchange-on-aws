@@ -22,7 +22,8 @@
   },
   "private": true,
   "author": {
-    "name": "aws-solutions-builder"
+    "name": "Amazon Web Services",
+    "url": "https://aws.amazon.com/solutions"
   },
   "license": "Apache-2.0"
 }

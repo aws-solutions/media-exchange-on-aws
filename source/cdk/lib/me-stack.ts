@@ -932,12 +932,12 @@ export class MEStack extends cdk.Stack {
       }
     });
     /**
-     * Custom Resource: Anonymouse Metric
+     * Custom Resource: Anonymized Metric
      */
-    new cdk.CustomResource(this, 'AnonymousMetric', { // NOSONAR
+    new cdk.CustomResource(this, 'AnonymizedMetric', { // NOSONAR
       serviceToken: customResourceLambda.functionArn,
       properties: {
-        Resource: 'AnonymousMetric',
+        Resource: 'AnonymizedMetric',
         SolutionId: solutionId,
         UUID: uuid.getAttString('UUID'),
         Version: '__VERSION__',

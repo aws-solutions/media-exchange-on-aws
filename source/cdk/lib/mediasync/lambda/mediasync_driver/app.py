@@ -87,8 +87,6 @@ def check_if_supported_storage_class(source_key, pre_flight_response):
     if unicodedata.is_normalized('NFC', source_key) == False:
         raise UnsupportedTextFormatError( source_key + ' is not in Normalized Form C' )
 
-    return "success"
-
 def submit_job(s3_batch_job_id, source_bucket, source_key, destination_bucket, size):
 
     source_bucket_region = get_bucket_region(source_bucket)
@@ -135,8 +133,6 @@ def in_place_copy(source_bucket, source_key, destination_bucket):
     )
 
     logger.debug('## COPY_RESPONSE\r' + jsonpickle.encode(dict(**copy_response)))
-    
-    return 'Success'
 
 def is_can_submit_jobs():
 

@@ -380,46 +380,6 @@ export class FixityStack extends cdk.Stack {
       )
     );
 
-    // Roles for s3 batch operation calling
-
-    const s3BatchRole = new iam.Role(this, "S3BatchRole", {
-      roleName: `mxc-${cdk.Aws.REGION}-${environment.valueAsString}-fixity-role`,
-      description: "Role for s3 batch job",
-      assumedBy: new iam.ServicePrincipal("batchoperations.s3.amazonaws.com"),
-    });
-
-    const s3BatchRolePolicy = new iam.Policy(this, "S3BatchRolePolicy", {
-      policyName: "S3BatchRolePolicy",
-      statements: [
-        new iam.PolicyStatement({
-          resources: ["*"],
-          effect: iam.Effect.ALLOW,
-          actions: [
-            "s3:GetObject",
-            "s3:GetObjectVersion",
-            "s3:GetObjectAcl",
-            "s3:GetObjectVersionAcl",
-            "s3:GetObjectTagging",
-            "s3:GetObjectVersionTagging",
-            "s3:PutObject",
-            "lambda:InvokeFunction",
-          ],
-        }),
-        new iam.PolicyStatement({
-          resources: ["*"],
-          effect: iam.Effect.ALLOW,
-          actions: [
-            "kms:Encrypt",
-            "kms:Decrypt",
-            "kms:ReEncrypt*",
-            "kms:GenerateDataKey*",
-            "kms:DescribeKey",
-          ],
-        }),
-      ],
-    });
-    s3BatchRolePolicy.attachToRole(s3BatchRole);
-
     // Actual lambda driver function
 
     const driverFunction = new lambda.Function(this, "DriverFunction", {
@@ -504,6 +464,46 @@ export class FixityStack extends cdk.Stack {
       logGroupName: `/aws/lambda/${apiFunction.functionName}`,
       retention: logs.RetentionDays.ONE_MONTH,
     });
+
+    // Roles for s3 batch operation calling
+
+    const s3BatchRole = new iam.Role(this, "S3BatchRole", {
+      roleName: `mxc-${cdk.Aws.REGION}-${environment.valueAsString}-fixity-role`,
+      description: "Role for s3 batch job",
+      assumedBy: new iam.ServicePrincipal("batchoperations.s3.amazonaws.com"),
+    });
+
+    const s3BatchRolePolicy = new iam.Policy(this, "S3BatchRolePolicy", {
+      policyName: "S3BatchRolePolicy",
+      statements: [
+        new iam.PolicyStatement({
+          resources: [driverFunction.functionArn, 'arn:aws:s3:::*'],
+          effect: iam.Effect.ALLOW,
+          actions: [
+            "s3:GetObject",
+            "s3:GetObjectVersion",
+            "s3:GetObjectAcl",
+            "s3:GetObjectVersionAcl",
+            "s3:GetObjectTagging",
+            "s3:GetObjectVersionTagging",
+            "s3:PutObject",
+            "lambda:InvokeFunction",
+          ],
+        }),
+        new iam.PolicyStatement({
+          resources: ["*"],
+          effect: iam.Effect.ALLOW,
+          actions: [
+            "kms:Encrypt",
+            "kms:Decrypt",
+            "kms:ReEncrypt*",
+            "kms:GenerateDataKey*",
+            "kms:DescribeKey",
+          ],
+        }),
+      ],
+    });
+    s3BatchRolePolicy.attachToRole(s3BatchRole);
 
     // Outputs
     new cdk.CfnOutput(this, "FixtyAPIURL", { // NOSONAR

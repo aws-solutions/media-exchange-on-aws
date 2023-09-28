@@ -112,7 +112,7 @@ Resources:
                   - s3:Delete*
                   - s3:AbortMultipartUpload
                   - s3:ListMultipartUploadParts
-                Resource: '*'
+                Resource: 'arn:aws:s3:::*'
               -
                 Effect: Allow
                 Action:

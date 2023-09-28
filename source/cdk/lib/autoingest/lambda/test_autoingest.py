@@ -43,17 +43,16 @@ class TestAutoIngestLambdaFunction(unittest.TestCase):
     def test_match_bucket_name_success(self):
         from autoingest_driver.app import match_bucket_name
         file_content = match_bucket_name(S3_BUCKET_NAME)
-        self.assertEqual(file_content, 'Success')
+        self.assertIsNone(file_content)
     
     def test_match_bucket_name_error(self):
         from autoingest_driver.app import match_bucket_name
-        file_content = match_bucket_name(DEFAULT_REGION)
-        self.assertEqual(file_content, None)
+        self.assertRaises(ClientError, match_bucket_name, DEFAULT_REGION)
 
     def test_check_object_success(self):
         from autoingest_driver.app import check_object
         file_content = check_object(S3_BUCKET_NAME, S3_TEST_FILE_KEY)
-        self.assertEqual(file_content, 'Success')
+        self.assertIsNone(file_content)
     
     def test_check_object_error(self):
         from autoingest_driver.app import check_object
@@ -62,7 +61,7 @@ class TestAutoIngestLambdaFunction(unittest.TestCase):
     def test_copy_object_success(self):
         from autoingest_driver.app import copy_object
         file_content = copy_object(S3_BUCKET_NAME, S3_TEST_FILE_KEY, self.S3_TEST_FILE_VERSION, DESTINATION_S3_BUCKET_NAME, 'ingest')
-        self.assertEqual(file_content, 'Success')
+        self.assertIsNone(file_content)
 
     def test_copy_object_error(self):
         from autoingest_driver.app import copy_object
