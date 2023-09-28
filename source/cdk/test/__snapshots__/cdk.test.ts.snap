@@ -1732,7 +1732,7 @@ exports[`AutoIngest Stack Test 1`] = `
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "8b6be34614b0c77300a19384f0d04672d19ce2b976e5a3a887bb8c166f42eb69.zip",
+          "S3Key": "[HASH REMOVED].zip",
         },
         "DeadLetterConfig": {
           "TargetArn": {
@@ -2145,7 +2145,7 @@ exports[`Fixity Stack Test 1`] = `
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "fc69804c8d6623409700af88667911fbf030791fabac8d180324b438bb2d3161.zip",
+          "S3Key": "[HASH REMOVED].zip",
         },
         "Description": "Lambda function to be invoked by api",
         "Environment": {
@@ -2346,7 +2346,7 @@ exports[`Fixity Stack Test 1`] = `
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "fc69804c8d6623409700af88667911fbf030791fabac8d180324b438bb2d3161.zip",
+          "S3Key": "[HASH REMOVED].zip",
         },
         "Description": "Lambda function to be invoked by s3 batch",
         "Environment": {
@@ -3222,7 +3222,15 @@ exports[`Fixity Stack Test 1`] = `
                 "lambda:InvokeFunction",
               ],
               "Effect": "Allow",
-              "Resource": "*",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "DriverFunction5A795A9A",
+                    "Arn",
+                  ],
+                },
+                "arn:aws:s3:::*",
+              ],
             },
             {
               "Action": [
@@ -3938,10 +3946,10 @@ exports[`ME Stack Test 1`] = `
       },
       "Type": "AWS::ServiceCatalog::CloudFormationProduct",
     },
-    "AnonymousMetric": {
+    "AnonymizedMetric": {
       "DeletionPolicy": "Delete",
       "Properties": {
-        "Resource": "AnonymousMetric",
+        "Resource": "AnonymizedMetric",
         "SendAnonymizedMetric": {
           "Fn::FindInMap": [
             "AnonymizedData",
@@ -4160,7 +4168,7 @@ exports[`ME Stack Test 1`] = `
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "de8675a52f7c7aa58be306cf7cc856d32e65aef73b043b0e8cf83a27ec07f63a.zip",
+          "S3Key": "[HASH REMOVED].zip",
         },
         "Description": "Used to deploy resources not supported by CloudFormation",
         "Environment": {
@@ -5870,7 +5878,7 @@ exports[`MediaSync Stack Test 1`] = `
           "S3Bucket": {
             "Fn::Sub": "cdk-hnb659fds-assets-\${AWS::AccountId}-\${AWS::Region}",
           },
-          "S3Key": "7fc6d92d8e68b88be2bd038da238de6413d6ec97a9b452c75534fd747a562de0.zip",
+          "S3Key": "[HASH REMOVED].zip",
         },
         "Description": "Lambda function to be invoked by s3 batch",
         "Environment": {
@@ -6008,7 +6016,15 @@ exports[`MediaSync Stack Test 1`] = `
                 "lambda:InvokeFunction",
               ],
               "Effect": "Allow",
-              "Resource": "*",
+              "Resource": [
+                {
+                  "Fn::GetAtt": [
+                    "MediaSyncDriverFunction0A5D414A",
+                    "Arn",
+                  ],
+                },
+                "arn:aws:s3:::*",
+              ],
             },
             {
               "Action": [

@@ -26,11 +26,15 @@ s3client = boto3.client('s3', config=presetConfig)
 
 
 def match_bucket_name(source_bucket):
-    try:
-        if (source_bucket == os.environ['SOURCE_BUCKET_NAME']):
-            return 'Success'
-    except ClientError as e:
-        raise e
+    if (source_bucket != os.environ['SOURCE_BUCKET_NAME']):
+        raise ClientError({
+            'Error': {
+                'Code': '400',
+                'Message': 'source bucket name does not match the environment variable SOURCE_BUCKET_NAME\r' + source_bucket + ' != ' + os.environ['SOURCE_BUCKET_NAME']
+            },
+            'ResponseMetadata': {}
+        }, 'match_bucket_name')
+        
 
 def check_object(source_bucket,source_key):
 
@@ -44,14 +48,10 @@ def check_object(source_bucket,source_key):
     #1 TB
     if (size > 1099511627776):
         logger.warn("the object size is " + size + ". The lambda function may timeout.")
-    
-    return 'Success'
 
 def copy_object(source_bucket, source_key, source_version, destination_bucket, prefix):
 
     s3client.copy(CopySource={'Bucket': source_bucket,'Key': source_key, 'VersionId': source_version}, Bucket=destination_bucket, Key='{}/{}'.format(prefix,source_key))
-    
-    return 'Success'
 
 
 def lambda_handler(event, _):

@@ -371,44 +371,6 @@ export class MediaSyncStack extends cdk.Stack {
       )
     );
 
-    const s3BatchRole = new iam.Role(this, "MediaSyncS3BatchRole", {
-      path: "/",
-      description: "Role for s3 batch job",
-      assumedBy: new iam.ServicePrincipal("batchoperations.s3.amazonaws.com"),
-    });
-
-    const s3BatchRolePolicy = new iam.Policy(this, "S3BatchRolePolicy", {
-      policyName: "S3BatchRolePolicy",
-      statements: [
-        new iam.PolicyStatement({
-          resources: ["*"],
-          effect: iam.Effect.ALLOW,
-          actions: [
-            "s3:GetObject",
-            "s3:GetObjectVersion",
-            "s3:GetObjectAcl",
-            "s3:GetObjectVersionAcl",
-            "s3:GetObjectTagging",
-            "s3:GetObjectVersionTagging",
-            "s3:PutObject",
-            "lambda:InvokeFunction",
-          ],
-        }),
-        new iam.PolicyStatement({
-          resources: ["*"],
-          effect: iam.Effect.ALLOW,
-          actions: [
-            "kms:Encrypt",
-            "kms:Decrypt",
-            "kms:ReEncrypt*",
-            "kms:GenerateDataKey*",
-            "kms:DescribeKey",
-          ],
-        }),
-      ],
-    });
-    s3BatchRolePolicy.attachToRole(s3BatchRole);
-
     // Two job definitions
     const copyJobDefinitionXRegion = new batch.CfnJobDefinition(
       this,
@@ -528,6 +490,44 @@ export class MediaSyncStack extends cdk.Stack {
         retention: logs.RetentionDays.ONE_MONTH,
       }
     );
+
+    const s3BatchRole = new iam.Role(this, "MediaSyncS3BatchRole", {
+      path: "/",
+      description: "Role for s3 batch job",
+      assumedBy: new iam.ServicePrincipal("batchoperations.s3.amazonaws.com"),
+    });
+
+    const s3BatchRolePolicy = new iam.Policy(this, "S3BatchRolePolicy", {
+      policyName: "S3BatchRolePolicy",
+      statements: [
+        new iam.PolicyStatement({
+          resources: [mediaSyncDriverFunction.functionArn, 'arn:aws:s3:::*'],
+          effect: iam.Effect.ALLOW,
+          actions: [
+            "s3:GetObject",
+            "s3:GetObjectVersion",
+            "s3:GetObjectAcl",
+            "s3:GetObjectVersionAcl",
+            "s3:GetObjectTagging",
+            "s3:GetObjectVersionTagging",
+            "s3:PutObject",
+            "lambda:InvokeFunction",
+          ],
+        }),
+        new iam.PolicyStatement({
+          resources: ["*"],
+          effect: iam.Effect.ALLOW,
+          actions: [
+            "kms:Encrypt",
+            "kms:Decrypt",
+            "kms:ReEncrypt*",
+            "kms:GenerateDataKey*",
+            "kms:DescribeKey",
+          ],
+        }),
+      ],
+    });
+    s3BatchRolePolicy.attachToRole(s3BatchRole);
 
     // Outputs
     new cdk.CfnOutput(this, "LambdaFunctionArn", { // NOSONAR
