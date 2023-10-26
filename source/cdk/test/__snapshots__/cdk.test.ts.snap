@@ -12,7 +12,7 @@ exports[`Agreement Stack Test 1`] = `
       ],
     },
   },
-  "Description": "(SO0133) - Media Exchange on AWS __VERSION__ - setup publisher and subscriber shared resources for asset exchange.",
+  "Description": "(SO0133) - Media Exchange on AWS - setup publisher and subscriber shared resources for asset exchange. Version: __VERSION__",
   "Metadata": {
     "AWS::CloudFormation::Interface": {
       "ParameterGroups": [
@@ -2609,7 +2609,7 @@ exports[`Fixity Stack Test 1`] = `
       "Type": "AWS::IAM::Role",
       "UpdateReplacePolicy": "Retain",
     },
-    "FixityApiDeployment5B361552e01113cff4f52c96bbac00fd437f8813": {
+    "FixityApiDeployment5B36155228abd44874dbb2ac5665461388025f97": {
       "DependsOn": [
         "FixityApiOPTIONS6D27A527",
         "FixityApirunOPTIONSAD15F5C4",
@@ -2630,7 +2630,7 @@ exports[`Fixity Stack Test 1`] = `
       ],
       "Properties": {
         "DeploymentId": {
-          "Ref": "FixityApiDeployment5B361552e01113cff4f52c96bbac00fd437f8813",
+          "Ref": "FixityApiDeployment5B36155228abd44874dbb2ac5665461388025f97",
         },
         "MethodSettings": [
           {
@@ -2648,6 +2648,7 @@ exports[`Fixity Stack Test 1`] = `
     },
     "FixityApiOPTIONS6D27A527": {
       "Properties": {
+        "ApiKeyRequired": false,
         "AuthorizationType": "NONE",
         "HttpMethod": "OPTIONS",
         "Integration": {
@@ -2707,6 +2708,7 @@ exports[`Fixity Stack Test 1`] = `
     },
     "FixityApirunOPTIONSAD15F5C4": {
       "Properties": {
+        "ApiKeyRequired": false,
         "AuthorizationType": "NONE",
         "HttpMethod": "OPTIONS",
         "Integration": {
@@ -3338,6 +3340,12 @@ exports[`Fixity Stack Test 1`] = `
           "Ref": "Vpc8378EB38",
         },
         "ResourceType": "VPC",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "Default/Fixity/VPCLogDeliveringToS3",
+          },
+        ],
         "TrafficType": "ALL",
       },
       "Type": "AWS::EC2::FlowLog",
@@ -3732,7 +3740,7 @@ exports[`Fixity Stack Test 1`] = `
 
 exports[`ME Stack Test 1`] = `
 {
-  "Description": "(SO0133) - Media Exchange on AWS __VERSION__ - mediaexchange service catalog setup",
+  "Description": "(SO0133) - Media Exchange on AWS - mediaexchange service catalog setup. Version: __VERSION__",
   "Mappings": {
     "AnonymizedData": {
       "SendAnonymizedData": {
@@ -6100,6 +6108,12 @@ exports[`MediaSync Stack Test 1`] = `
           "Ref": "Vpc8378EB38",
         },
         "ResourceType": "VPC",
+        "Tags": [
+          {
+            "Key": "Name",
+            "Value": "Default/MediaSync/VPCLogDeliveringToS3",
+          },
+        ],
         "TrafficType": "ALL",
       },
       "Type": "AWS::EC2::FlowLog",
@@ -6553,7 +6567,7 @@ exports[`Mediasync Repo Stack Test 1`] = `
 
 exports[`Provision Stack Test 1`] = `
 {
-  "Description": "(SO0133) - Media Exchange on AWS __VERSION__ - media exchange publisher/subscriber/agreement provisioning.",
+  "Description": "(SO0133) - Media Exchange on AWS - media exchange publisher/subscriber/agreement provisioning. Version: __VERSION__",
   "Metadata": {
     "AWS::CloudFormation::Interface": {
       "ParameterGroups": [
@@ -6922,7 +6936,7 @@ exports[`Publisher Stack Test 1`] = `
       ],
     },
   },
-  "Description": "(SO0133) - Media Exchange on AWS __VERSION__ - setup a publisher",
+  "Description": "(SO0133) - Media Exchange on AWS - setup a publisher. Version: __VERSION__",
   "Metadata": {
     "AWS::CloudFormation::Interface": {
       "ParameterGroups": [
@@ -7649,7 +7663,7 @@ exports[`Subscriber Stack Test 1`] = `
       ],
     },
   },
-  "Description": "(SO0133) - Media Exchange on AWS __VERSION__ - setup a subscriber",
+  "Description": "(SO0133) - Media Exchange on AWS - setup a subscriber. Version: __VERSION__",
   "Metadata": {
     "AWS::CloudFormation::Interface": {
       "ParameterGroups": [

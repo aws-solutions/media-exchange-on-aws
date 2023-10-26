@@ -30,7 +30,7 @@ export class AgreementStack extends cdk.Stack {
      */
     const solutionId = "SO0133";
     const solutionName = "Media Exchange on AWS";
-    this.templateOptions.description = `(${solutionId}) - ${solutionName} __VERSION__ - setup publisher and subscriber shared resources for asset exchange.`;
+    this.templateOptions.description = `(${solutionId}) - ${solutionName} - setup publisher and subscriber shared resources for asset exchange. Version: __VERSION__`;
     /**
      * Cfn Parameters
      */

@@ -83,7 +83,7 @@ export class MEStack extends cdk.Stack {
      */
     const solutionId = "SO0133";
     const solutionName = "Media Exchange on AWS";
-    this.templateOptions.description = `(${solutionId}) - ${solutionName} __VERSION__ - mediaexchange service catalog setup`;
+    this.templateOptions.description = `(${solutionId}) - ${solutionName} - mediaexchange service catalog setup. Version: __VERSION__`;
     /**
      * Cfn Parameters
      */

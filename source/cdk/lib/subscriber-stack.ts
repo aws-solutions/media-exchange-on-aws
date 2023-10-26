@@ -27,7 +27,7 @@ export class SubscriberStack extends cdk.Stack {
      */
     const solutionId = "SO0133";
     const solutionName = "Media Exchange on AWS";
-    this.templateOptions.description = `(${solutionId}) - ${solutionName} __VERSION__ - setup a subscriber`;
+    this.templateOptions.description = `(${solutionId}) - ${solutionName} - setup a subscriber. Version: __VERSION__`;
 
     /**
      * Cfn Parameters
