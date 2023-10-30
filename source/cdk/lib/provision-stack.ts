@@ -22,7 +22,7 @@ export class ProvisionStack extends cdk.Stack {
      */
     const solutionId = "SO0133";
     const solutionName = "Media Exchange on AWS";
-    this.templateOptions.description = `(${solutionId}) - ${solutionName} __VERSION__ - media exchange publisher/subscriber/agreement provisioning.`;
+    this.templateOptions.description = `(${solutionId}PROV) - ${solutionName} - media exchange publisher/subscriber/agreement provisioning. Version: __VERSION__`;
     /**
      * Cfn Parameters
      */
