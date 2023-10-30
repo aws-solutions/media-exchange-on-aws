@@ -1,0 +1,12 @@
+---
+id: SO0133
+name: media-exchange-on-aws
+version: 1.2.3
+cloudformation_templates:
+  - template: aws-media-exchange.template
+    main_template: true
+  - template: agreement.template
+  - template: publisher.template
+  - template: subscriber.template
+  - template: provision.template
+  

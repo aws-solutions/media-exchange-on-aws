@@ -30,7 +30,7 @@ export class PublisherStack extends cdk.Stack {
      */
     const solutionId = "SO0133";
     const solutionName = "Media Exchange on AWS";
-    this.templateOptions.description = `(${solutionId}) - ${solutionName} __VERSION__ - setup a publisher`;
+    this.templateOptions.description = `(${solutionId}PUB) - ${solutionName} - setup a publisher. Version: __VERSION__`;
     /**
      * Cfn Parameters
      */
